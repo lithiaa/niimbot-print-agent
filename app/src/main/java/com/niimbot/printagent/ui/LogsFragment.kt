@@ -21,7 +21,8 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class LogsFragment : Fragment() {
 
-    private lateinit var database: AppDatabase
+    @javax.inject.Inject
+    lateinit var database: AppDatabase
     private var rvLogs: RecyclerView? = null
     private var tvEmpty: TextView? = null
     private var logAdapter: LogAdapter? = null
@@ -34,8 +35,6 @@ class LogsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
-        database = AppDatabase.getInstance(requireContext())
         
         rvLogs = view.findViewById(R.id.rv_logs)
         tvEmpty = view.findViewById(R.id.tv_empty)

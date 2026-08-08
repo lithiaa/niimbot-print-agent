@@ -1,43 +1,33 @@
 package com.niimbot.printagent
 
 import android.app.Application
-import android.content.Context
-import dagger.hilt.android.EntryPointAccessors
+import android.util.Log
+import com.niimbot.printagent.ble.NiimbotBluetoothManager
+import dagger.hilt.EntryPoint
+import dagger.hilt.EntryPoints
+import dagger.hilt.InstallIn
 import dagger.hilt.android.HiltAndroidApp
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
+import dagger.hilt.components.SingletonComponent
 
 @HiltAndroidApp
 class NiimbotPrintApplication : Application() {
 
-    @Inject
-    @ApplicationContext
-    lateinit var appContext: Context
-
-    private var niimbotManager: com.niimbot.printagent.ble.NiimbotBluetoothManager? = null
-
     override fun onCreate() {
         super.onCreate()
-        // Initialize Hilt
-        dagger.hilt.android.HiltAndroidApp.class.java.getAnnotation(dagger.hilt.android.HiltAndroidApp::class.java)
-        // Hilt auto-injects via generated Application class
+        Log.i("NiimbotApp", "Application created")
     }
 
-    fun getNiimbotManager(): com.niimbot.printagent.ble.NiimbotBluetoothManager {
-        if (niimbotManager == null) {
-            // Get from Hilt EntryPoint
-            val entryPoint = EntryPointAccessors.fromApplication(
-                this,
-                NiimbotPrintApplication_EntryPoint::class.java
-            )
-            niimbotManager = entryPoint.getNiimbotBluetoothManager()
-        }
-        return niimbotManager!!
+    /**
+     * Accessor for NiimbotBluetoothManager from non-Hilt contexts (e.g., UI fragments that
+     * get the manager via Application rather than @Inject).
+     */
+    fun getNiimbotManager(): NiimbotBluetoothManager {
+        return EntryPoints.get(this, NiimbotEntryPoint::class.java).getNiimbotBluetoothManager()
     }
 
-    @dagger.hilt.EntryPoint
+    @EntryPoint
     @InstallIn(SingletonComponent::class)
-    interface NiimbotPrintApplication_EntryPoint {
-        fun getNiimbotBluetoothManager(): com.niimbot.printagent.ble.NiimbotBluetoothManager
+    interface NiimbotEntryPoint {
+        fun getNiimbotBluetoothManager(): NiimbotBluetoothManager
     }
 }

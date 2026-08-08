@@ -13,7 +13,7 @@ class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
-        if (action == Intent.ACTION_BOOT_COMPLETED || action == Intent.ACTION_QUICKBOOT_POWERON) {
+        if (action == Intent.ACTION_BOOT_COMPLETED || action == "android.intent.action.QUICKBOOT_POWERON") {
             Log.i("BootReceiver", "Boot completed - starting print service")
             
             val serviceIntent = Intent(context, PrintForegroundService::class.java)

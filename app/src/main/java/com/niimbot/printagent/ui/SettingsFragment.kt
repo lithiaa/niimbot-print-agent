@@ -25,7 +25,8 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class SettingsFragment : Fragment() {
 
-    private lateinit var database: AppDatabase
+    @javax.inject.Inject
+    lateinit var database: AppDatabase
     
     // Server config
     private var etServerPort: EditText? = null
@@ -53,8 +54,6 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
-        database = AppDatabase.getInstance(requireContext())
         
         bindViews(view)
         observePrinterConfig()

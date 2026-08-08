@@ -8,14 +8,13 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-    <uses-permission android:name="android.permission.BLUETOOTH_PRIVILEGED" tools:ignore="ProtectedPermissions" />
 
     <!-- Features -->
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
@@ -42,10 +41,10 @@
             </intent-filter>
         </activity>
 
-        <!-- Foreground Service -->
+        <!-- Foreground Service (connectedDevice for BLE on Android 14+) -->
         <service
             android:name=".service.PrintForegroundService"
-            android:foregroundServiceType="dataSync"
+            android:foregroundServiceType="connectedDevice"
             android:exported="false" />
 
         <!-- Boot Receiver -->
@@ -58,11 +57,6 @@
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
-
-        <!-- Hilt -->
-        <meta-data
-            android:name="dagger.hilt.android.internal.ENTRY_POINT"
-            android:value="com.niimbot.printagent.NiimbotPrintApplication" />
 
     </application>
 </manifest>

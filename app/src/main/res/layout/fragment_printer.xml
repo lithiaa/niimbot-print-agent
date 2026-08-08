@@ -213,7 +213,6 @@
                         android:id="@+id/btn_scan"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="auto"
                         android:text="@string/scan_devices"
                         android:icon="@drawable/ic_bluetooth"
                         app:iconGravity="start"
