@@ -281,8 +281,8 @@ class PrintForegroundService : Service() {
             val bitmap = LabelGenerator.generateLabel(
                 nama = job.nama,
                 hargaJual = job.hargaJual,
+                hargaBeli = job.hargaBeli,
                 sku = job.sku,
-                stok = job.stok,
                 satuan = job.satuan,
                 barcodeData = job.barcode
             )

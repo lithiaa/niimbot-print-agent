@@ -155,8 +155,8 @@ class SettingsFragment : Fragment() {
             val bitmap = LabelGenerator.generateLabel(
                 nama = "Sample Product Name",
                 hargaJual = 25000,
+                hargaBeli = 15000,
                 sku = "SPL001",
-                stok = 100,
                 satuan = "pcs",
                 barcodeData = "SPL001"
             )

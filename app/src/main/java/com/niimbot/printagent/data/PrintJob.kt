@@ -17,7 +17,7 @@ data class PrintJob(
     // Item data (from cloud)
     val nama: String,
     val hargaJual: Long,
-    val hargaBeli: Long,
+    val hargaBeli: Long = 0L,
     val sku: String,
     val stok: Int = 0,
     val satuan: String = "pcs",
