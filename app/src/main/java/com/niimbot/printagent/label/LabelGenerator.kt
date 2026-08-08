@@ -1,4 +1,4 @@
-package com.niimbot.printagent.util
+package com.niimbot.printagent.label
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -6,9 +6,9 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.common.BitMatrix
-import com.journeyapps.zxing.android.encoder.EncodeHintType
 import java.util.EnumMap
 
 /**
@@ -49,7 +49,7 @@ object LabelGenerator {
             typeface = Typeface.DEFAULT_BOLD
         }
         
-        var y = MARGIN_TOP
+        var y = MARGIN_TOP.toFloat()
         
         // ============ NAMA BARANG (Bold, Large) ============
         paint.textSize = 36f

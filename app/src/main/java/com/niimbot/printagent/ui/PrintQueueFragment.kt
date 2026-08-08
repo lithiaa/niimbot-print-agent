@@ -22,7 +22,8 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class PrintQueueFragment : Fragment() {
 
-    private lateinit var database: AppDatabase
+    @javax.inject.Inject
+    lateinit var database: AppDatabase
     private var rvJobs: RecyclerView? = null
     private var swipeRefresh: SwipeRefreshLayout? = null
     private var tvEmpty: TextView? = null
@@ -36,8 +37,6 @@ class PrintQueueFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
-        database = AppDatabase.getInstance(requireContext())
         
         rvJobs = view.findViewById(R.id.rv_jobs)
         swipeRefresh = view.findViewById(R.id.swipe_refresh)

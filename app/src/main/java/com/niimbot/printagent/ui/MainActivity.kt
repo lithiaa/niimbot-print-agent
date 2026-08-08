@@ -1,63 +1,100 @@
 package com.niimbot.printagent.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.Observer
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.navigation.NavigationBarView
 import com.niimbot.printagent.R
 import com.niimbot.printagent.data.AppDatabase
-import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintStatus
 import com.niimbot.printagent.service.PrintForegroundService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var database: AppDatabase
+    @Inject
+    lateinit var database: AppDatabase
+
     private lateinit var bottomNav: BottomNavigationView
-    
-    private val fragments = mapOf(
-        R.id.nav_dashboard to DashboardFragment(),
-        R.id.nav_printer to PrinterFragment(),
-        R.id.nav_queue to PrintQueueFragment(),
-        R.id.nav_logs to LogsFragment(),
-        R.id.nav_settings to SettingsFragment()
-    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        
-        database = AppDatabase.getInstance(this)
+
         bottomNav = findViewById(R.id.bottom_navigation)
-        
-        setupBottomNavigation()
+
+        setupBottomNavigation(savedInstanceState)
         observePrintQueue()
-        
-        // Start foreground service if not running
-        startForegroundService()
+
+        // Check permissions before starting service
+        checkAndRequestPermissions()
     }
-    
-    private fun setupBottomNavigation() {
+
+    private val PERMISSION_REQUEST_CODE = 1001
+
+    private fun checkAndRequestPermissions() {
+        val requiredPermissions = mutableListOf<String>()
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            requiredPermissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            requiredPermissions.add(Manifest.permission.BLUETOOTH_SCAN)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            requiredPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        
+        // Always request location for BLE scanning on some vendors
+        requiredPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        requiredPermissions.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+
+        val missingPermissions = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (missingPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, missingPermissions.toTypedArray(), PERMISSION_REQUEST_CODE)
+        } else {
+            startPrintService()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            // Check if all permissions were granted
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                startPrintService()
+            } else {
+                Log.w("MainActivity", "Permissions not fully granted, service not started.")
+            }
+        }
+    }
+
+    private fun setupBottomNavigation(savedInstanceState: Bundle?) {
         bottomNav.setOnItemSelectedListener { item ->
-            val fragment = fragments[item.itemId] ?: return@setOnItemSelectedListener false
+            val fragment = when (item.itemId) {
+                R.id.nav_dashboard -> DashboardFragment()
+                R.id.nav_printer   -> PrinterFragment()
+                R.id.nav_queue     -> PrintQueueFragment()
+                R.id.nav_logs      -> LogsFragment()
+                R.id.nav_settings  -> SettingsFragment()
+                else -> return@setOnItemSelectedListener false
+            }
             supportFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .commit()
             true
         }
-        
-        // Default to dashboard
+
+        // Default to dashboard on first launch
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container, DashboardFragment())
@@ -65,48 +102,44 @@ class MainActivity : AppCompatActivity() {
             bottomNav.selectedItemId = R.id.nav_dashboard
         }
     }
-    
+
     private fun observePrintQueue() {
-        val pendingJobs = database.printJobDao().getByStatus(PrintStatus.PENDING)
-        val printingJobs = database.printJobDao().getByStatus(PrintStatus.PRINTING)
-        
-        Observer<List<PrintJob>?> { jobs ->
-            updateQueueBadge(jobs?.size ?: 0 + printingJobs.value?.size ?: 0)
-        }.also { observer ->
-            pendingJobs.observe(this, observer)
-            printingJobs.observe(this, observer)
+        // Observe pending + printing jobs for badge count
+        database.printJobDao().getByStatuses(
+            listOf(PrintStatus.PENDING, PrintStatus.PRINTING)
+        ).observe(this) { jobs ->
+            val count = jobs?.size ?: 0
+            bottomNav.getOrCreateBadge(R.id.nav_queue).apply {
+                isVisible = count > 0
+                number = count
+            }
         }
     }
-    
-    private fun updateQueueBadge(count: Int) {
-        // Update bottom nav badge
-        bottomNav.getOrCreateBadge(R.id.nav_queue).apply {
-            isVisible = count > 0
-            number = count
+
+    private fun startPrintService() {
+        val intent = Intent(this, PrintForegroundService::class.java).apply {
+            action = PrintForegroundService.ACTION_START
         }
-    }
-    
-    private fun startForegroundService() {
-        val intent = Intent(this, PrintForegroundService::class.java)
-        intent.action = PrintForegroundService.ACTION_START
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             startForegroundService(intent)
         } else {
             startService(intent)
         }
+        Log.i("MainActivity", "Print service start requested")
     }
-    
+
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
         return true
     }
-    
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_test_print -> {
-                val intent = Intent(this, PrintForegroundService::class.java)
-                intent.action = PrintForegroundService.ACTION_TEST_PRINT
-                intent.putExtra(PrintForegroundService.EXTRA_TEST_DATA, "MANUAL TEST")
+                val intent = Intent(this, PrintForegroundService::class.java).apply {
+                    action = PrintForegroundService.ACTION_TEST_PRINT
+                    putExtra(PrintForegroundService.EXTRA_TEST_DATA, "MANUAL TEST")
+                }
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     startForegroundService(intent)
                 } else {

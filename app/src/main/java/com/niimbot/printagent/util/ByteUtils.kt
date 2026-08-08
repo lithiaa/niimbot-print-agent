@@ -49,13 +49,13 @@ object ByteUtils {
     fun shortToBytes(value: Short, bigEndian: Boolean = true): ByteArray {
         return if (bigEndian) {
             byteArrayOf(
-                (value shr 8).toByte(),
+                (value.toInt() shr 8).toByte(),
                 value.toByte()
             )
         } else {
             byteArrayOf(
                 value.toByte(),
-                (value shr 8).toByte()
+                (value.toInt() shr 8).toByte()
             )
         }
     }

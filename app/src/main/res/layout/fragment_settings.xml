@@ -204,7 +204,6 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             app:cardElevation="2dp"
-            android:layout_marginBottom="16dp"
             app:cardCornerRadius="12dp"
             app:strokeColor="@color/divider"
             app:strokeWidth="1dp">

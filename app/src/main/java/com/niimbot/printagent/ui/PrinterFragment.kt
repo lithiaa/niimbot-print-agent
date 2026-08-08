@@ -23,7 +23,8 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class PrinterFragment : Fragment() {
 
-    private lateinit var database: AppDatabase
+    @javax.inject.Inject
+    lateinit var database: AppDatabase
     private var tvPrinterName: TextView? = null
     private var tvPrinterMac: TextView? = null
     private var tvPrinterModel: TextView? = null
@@ -33,6 +34,7 @@ class PrinterFragment : Fragment() {
     private var btnTestPrint: Button? = null
     private var progressBar: ProgressBar? = null
     private var rvDevices: RecyclerView? = null
+    private var tvDiscoveredLabel: TextView? = null
     private var deviceAdapter: DeviceAdapter? = null
 
     override fun onCreateView(
@@ -44,8 +46,6 @@ class PrinterFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        database = AppDatabase.getInstance(requireContext())
-        
         tvPrinterName = view.findViewById(R.id.tv_printer_name)
         tvPrinterMac = view.findViewById(R.id.tv_printer_mac)
         tvPrinterModel = view.findViewById(R.id.tv_printer_model)
@@ -55,6 +55,7 @@ class PrinterFragment : Fragment() {
         btnTestPrint = view.findViewById(R.id.btn_test_print)
         progressBar = view.findViewById(R.id.progress_scan)
         rvDevices = view.findViewById(R.id.rv_devices)
+        tvDiscoveredLabel = view.findViewById(R.id.tv_discovered_label)
         
         rvDevices?.layoutManager = LinearLayoutManager(requireContext())
         deviceAdapter = DeviceAdapter()
@@ -93,7 +94,14 @@ class PrinterFragment : Fragment() {
         // Observe discovered devices
         bleManager.discoveredDevicesLive.observe(viewLifecycleOwner) { devices ->
             deviceAdapter?.submitList(devices)
-            progressBar?.visibility = if (devices.isNotEmpty()) View.GONE else View.VISIBLE
+            if (devices.isNotEmpty()) {
+                progressBar?.visibility = View.GONE
+                rvDevices?.visibility = View.VISIBLE
+                tvDiscoveredLabel?.visibility = View.VISIBLE
+            } else {
+                rvDevices?.visibility = View.GONE
+                tvDiscoveredLabel?.visibility = View.GONE
+            }
         }
     }
     
