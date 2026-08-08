@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Printer icon centered in adaptive icon safe zone -->
+    <group
+        android:scaleX="0.5"
+        android:scaleY="0.5"
+        android:pivotX="54"
+        android:pivotY="54">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M54,20C42,20 30,23 27,27C24,31 24,36 27,38L37,42V50H71V42L81,38C84,36 84,31 81,27C78,23 66,20 54,20M40,30H68V44H40V30M34,52V62H74V52H66V58H42V52H34M30,64V72H22V92H86V72H78V64H30Z" />
+    </group>
+</vector>
