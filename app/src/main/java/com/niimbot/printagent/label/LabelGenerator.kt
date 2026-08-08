@@ -26,6 +26,16 @@ object LabelGenerator {
     const val MARGIN_TOP = 15
     const val MARGIN_RIGHT = 15
     
+    // SANGUOERIP harga encode map (matches POS config.py)
+    private val HARGA_DECODE_MAP = mapOf(
+        '1' to 'S', '2' to 'A', '3' to 'N', '4' to 'G',
+        '5' to 'U', '6' to 'O', '7' to 'E', '8' to 'R',
+        '9' to 'I', '0' to 'P',
+        's' to 'S', 'a' to 'A', 'n' to 'N', 'g' to 'G',
+        'u' to 'U', 'o' to 'O', 'e' to 'E', 'r' to 'R',
+        'i' to 'I', 'p' to 'P'
+    )
+    
     /**
      * Generate label bitmap from item data
      */
@@ -38,73 +48,76 @@ object LabelGenerator {
         barcodeData: String? = null
     ): Bitmap {
         val bitmap = Bitmap.createBitmap(LABEL_WIDTH, LABEL_HEIGHT, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
+                val canvas = Canvas(bitmap)
         
-        // White background
-        canvas.drawColor(Color.WHITE)
+                // White background
+                canvas.drawColor(Color.WHITE)
         
-        val paint = Paint().apply {
-            isAntiAlias = true
-            color = Color.BLACK
-            typeface = Typeface.DEFAULT_BOLD
-        }
+                val paint = Paint().apply {
+                    isAntiAlias = true
+                    color = Color.BLACK
+                    typeface = Typeface.DEFAULT_BOLD
+                }
         
-        // ============ NAMA BARANG (Bold, Large) ============
-        paint.textSize = 36f
-        paint.isFakeBoldText = true
+                // ============ BARCODE (Code128) - TOP ============
+                val barcodeContent = barcodeData ?: sku
+                val barcodeBitmap = generateCode128(barcodeContent, LABEL_WIDTH - MARGIN_LEFT - MARGIN_RIGHT, 75)
         
-        // Fix baseline: drawText y is font baseline, so add textSize to MARGIN_TOP
-        var y = MARGIN_TOP.toFloat() + 36f
+                // Center barcode at top
+                val barcodeX = (LABEL_WIDTH - barcodeBitmap.width) / 2
+                var y = MARGIN_TOP.toFloat()
+                canvas.drawBitmap(barcodeBitmap, barcodeX.toFloat(), y, null)
+                y += barcodeBitmap.height + 16f
         
-        // Dynamic measure & truncate if too long for label width
-        val maxNamaWidth = (LABEL_WIDTH - MARGIN_LEFT - MARGIN_RIGHT).toFloat()
-        var displayNama = nama
-        if (paint.measureText(displayNama) > maxNamaWidth) {
-            while (displayNama.isNotEmpty() && paint.measureText("$displayNama...") > maxNamaWidth) {
-                displayNama = displayNama.dropLast(1)
-            }
-            displayNama = "$displayNama..."
-        }
-        canvas.drawText(displayNama, MARGIN_LEFT.toFloat(), y, paint)
-        y += 52f
+                // ============ BARCODE TEXT BELOW BARCODE ============
+                paint.textSize = 16f
+                paint.isFakeBoldText = false
+                val barcodeTextWidth = paint.measureText(barcodeContent)
+                val barcodeTextX = (LABEL_WIDTH - barcodeTextWidth) / 2
+                canvas.drawText(barcodeContent, barcodeTextX, y, paint)
+                y += 24f
         
-        // ============ HARGA JUAL (Very Large, Bold) ============
-        paint.textSize = 48f
-        paint.isFakeBoldText = true
+                // ============ NAMA BARANG (Bold, Large) ============
+                paint.textSize = 36f
+                paint.isFakeBoldText = true
         
-        val hargaText = "Rp ${formatRupiah(hargaJual)}"
-        canvas.drawText(hargaText, MARGIN_LEFT.toFloat(), y, paint)
+                // Fix baseline: drawText y is font baseline, so add textSize to MARGIN_TOP
+                // y already positioned after barcode
+        
+                // Dynamic measure & truncate if too long for label width
+                val maxNamaWidth = (LABEL_WIDTH - MARGIN_LEFT - MARGIN_RIGHT).toFloat()
+                var displayNama = nama
+                if (paint.measureText(displayNama) > maxNamaWidth) {
+                    while (displayNama.isNotEmpty() && paint.measureText("$displayNama...") > maxNamaWidth) {
+                        displayNama = displayNama.dropLast(1)
+                    }
+                    displayNama = "$displayNama..."
+                }
+                canvas.drawText(displayNama, MARGIN_LEFT.toFloat(), y, paint)
                 y += 48f
-
-                // ============ HARGA BELI (Medium) ============
+        
+                // ============ HARGA JUAL (Very Large, Bold) ============
+                paint.textSize = 48f
+                paint.isFakeBoldText = true
+        
+                val hargaText = "Rp ${formatRupiah(hargaJual)}"
+                canvas.drawText(hargaText, MARGIN_LEFT.toFloat(), y, paint)
+                y += 56f
+        
+                // ============ HARGA BELI (Medium, encoded) ============
                 paint.textSize = 24f
                 paint.isFakeBoldText = false
-
-                val hargaBeliText = "Beli: Rp ${formatRupiah(hargaBeli)}"
+        
+                val hargaBeliEncoded = hargaEncode(hargaBeli)
+                val hargaBeliText = "Beli: $hargaBeliEncoded"
                 canvas.drawText(hargaBeliText, MARGIN_LEFT.toFloat(), y, paint)
                 y += 32f
-
+        
                 // ============ SKU (Medium) ============
                 paint.textSize = 24f
                 paint.isFakeBoldText = false
-
+        
                 canvas.drawText("SKU: $sku", MARGIN_LEFT.toFloat(), y, paint)
-                y += 32f
-        
-        // ============ BARCODE (Code128) ============
-        val barcodeContent = barcodeData ?: sku
-        val barcodeBitmap = generateCode128(barcodeContent, LABEL_WIDTH - MARGIN_LEFT - MARGIN_RIGHT, 75)
-        
-        // Center barcode
-        val barcodeX = (LABEL_WIDTH - barcodeBitmap.width) / 2
-        canvas.drawBitmap(barcodeBitmap, barcodeX.toFloat(), y, null)
-        y += barcodeBitmap.height + 22f
-        
-        // ============ BARCODE TEXT BELOW ============
-        paint.textSize = 18f
-        val barcodeTextWidth = paint.measureText(barcodeContent)
-        val barcodeTextX = (LABEL_WIDTH - barcodeTextWidth) / 2
-        canvas.drawText(barcodeContent, barcodeTextX, y, paint)
         
         return bitmap
     }
@@ -152,5 +165,19 @@ object LabelGenerator {
      */
     private fun formatRupiah(amount: Long): String {
         return java.text.NumberFormat.getNumberInstance(java.util.Locale.GERMANY).format(amount)
+    }
+
+    /** SANGUOERIP encode (matches POS harga_encode) */
+    private fun hargaEncode(amount: Long): String {
+        if (amount == 0L) return "P"
+        val s = amount.toString()
+        val encoded = s.map { HARGA_DECODE_MAP[it] ?: it }.joinToString("")
+        // Collapse repeating trailing chars: AUPPP -> AUP
+        if (encoded.length > 1) {
+            val lastChar = encoded.last()
+            val stripped = encoded.dropLastWhile { it == lastChar }
+            return if (stripped.isNotEmpty()) stripped + lastChar else lastChar.toString()
+        }
+        return encoded
     }
 }
