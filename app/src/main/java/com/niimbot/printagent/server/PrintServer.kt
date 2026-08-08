@@ -45,6 +45,7 @@ data class PrintRequest(
     val imageBase64: String? = null,   // Base64 PNG (optional)
     val nama: String? = null,
     val hargaJual: Long? = null,
+    val hargaBeli: Long? = null,
     val sku: String? = null,
     val stok: Int? = null,
     val satuan: String = "pcs",
@@ -241,6 +242,7 @@ class PrintServer(
                     val testJob = PrintJob(
                         nama = "TEST LABEL",
                         hargaJual = 12345,
+                        hargaBeli = 8000,
                         sku = "TEST001",
                         stok = 99,
                         satuan = "pcs",
@@ -320,6 +322,7 @@ class PrintServer(
             PrintJob(
                 nama = request.nama ?: "Unknown",
                 hargaJual = request.hargaJual ?: 0,
+                hargaBeli = request.hargaBeli ?: 0,
                 sku = request.sku ?: "000000",
                 stok = request.stok ?: 0,
                 satuan = request.satuan,
@@ -379,8 +382,8 @@ class PrintServer(
         val bitmap = LabelGenerator.generateLabel(
             nama = job.nama,
             hargaJual = job.hargaJual,
+            hargaBeli = job.hargaBeli,
             sku = job.sku,
-            stok = job.stok,
             satuan = job.satuan,
             barcodeData = job.barcode
         )

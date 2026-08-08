@@ -32,8 +32,8 @@ object LabelGenerator {
     fun generateLabel(
         nama: String,
         hargaJual: Long,
+        hargaBeli: Long,
         sku: String,
-        stok: Int,
         satuan: String = "pcs",
         barcodeData: String? = null
     ): Bitmap {
@@ -74,17 +74,22 @@ object LabelGenerator {
         
         val hargaText = "Rp ${formatRupiah(hargaJual)}"
         canvas.drawText(hargaText, MARGIN_LEFT.toFloat(), y, paint)
-        y += 48f
-        
-        // ============ SKU + STOK (Medium) ============
-        paint.textSize = 24f
-        paint.isFakeBoldText = false
-        
-        canvas.drawText("SKU: $sku", MARGIN_LEFT.toFloat(), y, paint)
-        y += 32f
-        
-        canvas.drawText("Stok: $stok $satuan", MARGIN_LEFT.toFloat(), y, paint)
-        y += 24f
+                y += 48f
+
+                // ============ HARGA BELI (Medium) ============
+                paint.textSize = 24f
+                paint.isFakeBoldText = false
+
+                val hargaBeliText = "Beli: Rp ${formatRupiah(hargaBeli)}"
+                canvas.drawText(hargaBeliText, MARGIN_LEFT.toFloat(), y, paint)
+                y += 32f
+
+                // ============ SKU (Medium) ============
+                paint.textSize = 24f
+                paint.isFakeBoldText = false
+
+                canvas.drawText("SKU: $sku", MARGIN_LEFT.toFloat(), y, paint)
+                y += 32f
         
         // ============ BARCODE (Code128) ============
         val barcodeContent = barcodeData ?: sku
@@ -108,15 +113,15 @@ object LabelGenerator {
      * Generate label from JSON template (for dynamic fields)
      */
     fun generateLabelFromJson(jsonData: Map<String, Any>): Bitmap {
-        val nama = jsonData["nama"] as? String ?: "Unknown"
-        val hargaJual = (jsonData["harga_jual"] as? Number ?: jsonData["hargaJual"] as? Number ?: 0L).toLong()
-        val sku = jsonData["sku"] as? String ?: jsonData["kode_barang"] as? String ?: "000000"
-        val stok = (jsonData["stok"] as? Number ?: 0).toInt()
-        val satuan = jsonData["satuan"] as? String ?: "pcs"
-        val barcodeData = jsonData["barcode"] as? String
-        
-        return generateLabel(nama, hargaJual, sku, stok, satuan, barcodeData)
-    }
+            val nama = jsonData["nama"] as? String ?: "Unknown"
+            val hargaJual = (jsonData["harga_jual"] as? Number ?: jsonData["hargaJual"] as? Number ?: 0L).toLong()
+            val hargaBeli = (jsonData["harga_beli"] as? Number ?: jsonData["hargaBeli"] as? Number ?: 0L).toLong()
+            val sku = jsonData["sku"] as? String ?: jsonData["kode_barang"] as? String ?: "000000"
+            val satuan = jsonData["satuan"] as? String ?: "pcs"
+            val barcodeData = jsonData["barcode"] as? String
+
+            return generateLabel(nama, hargaJual, hargaBeli, sku, satuan, barcodeData)
+        }
     
     /**
      * Generate Code128 barcode bitmap
