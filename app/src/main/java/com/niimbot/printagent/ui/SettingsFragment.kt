@@ -14,7 +14,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import com.niimbot.printagent.R
 import com.niimbot.printagent.data.AppDatabase
-import com.niimbot.printagent.data.PrinterConfig
 import com.niimbot.printagent.label.LabelGenerator
 import com.niimbot.printagent.service.PrintForegroundService
 import kotlinx.coroutines.CoroutineScope
@@ -41,10 +40,6 @@ class SettingsFragment : Fragment() {
     // Label preview
     private var ivLabelPreview: ImageView? = null
     private var btnGeneratePreview: Button? = null
-    
-    // Printer config
-    private var tvPairedPrinter: TextView? = null
-    private var btnForgetPrinter: Button? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -56,7 +51,6 @@ class SettingsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         
         bindViews(view)
-        observePrinterConfig()
         setupClickListeners()
         loadSettings()
     }
@@ -75,24 +69,9 @@ class SettingsFragment : Fragment() {
         // Label preview
         ivLabelPreview = view.findViewById(R.id.iv_label_preview)
         btnGeneratePreview = view.findViewById(R.id.btn_generate_preview)
-        
-        // Printer
-        tvPairedPrinter = view.findViewById(R.id.tv_paired_printer)
-        btnForgetPrinter = view.findViewById(R.id.btn_forget_printer)
     }
     
-    private fun observePrinterConfig() {
-        database.printerConfigDao().getConfig().observe(viewLifecycleOwner) { config ->
-            config?.let {
-                tvPairedPrinter?.text = if (it.macAddress != null) {
-                    "${it.name} (${it.macAddress})"
-                } else {
-                    "No printer paired"
-                }
-                btnForgetPrinter?.visibility = if (it.macAddress != null) View.VISIBLE else View.GONE
-            }
-        }
-    }
+
     
     private fun loadSettings() {
         val prefs = requireContext().getSharedPreferences("niimbot_prefs", android.content.Context.MODE_PRIVATE)
@@ -132,11 +111,6 @@ class SettingsFragment : Fragment() {
         btnGeneratePreview?.setOnClickListener {
             generateLabelPreview()
         }
-        
-        // Forget printer
-        btnForgetPrinter?.setOnClickListener {
-            forgetPrinter()
-        }
     }
     
     private fun restartPrintServer(port: Int) {
@@ -166,25 +140,5 @@ class SettingsFragment : Fragment() {
                 Toast.makeText(requireContext(), "Preview generated", Toast.LENGTH_SHORT).show()
             }
         }
-    }
-    
-    private fun forgetPrinter() {
-        val prefs = requireContext().getSharedPreferences("niimbot_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit()
-            .remove("printer_mac")
-            .remove("printer_name")
-            .apply()
-        
-        // Clear database
-        CoroutineScope(Dispatchers.IO).launch {
-            database.printerConfigDao().clear()
-        }
-        
-        // Disconnect BLE
-        val bleManager = (requireActivity().applicationContext as com.niimbot.printagent.NiimbotPrintApplication)
-            .getNiimbotManager()
-        bleManager.disconnect()
-        
-        Toast.makeText(requireContext(), "Printer forgotten", Toast.LENGTH_SHORT).show()
     }
 }

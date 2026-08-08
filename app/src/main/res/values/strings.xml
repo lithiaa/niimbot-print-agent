@@ -61,4 +61,9 @@
     <string name="generate_preview">Generate Preview</string>
     <string name="printer_config">Printer Configuration</string>
     <string name="forget_printer">Forget Printer</string>
-</resources>
+    
+    <!-- Server Info -->
+    <string name="server_info">Server Info</string>
+    <string name="server_endpoint">Endpoint</string>
+    <string name="server_status_label">Status</string>
+</resources>

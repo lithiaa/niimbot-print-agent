@@ -36,6 +36,7 @@ class PrinterFragment : Fragment() {
     private var rvDevices: RecyclerView? = null
     private var tvDiscoveredLabel: TextView? = null
     private var deviceAdapter: DeviceAdapter? = null
+    private var btnForgetPrinter: Button? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -60,6 +61,7 @@ class PrinterFragment : Fragment() {
         rvDevices?.layoutManager = LinearLayoutManager(requireContext())
         deviceAdapter = DeviceAdapter()
         rvDevices?.adapter = deviceAdapter
+        btnForgetPrinter = view.findViewById(R.id.btn_forget_printer)
         
         observePrinterConfig()
         observeBleState()
@@ -72,6 +74,7 @@ class PrinterFragment : Fragment() {
                 tvPrinterName?.text = it.name
                 tvPrinterMac?.text = it.macAddress ?: "Not paired"
                 tvPrinterModel?.text = it.model
+                btnForgetPrinter?.visibility = if (it.macAddress != null) View.VISIBLE else View.GONE
             }
         }
     }
@@ -135,6 +138,10 @@ class PrinterFragment : Fragment() {
         deviceAdapter?.onItemClick = { device ->
             pairPrinter(device)
         }
+        
+        btnForgetPrinter?.setOnClickListener {
+            forgetPrinter()
+        }
     }
     
     private fun pairPrinter(device: android.bluetooth.BluetoothDevice) {
@@ -168,6 +175,26 @@ class PrinterFragment : Fragment() {
                 }
             }
         }
+    }
+    
+    private fun forgetPrinter() {
+        val prefs = requireContext().getSharedPreferences("niimbot_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit()
+            .remove("printer_mac")
+            .remove("printer_name")
+            .apply()
+        
+        // Clear database
+        CoroutineScope(Dispatchers.IO).launch {
+            database.printerConfigDao().clear()
+        }
+        
+        // Disconnect BLE
+        val bleManager = (requireActivity().applicationContext as com.niimbot.printagent.NiimbotPrintApplication)
+            .getNiimbotManager()
+        bleManager.disconnect()
+        
+        android.widget.Toast.makeText(requireContext(), "Printer forgotten", android.widget.Toast.LENGTH_SHORT).show()
     }
 }
 

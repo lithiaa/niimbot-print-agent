@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
+    android:clipToPadding="false"
     android:fillViewport="true">
 
     <LinearLayout
@@ -131,6 +132,19 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- Forget Printer (visible only when paired) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_forget_printer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="@string/forget_printer"
+            android:icon="@drawable/ic_delete"
+            app:iconGravity="start"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:cornerRadius="12dp"
+            android:visibility="gone" />
 
         <!-- Battery Card -->
         <com.google.android.material.card.MaterialCardView

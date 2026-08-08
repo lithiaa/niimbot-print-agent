@@ -31,6 +31,8 @@ class DashboardFragment : Fragment() {
     private var tvDoneCount: TextView? = null
     private var tvFailedCount: TextView? = null
     private var tvUptime: TextView? = null
+    private var tvServerEndpoint: TextView? = null
+    private var tvServerStatus: TextView? = null
 
     private var uptimeJob: Job? = null
 
@@ -49,8 +51,11 @@ class DashboardFragment : Fragment() {
         tvDoneCount     = view.findViewById(R.id.tv_done_count)
         tvFailedCount   = view.findViewById(R.id.tv_failed_count)
         tvUptime        = view.findViewById(R.id.tv_uptime)
+        tvServerEndpoint = view.findViewById(R.id.tv_server_endpoint)
+        tvServerStatus  = view.findViewById(R.id.tv_server_status)
 
         observeData()
+        showServerInfo()
     }
 
     override fun onResume() {
@@ -94,6 +99,31 @@ class DashboardFragment : Fragment() {
         database.printJobDao().getByStatus(PrintStatus.FAILED).observe(viewLifecycleOwner) { jobs ->
             tvFailedCount?.text = (jobs?.size ?: 0).toString()
         }
+    }
+
+    private fun showServerInfo() {
+        val prefs = requireContext().getSharedPreferences("niimbot_prefs", android.content.Context.MODE_PRIVATE)
+        val port = prefs.getInt("server_port", 8080)
+        val ip = getDeviceIpAddress()
+        tvServerEndpoint?.text = "$ip:$port"
+        tvServerStatus?.text = "🟢 Running"
+    }
+
+    private fun getDeviceIpAddress(): String {
+        try {
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
+            while (interfaces.hasMoreElements()) {
+                val networkInterface = interfaces.nextElement()
+                val addresses = networkInterface.inetAddresses
+                while (addresses.hasMoreElements()) {
+                    val address = addresses.nextElement()
+                    if (!address.isLoopbackAddress && address is java.net.Inet4Address) {
+                        return address.hostAddress ?: "0.0.0.0"
+                    }
+                }
+            }
+        } catch (_: Exception) { }
+        return "0.0.0.0"
     }
 
     companion object {
