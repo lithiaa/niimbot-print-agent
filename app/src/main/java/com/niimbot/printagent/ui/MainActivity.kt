@@ -134,6 +134,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return super.onOptionsItemSelected(item)
+        return when (item.itemId) {
+            R.id.action_test_print -> {
+                val intent = Intent(this, PrintForegroundService::class.java).apply {
+                    action = PrintForegroundService.ACTION_TEST_PRINT
+                    putExtra(PrintForegroundService.EXTRA_TEST_DATA, "MANUAL TEST")
+                }
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+
     }
 }
