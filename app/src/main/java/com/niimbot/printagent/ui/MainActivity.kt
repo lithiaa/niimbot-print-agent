@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_dashboard -> DashboardFragment()
                 R.id.nav_printer   -> PrinterFragment()
                 R.id.nav_queue     -> PrintQueueFragment()
-                R.id.nav_logs      -> LogsFragment()
+                R.id.nav_label     -> LabelFragment()
                 R.id.nav_settings  -> SettingsFragment()
                 else -> return@setOnItemSelectedListener false
             }
@@ -101,6 +101,10 @@ class MainActivity : AppCompatActivity() {
                 .commit()
             bottomNav.selectedItemId = R.id.nav_dashboard
         }
+    }
+
+    fun selectLabelTab() {
+        bottomNav.selectedItemId = R.id.nav_label
     }
 
     private fun observePrintQueue() {

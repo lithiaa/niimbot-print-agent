@@ -84,6 +84,10 @@ class DashboardFragment : Fragment() {
         printerGauge = view.findViewById(R.id.chart_printer_gauge)
         recentTrendChart = view.findViewById(R.id.chart_recent_trend)
 
+        view.findViewById<View>(R.id.btn_dashboard_create_label).setOnClickListener {
+            (requireActivity() as MainActivity).selectLabelTab()
+        }
+
         observeData()
     }
 

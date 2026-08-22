@@ -11,22 +11,37 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import com.niimbot.printagent.R
 import com.niimbot.printagent.data.AppDatabase
-import com.niimbot.printagent.data.PrinterConfig
 import com.niimbot.printagent.label.LabelGenerator
+import com.niimbot.printagent.pos.IntegrationConfigStore
+import com.niimbot.printagent.pos.PosApiClient
+import com.niimbot.printagent.pos.PosApiResult
+import com.niimbot.printagent.pos.PosProductRules
 import com.niimbot.printagent.service.PrintForegroundService
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import dagger.hilt.android.AndroidEntryPoint
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 @AndroidEntryPoint
 class SettingsFragment : Fragment() {
 
     @javax.inject.Inject
     lateinit var database: AppDatabase
+
+    @javax.inject.Inject
+    lateinit var integrationConfigStore: IntegrationConfigStore
+
+    @javax.inject.Inject
+    lateinit var posApiClient: PosApiClient
+
+    private var etPosBaseUrl: EditText? = null
+    private var etPosIntegrationKey: EditText? = null
+    private var btnSavePosConfig: Button? = null
+    private var btnTestPosConnection: Button? = null
     
     // Server config
     private var etServerPort: EditText? = null
@@ -62,6 +77,11 @@ class SettingsFragment : Fragment() {
     }
     
     private fun bindViews(view: View) {
+        etPosBaseUrl = view.findViewById(R.id.et_pos_base_url)
+        etPosIntegrationKey = view.findViewById(R.id.et_pos_integration_key)
+        btnSavePosConfig = view.findViewById(R.id.btn_save_pos_config)
+        btnTestPosConnection = view.findViewById(R.id.btn_test_pos_connection)
+
         // Server
         etServerPort = view.findViewById(R.id.et_server_port)
         btnSavePort = view.findViewById(R.id.btn_save_port)
@@ -101,9 +121,21 @@ class SettingsFragment : Fragment() {
         etTunnelUrl?.setText(prefs.getString("tunnel_url", ""))
         swTailscale?.isChecked = prefs.getBoolean("tailscale_enabled", false)
         swLanOnly?.isChecked = prefs.getBoolean("lan_only", true)
+        etPosBaseUrl?.setText(integrationConfigStore.getBaseUrl())
+        etPosIntegrationKey?.setText(
+            if (integrationConfigStore.hasIntegrationKey()) IntegrationConfigStore.MASKED_KEY else ""
+        )
     }
     
     private fun setupClickListeners() {
+        btnSavePosConfig?.setOnClickListener { savePosConfig() }
+        btnTestPosConnection?.setOnClickListener { testPosConnection() }
+        etPosIntegrationKey?.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && etPosIntegrationKey?.text.toString() == IntegrationConfigStore.MASKED_KEY) {
+                etPosIntegrationKey?.text?.clear()
+            }
+        }
+
         // Server port
         btnSavePort?.setOnClickListener {
             val port = etServerPort?.text?.toString()?.toIntOrNull() ?: 8080
@@ -151,20 +183,68 @@ class SettingsFragment : Fragment() {
     }
     
     private fun generateLabelPreview() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val bitmap = LabelGenerator.generateLabel(
-                nama = "Sample Product Name",
-                hargaJual = 25000,
-                sku = "SPL001",
-                stok = 100,
-                satuan = "pcs",
-                barcodeData = "SPL001"
-            )
-            
-            requireActivity().runOnUiThread {
-                ivLabelPreview?.setImageBitmap(bitmap)
-                Toast.makeText(requireContext(), "Preview generated", Toast.LENGTH_SHORT).show()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val bitmap = withContext(Dispatchers.Default) {
+                LabelGenerator.generateLabel(
+                    nama = "Sample Product Name",
+                    hargaJual = 25000,
+                    hargaBeli = 18000,
+                    sku = "SPL001",
+                    satuan = "pcs",
+                    barcodeData = "SPL001"
+                )
             }
+            ivLabelPreview?.setImageBitmap(bitmap)
+            Toast.makeText(requireContext(), "Preview generated", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun savePosConfig() {
+        val baseUrl = PosProductRules.normalizeBaseUrl(etPosBaseUrl?.text.toString())
+        if (baseUrl.toHttpUrlOrNull() == null) {
+            etPosBaseUrl?.error = getString(R.string.pos_url_invalid)
+            return
+        }
+        etPosBaseUrl?.error = null
+        integrationConfigStore.setBaseUrl(baseUrl)
+        val enteredKey = etPosIntegrationKey?.text.toString()
+        if (enteredKey.isNotBlank() && enteredKey != IntegrationConfigStore.MASKED_KEY) {
+            integrationConfigStore.setIntegrationKey(enteredKey)
+        }
+        etPosIntegrationKey?.setText(
+            if (integrationConfigStore.hasIntegrationKey()) IntegrationConfigStore.MASKED_KEY else ""
+        )
+        Toast.makeText(requireContext(), R.string.pos_config_saved, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun testPosConnection() {
+        val baseUrl = PosProductRules.normalizeBaseUrl(etPosBaseUrl?.text.toString())
+        if (baseUrl.toHttpUrlOrNull() == null) {
+            etPosBaseUrl?.error = getString(R.string.pos_url_invalid)
+            return
+        }
+        val enteredKey = etPosIntegrationKey?.text.toString()
+        val key = if (enteredKey.isNotBlank() && enteredKey != IntegrationConfigStore.MASKED_KEY) {
+            enteredKey.trim()
+        } else {
+            integrationConfigStore.getIntegrationKey()
+        }
+        if (key.isNullOrBlank()) {
+            etPosIntegrationKey?.error = getString(R.string.pos_test_key_required)
+            return
+        }
+        etPosIntegrationKey?.error = null
+        btnTestPosConnection?.isEnabled = false
+        viewLifecycleOwner.lifecycleScope.launch {
+            val result = runCatching { posApiClient.testConnection(baseUrl, key) }
+                .getOrElse { PosApiResult.Failure(it.message ?: getString(R.string.pos_request_failed)) }
+            btnTestPosConnection?.isEnabled = true
+            val message = when (result) {
+                is PosApiResult.Success -> getString(R.string.pos_test_success)
+                is PosApiResult.Failure -> result.message
+                PosApiResult.NotFound -> getString(R.string.pos_test_success)
+            }
+            Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
         }
     }
     
@@ -176,7 +256,7 @@ class SettingsFragment : Fragment() {
             .apply()
         
         // Clear database
-        CoroutineScope(Dispatchers.IO).launch {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             database.printerConfigDao().clear()
         }
         

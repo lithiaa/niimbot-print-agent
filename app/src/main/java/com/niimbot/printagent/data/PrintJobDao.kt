@@ -40,6 +40,9 @@ interface PrintJobDao {
     @Query("SELECT * FROM print_jobs WHERE status = :status ORDER BY priority DESC, createdAt ASC")
     suspend fun getByStatusSync(status: PrintStatus): List<PrintJob>
 
+    @Query("SELECT * FROM print_jobs WHERE status = :status ORDER BY priority DESC, createdAt ASC LIMIT 1")
+    suspend fun getNextPendingSync(status: PrintStatus = PrintStatus.PENDING): PrintJob?
+
     @Query("SELECT * FROM print_jobs ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")
     suspend fun getAllPagedSync(limit: Int, offset: Int): List<PrintJob>
 

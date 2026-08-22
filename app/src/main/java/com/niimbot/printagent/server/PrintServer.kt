@@ -1,8 +1,7 @@
 package com.niimbot.printagent.server
 
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.util.Base64
+import android.content.Intent
 import android.util.Log
 import com.niimbot.printagent.ble.NiimbotBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
@@ -10,7 +9,7 @@ import com.niimbot.printagent.data.LogAction
 import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintLog
 import com.niimbot.printagent.data.PrintStatus
-import com.niimbot.printagent.label.LabelGenerator
+import com.niimbot.printagent.service.PrintForegroundService
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
@@ -31,11 +30,6 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 
 // ===================== DTOs =====================
@@ -111,8 +105,6 @@ class PrintServer(
 ) {
 
     private var server: ApplicationEngine? = null
-    private val printQueue = Channel<PrintJob>(100)
-    private val serverScope = CoroutineScope(Dispatchers.IO)
     private val startTime = System.currentTimeMillis()
 
     // Config (settable from service)
@@ -120,8 +112,6 @@ class PrintServer(
     var host = "0.0.0.0"
 
     fun start() {
-        serverScope.launch { processQueue() }
-
         server = embeddedServer(Netty, port = port, host = host) {
             install(ContentNegotiation) {
                 json()
@@ -178,8 +168,6 @@ class PrintServer(
 
                         if (job != null) {
                             val jobId = database.printJobDao().insert(job)
-                            val savedJob = job.copy(id = jobId)
-
                             database.printLogDao().insert(
                                 PrintLog(
                                     printJobId = jobId,
@@ -187,7 +175,7 @@ class PrintServer(
                                 )
                             )
 
-                            printQueue.send(savedJob)
+                            signalQueue(jobId)
 
                             call.respond(
                                 PrintResponse(
@@ -249,7 +237,10 @@ class PrintServer(
                         qty = 1
                     )
                     val jobId = database.printJobDao().insert(testJob)
-                    printQueue.send(testJob.copy(id = jobId))
+                    database.printLogDao().insert(
+                        PrintLog(printJobId = jobId, action = LogAction.QUEUED)
+                    )
+                    signalQueue(jobId)
                     call.respond(PrintResponse(success = true, jobId = jobId, message = "Test print queued"))
                 }
             }
@@ -260,7 +251,6 @@ class PrintServer(
 
     fun stop() {
         server?.stop(1000, 2000)
-        printQueue.close()
         Log.i("PrintServer", "HTTP server stopped")
     }
 
@@ -298,6 +288,7 @@ class PrintServer(
         return PrintJob(
             nama = "RAW-$ts",
             hargaJual = 0,
+            hargaBeli = 0,
             sku = "RAW",
             stok = 0,
             satuan = "pcs",
@@ -338,68 +329,13 @@ class PrintServer(
         }
     }
 
-    // ─── Queue processor ───────────────────────────────────────────────────
-
-    private suspend fun processQueue() {
-        for (job in printQueue) {
-            // Update status to PRINTING
-            database.printJobDao().updateStatus(job.id, PrintStatus.PRINTING, null)
-            database.printLogDao().insert(
-                PrintLog(printJobId = job.id, action = LogAction.PRINTING_STARTED)
-            )
-
-            val success = printViaBle(job)
-
-            if (success) {
-                database.printJobDao().updateStatus(job.id, PrintStatus.DONE, null)
-                database.printLogDao().insert(
-                    PrintLog(printJobId = job.id, action = LogAction.PRINTING_COMPLETED)
-                )
-            } else {
-                if (job.retryCount < 3) {
-                    database.printJobDao().incrementRetry(job.id)
-                    database.printJobDao().updateStatus(job.id, PrintStatus.PENDING, "Retry ${job.retryCount + 1}")
-                    printQueue.send(job.copy(retryCount = job.retryCount + 1))
-                } else {
-                    database.printJobDao().updateStatus(job.id, PrintStatus.FAILED, "Max retries exceeded")
-                    database.printLogDao().insert(
-                        PrintLog(
-                            printJobId = job.id,
-                            action = LogAction.PRINTING_FAILED,
-                            errorDetail = "Max retries exceeded"
-                        )
-                    )
-                }
-            }
-
-            // Small delay between consecutive prints
-            kotlinx.coroutines.delay(500)
+    private fun signalQueue(jobId: Long) {
+        val intent = Intent(context, PrintForegroundService::class.java).apply {
+            action = PrintForegroundService.ACTION_ENQUEUE
+            putExtra(PrintForegroundService.EXTRA_JOB_ID, jobId)
         }
-    }
-
-    private suspend fun printViaBle(job: PrintJob): Boolean {
-        // Generate label bitmap
-        val bitmap = LabelGenerator.generateLabel(
-            nama = job.nama,
-            hargaJual = job.hargaJual,
-            hargaBeli = job.hargaBeli,
-            sku = job.sku,
-            satuan = job.satuan,
-            barcodeData = job.barcode
-        )
-
-        // Print via BLE with 30s timeout
-        val resultChannel = Channel<Boolean>(1)
-        bleManager.printBitmap(bitmap) { success, error ->
-            serverScope.launch { resultChannel.send(success) }
-        }
-
-        return withTimeoutOrNull(30_000L) {
-            resultChannel.receive()
-        } ?: run {
-            Log.e("PrintServer", "BLE print timeout for job #${job.id}")
-            false
-        }
+        // The HTTP server only exists while this foreground service is already running.
+        context.startService(intent)
     }
 
     // ─── DAO helpers ───────────────────────────────────────────────────────

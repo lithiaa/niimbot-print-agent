@@ -17,12 +17,23 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="8dp"
             android:fontFamily="sans-serif"
             android:text="Dashboard"
             android:textColor="@color/text_primary"
             android:textSize="24sp"
             android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_dashboard_create_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="@string/dashboard_create_label_description"
+            android:minHeight="48dp"
+            android:text="@string/create_label_title"
+            app:icon="@drawable/ic_preview"
+            app:iconGravity="textStart" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"

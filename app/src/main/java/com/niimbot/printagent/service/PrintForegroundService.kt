@@ -28,6 +28,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -42,7 +43,9 @@ class PrintForegroundService : Service() {
         const val ACTION_START = "com.niimbot.printagent.START"
         const val ACTION_STOP = "com.niimbot.printagent.STOP"
         const val ACTION_TEST_PRINT = "com.niimbot.printagent.TEST_PRINT"
+        const val ACTION_ENQUEUE = "com.niimbot.printagent.ENQUEUE"
         const val EXTRA_TEST_DATA = "test_data"
+        const val EXTRA_JOB_ID = "job_id"
 
         private const val TAG = "PrintService"
     }
@@ -61,7 +64,7 @@ class PrintForegroundService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
 
     private val serviceScope = CoroutineScope(Dispatchers.IO)
-    private val printQueue = Channel<PrintJob>(100)
+    private val queueSignal = Channel<Unit>(Channel.CONFLATED)
     private var queueJob: Job? = null
     private var reconnectJob: Job? = null
 
@@ -72,6 +75,7 @@ class PrintForegroundService : Service() {
             NiimbotBluetoothManager.STATE_CONNECTED -> {
                 Log.i(TAG, "BLE Connected ✅")
                 prefs.edit().putLong("last_connected", System.currentTimeMillis()).apply()
+                queueSignal.trySend(Unit)
             }
             NiimbotBluetoothManager.STATE_DISCONNECTED -> {
                 Log.w(TAG, "BLE Disconnected — scheduling reconnect")
@@ -88,8 +92,6 @@ class PrintForegroundService : Service() {
         }
     }
 
-    private var isProcessing = false
-
     override fun onCreate() {
         super.onCreate()
 
@@ -97,6 +99,7 @@ class PrintForegroundService : Service() {
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         createNotificationChannel()
+        startForeground(NOTIFICATION_ID, buildNotification())
         acquireWakeLock()
 
         // Start HTTP server
@@ -113,6 +116,7 @@ class PrintForegroundService : Service() {
 
         // Start queue processor
         queueJob = serviceScope.launch { processQueue() }
+        queueSignal.trySend(Unit)
 
         // Observe BLE state changes (use Handler for LiveData from non-main thread)
         observeBleState()
@@ -125,7 +129,6 @@ class PrintForegroundService : Service() {
 
         when (action) {
             ACTION_START -> {
-                startForeground(NOTIFICATION_ID, buildNotification())
                 Log.i(TAG, "Foreground service started")
             }
             ACTION_STOP -> {
@@ -136,6 +139,9 @@ class PrintForegroundService : Service() {
                 val testData = intent?.getStringExtra(EXTRA_TEST_DATA) ?: "TEST LABEL"
                 sendTestPrint(testData)
             }
+            ACTION_ENQUEUE -> {
+                queueSignal.trySend(Unit)
+            }
         }
 
         return START_STICKY
@@ -145,7 +151,9 @@ class PrintForegroundService : Service() {
 
     override fun onDestroy() {
         queueJob?.cancel()
+        queueSignal.close()
         reconnectJob?.cancel()
+        serviceScope.cancel()
         printServer.stop()
         bleManager.cleanup()
         releaseWakeLock()
@@ -252,56 +260,67 @@ class PrintForegroundService : Service() {
     // ─── Print Queue ───────────────────────────────────────────────────────
 
     private suspend fun processQueue() {
-        for (job in printQueue) {
-            if (isProcessing) {
-                // Re-enqueue and skip
-                printQueue.send(job)
-                delay(500)
-                continue
-            }
-            isProcessing = true
+        recoverInterruptedJobs()
+        for (ignored in queueSignal) {
+            while (true) {
+                val job = database.printJobDao().getNextPendingSync() ?: break
 
-            // Update status to PRINTING
-            database.printJobDao().updateStatus(job.id, PrintStatus.PRINTING, null)
-            database.printLogDao().insert(
-                PrintLog(printJobId = job.id, action = LogAction.PRINTING_STARTED)
-            )
+                // Check printer before claiming the Room job.
+                if (bleManager.connectionStateLive.value != NiimbotBluetoothManager.STATE_CONNECTED) {
+                    database.printJobDao().updateStatus(job.id, PrintStatus.PENDING, "Printer not connected")
+                    serviceScope.launch {
+                        delay(5000)
+                        queueSignal.trySend(Unit)
+                    }
+                    break
+                }
 
-            // Check printer connection
-            if (bleManager.connectionStateLive.value != NiimbotBluetoothManager.STATE_CONNECTED) {
-                Log.w(TAG, "Printer not connected, re-queuing job #${job.id}")
-                database.printJobDao().updateStatus(job.id, PrintStatus.PENDING, "Printer not connected")
-                delay(5000)
-                printQueue.send(job)
-                isProcessing = false
-                continue
-            }
-
-            // Generate label
-            val bitmap = LabelGenerator.generateLabel(
-                nama = job.nama,
-                hargaJual = job.hargaJual,
-                sku = job.sku,
-                stok = job.stok,
-                satuan = job.satuan,
-                barcodeData = job.barcode
-            )
-
-            // Print via BLE (with timeout)
-            val success = printViaBleBlocking(bitmap, job.id)
-
-            if (success) {
-                database.printJobDao().updateStatus(job.id, PrintStatus.DONE, null)
+                database.printJobDao().updateStatus(job.id, PrintStatus.PRINTING, null)
                 database.printLogDao().insert(
-                    PrintLog(printJobId = job.id, action = LogAction.PRINTING_COMPLETED)
+                    PrintLog(printJobId = job.id, action = LogAction.PRINTING_STARTED)
                 )
-                Log.i(TAG, "Job #${job.id} printed successfully")
-            } else {
-                handlePrintFailure(job)
-            }
 
-            isProcessing = false
-            delay(500) // Small delay between prints
+                val bitmap = LabelGenerator.generateLabel(
+                    nama = job.nama,
+                    hargaJual = job.hargaJual,
+                    hargaBeli = job.hargaBeli,
+                    sku = job.sku,
+                    satuan = job.satuan,
+                    barcodeData = job.barcode
+                )
+
+                val requestedCopies = job.qty.coerceAtLeast(1)
+                var printedCopies = 0
+                while (
+                    printedCopies < requestedCopies &&
+                    printViaBleBlocking(bitmap, job.id)
+                ) {
+                    printedCopies++
+                }
+
+                if (printedCopies == requestedCopies) {
+                    database.printJobDao().updateStatus(job.id, PrintStatus.DONE, null)
+                    database.printLogDao().insert(
+                        PrintLog(printJobId = job.id, action = LogAction.PRINTING_COMPLETED)
+                    )
+                    Log.i(TAG, "Job #${job.id} printed successfully")
+                } else if (printedCopies > 0) {
+                    markPrintFailed(
+                        job.id,
+                        "Printed $printedCopies/$requestedCopies copies; automatic retry stopped to avoid duplicates"
+                    )
+                } else {
+                    handlePrintFailure(job)
+                }
+
+                delay(500)
+            }
+        }
+    }
+
+    private suspend fun recoverInterruptedJobs() {
+        database.printJobDao().getByStatusSync(PrintStatus.PRINTING).forEach { job ->
+            markPrintFailed(job.id, "Print interrupted; completion unknown, so automatic retry was stopped")
         }
     }
 
@@ -309,7 +328,7 @@ class PrintForegroundService : Service() {
         val resultChannel = Channel<Boolean>(1)
 
         bleManager.printBitmap(bitmap) { success, error ->
-            serviceScope.launch { resultChannel.send(success) }
+            resultChannel.trySend(success)
             if (!success) Log.e(TAG, "BLE print error for job #$jobId: $error")
         }
 
@@ -327,19 +346,23 @@ class PrintForegroundService : Service() {
             database.printJobDao().incrementRetry(job.id)
             database.printJobDao().updateStatus(job.id, PrintStatus.PENDING, "Retry $nextRetry/3")
             delay(2000)
-            printQueue.send(job.copy(retryCount = nextRetry))
+            queueSignal.trySend(Unit)
             Log.w(TAG, "Job #${job.id} failed — retry $nextRetry/3")
         } else {
-            database.printJobDao().updateStatus(job.id, PrintStatus.FAILED, "Max retries exceeded")
-            database.printLogDao().insert(
-                PrintLog(
-                    printJobId = job.id,
-                    action = LogAction.PRINTING_FAILED,
-                    errorDetail = "Max retries exceeded"
-                )
-            )
-            Log.e(TAG, "Job #${job.id} permanently failed")
+            markPrintFailed(job.id, "Max retries exceeded")
         }
+    }
+
+    private suspend fun markPrintFailed(jobId: Long, error: String) {
+        database.printJobDao().updateStatus(jobId, PrintStatus.FAILED, error)
+        database.printLogDao().insert(
+            PrintLog(
+                printJobId = jobId,
+                action = LogAction.PRINTING_FAILED,
+                errorDetail = error
+            )
+        )
+        Log.e(TAG, "Job #$jobId failed: $error")
     }
 
     private fun sendTestPrint(text: String) {
@@ -347,13 +370,14 @@ class PrintForegroundService : Service() {
             val testJob = PrintJob(
                 nama = text,
                 hargaJual = 99999,
+                hargaBeli = 75000,
                 sku = "TEST001",
-                stok = 1,
                 satuan = "pcs",
                 qty = 1
             )
             val jobId = database.printJobDao().insert(testJob)
-            printQueue.send(testJob.copy(id = jobId))
+            database.printLogDao().insert(PrintLog(printJobId = jobId, action = LogAction.QUEUED))
+            queueSignal.trySend(Unit)
             Log.i(TAG, "Test print queued, job #$jobId")
         }
     }

@@ -13,6 +13,84 @@
         android:orientation="vertical"
         android:layout_marginBottom="16dp">
 
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/divider"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/pos_config"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="@string/pos_base_url">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_pos_base_url"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/pos_base_url_description"
+                        android:inputType="textUri"
+                        android:minHeight="48dp"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:hint="@string/pos_integration_key">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_pos_integration_key"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/pos_integration_key_description"
+                        android:inputType="textPassword"
+                        android:minHeight="48dp"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_save_pos_config"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:contentDescription="@string/save_pos_config"
+                    android:minHeight="48dp"
+                    android:text="@string/save_pos_config" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_test_pos_connection"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:contentDescription="@string/test_pos_connection"
+                    android:minHeight="48dp"
+                    android:text="@string/test_pos_connection" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Server Configuration -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
