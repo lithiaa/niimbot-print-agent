@@ -42,7 +42,9 @@ class PrintForegroundService : Service() {
         const val ACTION_START = "com.niimbot.printagent.START"
         const val ACTION_STOP = "com.niimbot.printagent.STOP"
         const val ACTION_TEST_PRINT = "com.niimbot.printagent.TEST_PRINT"
+        const val ACTION_RESTART_SERVER = "com.niimbot.printagent.RESTART_SERVER"
         const val EXTRA_TEST_DATA = "test_data"
+        const val EXTRA_SERVER_PORT = "server_port"
 
         private const val TAG = "PrintService"
     }
@@ -123,9 +125,12 @@ class PrintForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action ?: ACTION_START
 
+        if (action != ACTION_STOP) {
+            startForeground(NOTIFICATION_ID, buildNotification())
+        }
+
         when (action) {
             ACTION_START -> {
-                startForeground(NOTIFICATION_ID, buildNotification())
                 Log.i(TAG, "Foreground service started")
             }
             ACTION_STOP -> {
@@ -135,6 +140,14 @@ class PrintForegroundService : Service() {
             ACTION_TEST_PRINT -> {
                 val testData = intent?.getStringExtra(EXTRA_TEST_DATA) ?: "TEST LABEL"
                 sendTestPrint(testData)
+            }
+            ACTION_RESTART_SERVER -> {
+                val port = intent?.getIntExtra(EXTRA_SERVER_PORT, prefs.getInt("server_port", 8080))
+                    ?: 8080
+                printServer.stop()
+                printServer.port = port
+                printServer.start()
+                Log.i(TAG, "Print server restarted on port $port")
             }
         }
 

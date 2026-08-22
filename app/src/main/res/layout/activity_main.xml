@@ -7,37 +7,50 @@
     android:background="@color/background">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/surface"
-        android:elevation="0dp">
+        android:background="@drawable/bg_app_header"
+        android:elevation="0dp"
+        app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/surface"
-            app:title="@string/app_name"
-            app:titleTextColor="@color/text_primary"
-            app:menu="@menu/menu_main" />
+            android:layout_height="84dp"
+            android:background="@android:color/transparent"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            app:title="@string/dashboard_title"
+            app:subtitle="@string/app_name"
+            app:subtitleCentered="true"
+            app:subtitleTextColor="#C9C5FF"
+            app:titleCentered="true"
+            app:titleTextColor="@color/white"
+            app:titleTextAppearance="@style/TextAppearance.MaterialComponents.Subtitle1" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <FrameLayout
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingBottom="56dp"
-        android:clipToPadding="false"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+        android:paddingBottom="92dp"
+        android:clipToPadding="false" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="68dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="12dp"
         android:layout_gravity="bottom"
-        android:background="@color/surface"
-        app:itemIconTint="@color/primary"
-        app:itemTextColor="@color/primary"
+        android:background="@drawable/bg_floating_nav"
+        android:elevation="12dp"
+        app:elevation="12dp"
+        app:itemHorizontalTranslationEnabled="false"
+        app:itemIconSize="21dp"
+        app:itemPaddingBottom="6dp"
+        app:itemPaddingTop="7dp"
         app:labelVisibilityMode="labeled"
         app:menu="@menu/menu_bottom_nav" />
 

@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.niimbot.printagent.R
@@ -18,6 +19,7 @@ import com.niimbot.printagent.ble.NiimbotBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintStatus
+import com.niimbot.printagent.service.PrintForegroundService
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -90,6 +92,22 @@ class DashboardFragment : Fragment() {
 
         observeData()
         showServerInfo()
+        setupActions(view)
+    }
+
+    private fun setupActions(view: View) {
+        view.findViewById<View>(R.id.btn_quick_test_print).setOnClickListener {
+            val intent = Intent(requireContext(), PrintForegroundService::class.java).apply {
+                action = PrintForegroundService.ACTION_TEST_PRINT
+                putExtra(PrintForegroundService.EXTRA_TEST_DATA, "DASHBOARD TEST")
+            }
+            ContextCompat.startForegroundService(requireContext(), intent)
+        }
+        view.findViewById<View>(R.id.btn_open_queue).setOnClickListener {
+            requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
+                R.id.bottom_navigation
+            ).selectedItemId = R.id.nav_queue
+        }
     }
 
     override fun onResume() {

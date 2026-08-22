@@ -5,12 +5,16 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.appbar.AppBarLayout
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import com.niimbot.printagent.R
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.data.PrintStatus
@@ -25,12 +29,19 @@ class MainActivity : AppCompatActivity() {
     lateinit var database: AppDatabase
 
     private lateinit var bottomNav: BottomNavigationView
+    private lateinit var toolbar: MaterialToolbar
+    private lateinit var appBar: AppBarLayout
+    private lateinit var fragmentContainer: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        toolbar = findViewById(R.id.toolbar)
+        appBar = findViewById(R.id.app_bar)
+        fragmentContainer = findViewById(R.id.fragment_container)
         bottomNav = findViewById(R.id.bottom_navigation)
+        setSupportActionBar(toolbar)
 
         setupBottomNavigation(savedInstanceState)
         observePrintQueue()
@@ -80,27 +91,38 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupBottomNavigation(savedInstanceState: Bundle?) {
         bottomNav.setOnItemSelectedListener { item ->
-            val fragment = when (item.itemId) {
-                R.id.nav_dashboard -> DashboardFragment()
-                R.id.nav_printer   -> PrinterFragment()
-                R.id.nav_queue     -> PrintQueueFragment()
-                R.id.nav_logs      -> LogsFragment()
-                R.id.nav_settings  -> SettingsFragment()
-                else -> return@setOnItemSelectedListener false
+            showDestination(item.itemId)
+        }
+        bottomNav.setOnItemReselectedListener { item -> showDestination(item.itemId) }
+
+        // Default to dashboard on first launch
+        if (savedInstanceState == null) {
+            bottomNav.selectedItemId = R.id.nav_dashboard
+        }
+    }
+
+    private fun showDestination(itemId: Int): Boolean {
+            val showGlobalHeader = itemId == R.id.nav_queue || itemId == R.id.nav_logs
+            appBar.visibility = if (showGlobalHeader) View.VISIBLE else View.GONE
+            val containerParams = fragmentContainer.layoutParams as CoordinatorLayout.LayoutParams
+            containerParams.topMargin = if (showGlobalHeader) {
+                (84 * resources.displayMetrics.density).toInt()
+            } else {
+                0
+            }
+            fragmentContainer.layoutParams = containerParams
+            val fragment = when (itemId) {
+                R.id.nav_dashboard -> DashboardFragment().also { toolbar.title = getString(R.string.dashboard_title) }
+                R.id.nav_printer   -> PrinterFragment().also { toolbar.title = getString(R.string.printer_title) }
+                R.id.nav_queue     -> PrintQueueFragment().also { toolbar.title = getString(R.string.queue_title) }
+                R.id.nav_logs      -> LogsFragment().also { toolbar.title = getString(R.string.logs_title) }
+                R.id.nav_settings  -> SettingsFragment().also { toolbar.title = getString(R.string.settings_title) }
+                else -> return false
             }
             supportFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .commit()
-            true
-        }
-
-        // Default to dashboard on first launch
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, DashboardFragment())
-                .commit()
-            bottomNav.selectedItemId = R.id.nav_dashboard
-        }
+            return true
     }
 
     private fun observePrintQueue() {
@@ -135,6 +157,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_refresh -> showDestination(bottomNav.selectedItemId)
             R.id.action_test_print -> {
                 val intent = Intent(this, PrintForegroundService::class.java).apply {
                     action = PrintForegroundService.ACTION_TEST_PRINT

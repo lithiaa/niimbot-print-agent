@@ -36,16 +36,6 @@ object LabelGenerator {
         'i' to 'I', 'p' to 'P'
     )
     
-    // SANGUOERIP harga encode map (matches POS config.py)
-    private val HARGA_DECODE_MAP = mapOf(
-        '1' to 'S', '2' to 'A', '3' to 'N', '4' to 'G',
-        '5' to 'U', '6' to 'O', '7' to 'E', '8' to 'R',
-        '9' to 'I', '0' to 'P',
-        's' to 'S', 'a' to 'A', 'n' to 'N', 'g' to 'G',
-        'u' to 'U', 'o' to 'O', 'e' to 'E', 'r' to 'R',
-        'i' to 'I', 'p' to 'P'
-    )
-    
     /**
      * Generate label bitmap from item data
      */

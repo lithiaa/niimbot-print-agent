@@ -85,7 +85,11 @@ class SettingsFragment : Fragment() {
     private fun setupClickListeners() {
         // Server port
         btnSavePort?.setOnClickListener {
-            val port = etServerPort?.text?.toString()?.toIntOrNull() ?: 8080
+            val port = etServerPort?.text?.toString()?.toIntOrNull()
+            if (port == null || port !in 1..65535) {
+                etServerPort?.error = "Port must be between 1 and 65535"
+                return@setOnClickListener
+            }
             val prefs = requireContext().getSharedPreferences("niimbot_prefs", android.content.Context.MODE_PRIVATE)
             prefs.edit().putInt("server_port", port).apply()
             
@@ -115,8 +119,10 @@ class SettingsFragment : Fragment() {
     
     private fun restartPrintServer(port: Int) {
         val context = requireContext()
-        val intent = android.content.Intent(context, PrintForegroundService::class.java)
-        intent.putExtra("restart_port", port)
+        val intent = android.content.Intent(context, PrintForegroundService::class.java).apply {
+            action = PrintForegroundService.ACTION_RESTART_SERVER
+            putExtra(PrintForegroundService.EXTRA_SERVER_PORT, port)
+        }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
         } else {
