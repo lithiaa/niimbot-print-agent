@@ -2,13 +2,12 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/action_test_print"
-        android:title="@string/action_test_print"
-        android:icon="@drawable/ic_printer"
-        app:showAsAction="ifRoom" />
-    <item
         android:id="@+id/action_refresh"
         android:title="@string/action_refresh"
         android:icon="@drawable/ic_refresh"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_test_print"
+        android:title="@string/action_test_print"
+        app:showAsAction="never" />
 </menu>

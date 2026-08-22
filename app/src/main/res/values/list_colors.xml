@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="list_accent">#5747E8</color>
+    <color name="list_accent_dark">#4033C7</color>
+    <color name="list_accent_soft">#EFEDFF</color>
+    <color name="list_surface">#FFFFFF</color>
+    <color name="list_border">#E6E2F7</color>
+    <color name="list_divider">#F0EDF8</color>
+    <color name="list_text_primary">#262238</color>
+    <color name="list_text_secondary">#68637B</color>
+    <color name="list_text_muted">#9C97AD</color>
+    <color name="list_error">#D63D5B</color>
+    <color name="list_error_border">#FFD5DE</color>
+    <color name="list_error_surface">#FFF3F5</color>
+</resources>

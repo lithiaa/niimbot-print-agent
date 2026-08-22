@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.niimbot.printagent.R
@@ -18,6 +19,7 @@ import com.niimbot.printagent.ble.NiimbotBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintStatus
+import com.niimbot.printagent.service.PrintForegroundService
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,6 +52,8 @@ class DashboardFragment : Fragment() {
     private var activityChart: StatusBarChartView? = null
     private var printerGauge: ConnectionGaugeView? = null
     private var recentTrendChart: RecentTrendChartView? = null
+    private var tvServerEndpoint: TextView? = null
+    private var tvServerStatus: TextView? = null
 
     private var pendingJobs: List<PrintJob> = emptyList()
     private var printingJobs: List<PrintJob> = emptyList()
@@ -83,12 +87,31 @@ class DashboardFragment : Fragment() {
         activityChart = view.findViewById(R.id.chart_activity)
         printerGauge = view.findViewById(R.id.chart_printer_gauge)
         recentTrendChart = view.findViewById(R.id.chart_recent_trend)
+        tvServerEndpoint = view.findViewById(R.id.tv_server_endpoint)
+        tvServerStatus  = view.findViewById(R.id.tv_server_status)
 
         view.findViewById<View>(R.id.btn_dashboard_create_label).setOnClickListener {
             (requireActivity() as MainActivity).selectLabelTab()
         }
 
         observeData()
+        showServerInfo()
+        setupActions(view)
+    }
+
+    private fun setupActions(view: View) {
+        view.findViewById<View>(R.id.btn_quick_test_print).setOnClickListener {
+            val intent = Intent(requireContext(), PrintForegroundService::class.java).apply {
+                action = PrintForegroundService.ACTION_TEST_PRINT
+                putExtra(PrintForegroundService.EXTRA_TEST_DATA, "DASHBOARD TEST")
+            }
+            ContextCompat.startForegroundService(requireContext(), intent)
+        }
+        view.findViewById<View>(R.id.btn_open_queue).setOnClickListener {
+            requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
+                R.id.bottom_navigation
+            ).selectedItemId = R.id.nav_queue
+        }
     }
 
     override fun onResume() {
@@ -170,6 +193,31 @@ class DashboardFragment : Fragment() {
         )
         recentTrendChart?.setJobs(pendingJobs + printingJobs + doneJobs + failedJobs)
         printerGauge?.setHasJobs(total > 0)
+    }
+
+    private fun showServerInfo() {
+        val prefs = requireContext().getSharedPreferences("niimbot_prefs", android.content.Context.MODE_PRIVATE)
+        val port = prefs.getInt("server_port", 8080)
+        val ip = getDeviceIpAddress()
+        tvServerEndpoint?.text = "$ip:$port"
+        tvServerStatus?.text = "🟢 Running"
+    }
+
+    private fun getDeviceIpAddress(): String {
+        try {
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
+            while (interfaces.hasMoreElements()) {
+                val networkInterface = interfaces.nextElement()
+                val addresses = networkInterface.inetAddresses
+                while (addresses.hasMoreElements()) {
+                    val address = addresses.nextElement()
+                    if (!address.isLoopbackAddress && address is java.net.Inet4Address) {
+                        return address.hostAddress ?: "0.0.0.0"
+                    }
+                }
+            }
+        } catch (_: Exception) { }
+        return "0.0.0.0"
     }
 
     companion object {

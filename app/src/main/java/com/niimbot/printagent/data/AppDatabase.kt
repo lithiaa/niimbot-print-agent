@@ -15,7 +15,7 @@ import com.niimbot.printagent.data.converters.DateConverter
         PrinterConfig::class,
         PrintLog::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(DateConverter::class)
@@ -25,6 +25,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun printLogDao(): PrintLogDao
 
     companion object {
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Version 2 only changed Kotlin defaults; the persisted schema is unchanged.
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -35,6 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "niimbot_print_agent.db"
                 )
+                    .addMigrations(MIGRATION_1_2)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
