@@ -126,10 +126,11 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/til_label_qty"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="120dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:hint="@string/label_qty">
+                    android:hint="@string/label_qty"
+                    app:helperText="@string/label_qty_help">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_label_qty"
@@ -150,6 +151,27 @@
                     android:contentDescription="@string/add_to_pos_description"
                     android:minHeight="48dp"
                     android:text="@string/add_to_pos" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/til_jumlah_barang_masuk"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:enabled="false"
+                    android:hint="@string/incoming_stock_qty"
+                    app:helperText="@string/incoming_stock_qty_help">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_jumlah_barang_masuk"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/incoming_stock_qty_description"
+                        android:imeOptions="actionDone"
+                        android:inputType="number"
+                        android:minHeight="48dp"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

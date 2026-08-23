@@ -21,11 +21,12 @@ object PosProductRules {
         return if (isSame) PosLookupDecision.PRINT_POS else PosLookupDecision.SHOW_CONFLICT
     }
 
-    fun toLabelData(product: PosProduct, qty: Int): LabelData = LabelData(
+    fun toLabelData(product: PosProduct, qty: Int, jumlahBarangMasuk: Int): LabelData = LabelData(
         sku = normalizeSku(product.sku),
         nama = product.nama,
         hargaBeli = product.hargaBeli,
         hargaJual = product.hargaJual,
-        qty = qty
+        qty = qty,
+        jumlahBarangMasuk = jumlahBarangMasuk
     )
 }

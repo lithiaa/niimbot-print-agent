@@ -18,28 +18,64 @@ sealed interface PosApiResult<out T> {
     data class Failure(val message: String, val statusCode: Int? = null) : PosApiResult<Nothing>
 }
 
+interface PosProductGateway {
+    suspend fun lookup(
+        baseUrl: String,
+        integrationKey: String,
+        normalizedSku: String
+    ): PosApiResult<PosProduct>
+
+    suspend fun create(
+        baseUrl: String,
+        integrationKey: String,
+        form: com.niimbot.printagent.label.LabelData,
+        operationId: String
+    ): PosApiResult<PosProduct>
+
+    suspend fun update(
+        baseUrl: String,
+        integrationKey: String,
+        form: com.niimbot.printagent.label.LabelData
+    ): PosApiResult<PosProduct>
+
+    suspend fun addStock(
+        baseUrl: String,
+        integrationKey: String,
+        sku: String,
+        jumlahBarangMasuk: Int,
+        hargaSatuan: Long,
+        operationId: String
+    ): PosApiResult<PosProduct>
+}
+
 class PosApiClient(
     private val client: OkHttpClient,
     private val json: Json
-) {
+) : PosProductGateway {
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         private const val CONNECTION_TEST_SKU = "__NIIMBOT_CONNECTION_TEST__"
     }
 
-    suspend fun lookup(baseUrl: String, integrationKey: String, normalizedSku: String): PosApiResult<PosProduct> =
+    override suspend fun lookup(baseUrl: String, integrationKey: String, normalizedSku: String): PosApiResult<PosProduct> =
         executeProductRequest(
             request = requestBuilder(baseUrl, integrationKey, normalizedSku).get().build(),
             allowNotFound = true
         )
 
-    suspend fun create(baseUrl: String, integrationKey: String, form: com.niimbot.printagent.label.LabelData): PosApiResult<PosProduct> {
+    override suspend fun create(
+        baseUrl: String,
+        integrationKey: String,
+        form: com.niimbot.printagent.label.LabelData,
+        operationId: String
+    ): PosApiResult<PosProduct> {
         val product = PosProductWriteRequest(
             sku = form.sku,
             nama = form.nama,
             hargaBeli = form.hargaBeli,
             hargaJual = form.hargaJual,
-            stok = 0,
+            jumlahBarangMasuk = form.jumlahBarangMasuk,
+            operationId = operationId,
             satuan = "pcs"
         )
         return executeProductRequest(
@@ -49,7 +85,7 @@ class PosApiClient(
         )
     }
 
-    suspend fun update(
+    override suspend fun update(
         baseUrl: String,
         integrationKey: String,
         form: com.niimbot.printagent.label.LabelData
@@ -62,6 +98,26 @@ class PosApiClient(
         return executeProductRequest(
             requestBuilder(baseUrl, integrationKey, form.sku)
                 .put(json.encodeToString(product).toRequestBody(JSON_MEDIA_TYPE))
+                .build()
+        )
+    }
+
+    override suspend fun addStock(
+        baseUrl: String,
+        integrationKey: String,
+        sku: String,
+        jumlahBarangMasuk: Int,
+        hargaSatuan: Long,
+        operationId: String
+    ): PosApiResult<PosProduct> {
+        val stock = PosStockInRequest(
+            jumlahBarangMasuk = jumlahBarangMasuk,
+            hargaSatuan = hargaSatuan,
+            operationId = operationId
+        )
+        return executeProductRequest(
+            requestBuilder(baseUrl, integrationKey, sku, stockIn = true)
+                .post(json.encodeToString(stock).toRequestBody(JSON_MEDIA_TYPE))
                 .build()
         )
     }
@@ -97,7 +153,12 @@ class PosApiClient(
         }
     }
 
-    private fun requestBuilder(baseUrl: String, integrationKey: String, sku: String? = null): Request.Builder {
+    private fun requestBuilder(
+        baseUrl: String,
+        integrationKey: String,
+        sku: String? = null,
+        stockIn: Boolean = false
+    ): Request.Builder {
         val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
             ?: throw IllegalArgumentException("URL Lithia POS tidak valid")
         val url = parsedBase.newBuilder()
@@ -106,6 +167,7 @@ class PosApiClient(
                 if (sku != null) {
                     addPathSegment("by-sku")
                     addPathSegment(sku)
+                    if (stockIn) addPathSegment("stok-masuk")
                 }
             }
             .build()

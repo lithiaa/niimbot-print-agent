@@ -7,7 +7,9 @@ data class LabelFormInput(
     val nama: String,
     val hargaBeli: String,
     val hargaJual: String,
-    val qty: String
+    val qty: String,
+    val jumlahBarangMasuk: String,
+    val addToPos: Boolean
 )
 
 data class LabelData(
@@ -15,11 +17,12 @@ data class LabelData(
     val nama: String,
     val hargaBeli: Long,
     val hargaJual: Long,
-    val qty: Int
+    val qty: Int,
+    val jumlahBarangMasuk: Int
 )
 
 enum class LabelField {
-    SKU, NAMA, HARGA_BELI, HARGA_JUAL, QTY
+    SKU, NAMA, HARGA_BELI, HARGA_JUAL, QTY, JUMLAH_BARANG_MASUK
 }
 
 data class LabelValidationResult(
@@ -35,6 +38,11 @@ object LabelFormRules {
         val hargaBeli = input.hargaBeli.trim().toLongOrNull()
         val hargaJual = input.hargaJual.trim().toLongOrNull()
         val qty = input.qty.trim().toIntOrNull()
+        val jumlahBarangMasuk = if (input.addToPos) {
+            input.jumlahBarangMasuk.trim().toIntOrNull()
+        } else {
+            0
+        }
 
         if (sku.isEmpty()) errors[LabelField.SKU] = "SKU wajib diisi"
         if (nama.isEmpty()) errors[LabelField.NAMA] = "Nama wajib diisi"
@@ -44,10 +52,23 @@ object LabelFormRules {
         if (hargaJual == null || hargaJual < 0) {
             errors[LabelField.HARGA_JUAL] = "Harga jual harus berupa angka nol atau lebih"
         }
-        if (qty == null || qty <= 0) errors[LabelField.QTY] = "Qty minimal 1"
+        if (qty == null || qty <= 0) {
+            errors[LabelField.QTY] = "Jumlah label minimal 1"
+        }
+        if (input.addToPos && (jumlahBarangMasuk == null || jumlahBarangMasuk < 0)) {
+            errors[LabelField.JUMLAH_BARANG_MASUK] =
+                "Jumlah barang masuk untuk stok POS harus berupa bilangan bulat nol atau lebih"
+        }
 
         val data = if (errors.isEmpty()) {
-            LabelData(sku, nama, hargaBeli!!, hargaJual!!, qty!!)
+            LabelData(
+                sku,
+                nama,
+                hargaBeli!!,
+                hargaJual!!,
+                qty!!,
+                jumlahBarangMasuk!!
+            )
         } else {
             null
         }

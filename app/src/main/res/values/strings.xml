@@ -74,8 +74,12 @@
     <string name="label_harga_beli_description">Masukkan harga beli berupa angka</string>
     <string name="label_harga_jual">Harga jual</string>
     <string name="label_harga_jual_description">Masukkan harga jual berupa angka</string>
-    <string name="label_qty">Qty</string>
-    <string name="label_qty_description">Masukkan jumlah label</string>
+    <string name="label_qty">Jumlah Label</string>
+    <string name="label_qty_description">Masukkan jumlah salinan label yang akan dicetak, minimal satu</string>
+    <string name="label_qty_help">Menentukan jumlah salinan label cetak; tidak mengubah stok POS.</string>
+    <string name="incoming_stock_qty">Jumlah Barang Masuk</string>
+    <string name="incoming_stock_qty_description">Masukkan jumlah barang yang ditambahkan ke stok POS, minimal nol</string>
+    <string name="incoming_stock_qty_help">Menambah stok Lithia POS; tidak mengubah jumlah label yang dicetak.</string>
     <string name="add_to_pos">Masukkan ke Lithia POS</string>
     <string name="add_to_pos_description">Aktifkan untuk menyinkronkan barang ke Lithia POS sebelum mencetak</string>
     <string name="label_preview_live">Preview label</string>
@@ -92,7 +96,8 @@
     <string name="update_pos_and_print">Perbarui POS &amp; cetak</string>
     <string name="cannot_print_title">Tidak dapat mencetak</string>
     <string name="queue_failed">Gagal memasukkan label ke antrean cetak.</string>
-    <string name="label_queued">Label masuk antrean #%1$d</string>
+    <string name="label_queued">%1$d label masuk antrean cetak.</string>
+    <string name="label_queued_with_stock">%1$d label masuk antrean. Stok ditambah %2$d; stok saat ini %3$d.</string>
 
     <!-- Integrasi POS -->
     <string name="pos_config">Integrasi Lithia POS</string>

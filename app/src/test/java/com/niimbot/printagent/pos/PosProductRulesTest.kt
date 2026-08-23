@@ -21,7 +21,7 @@ class PosProductRulesTest {
 
     @Test
     fun `existing product with exact editable data prints without dialog`() {
-        val form = LabelData("ABC-1", "Gula", 10_000L, 12_000L, 3)
+        val form = LabelData("ABC-1", "Gula", 10_000L, 12_000L, 3, 5)
         val product = PosProduct(
             id = 7L,
             sku = "abc-1",
@@ -38,7 +38,7 @@ class PosProductRulesTest {
 
     @Test
     fun `different existing editable data requires conflict choice`() {
-        val form = LabelData("ABC-1", "Gula Premium", 10_000L, 13_000L, 1)
+        val form = LabelData("ABC-1", "Gula Premium", 10_000L, 13_000L, 1, 5)
         val product = PosProduct(
             id = 7L,
             sku = "ABC-1",
@@ -55,7 +55,7 @@ class PosProductRulesTest {
 
     @Test
     fun `qty stock unit id and purchase code do not make editable data different`() {
-        val form = LabelData("SKU-9", "Barang", 500L, 700L, 8)
+        val form = LabelData("SKU-9", "Barang", 500L, 700L, 8, 12)
         val product = PosProduct(
             id = 999L,
             sku = "SKU-9",

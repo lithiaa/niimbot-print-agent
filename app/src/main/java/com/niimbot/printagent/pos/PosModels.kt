@@ -24,8 +24,16 @@ internal data class PosProductWriteRequest(
     val nama: String,
     @SerialName("harga_beli") val hargaBeli: Long,
     @SerialName("harga_jual") val hargaJual: Long,
-    val stok: Int,
+    @SerialName("jumlah_barang_masuk") val jumlahBarangMasuk: Int,
+    @SerialName("operation_id") val operationId: String,
     val satuan: String
+)
+
+@Serializable
+internal data class PosStockInRequest(
+    @SerialName("jumlah_barang_masuk") val jumlahBarangMasuk: Int,
+    @SerialName("harga_satuan") val hargaSatuan: Long,
+    @SerialName("operation_id") val operationId: String
 )
 
 @Serializable

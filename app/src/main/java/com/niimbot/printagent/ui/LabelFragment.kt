@@ -27,14 +27,14 @@ import com.niimbot.printagent.label.LabelFormRules
 import com.niimbot.printagent.label.LabelGenerator
 import com.niimbot.printagent.pos.IntegrationConfigStore
 import com.niimbot.printagent.pos.PosApiClient
-import com.niimbot.printagent.pos.PosApiResult
-import com.niimbot.printagent.pos.PosLookupDecision
-import com.niimbot.printagent.pos.PosProduct
-import com.niimbot.printagent.pos.PosProductRules
+import com.niimbot.printagent.pos.PosConflictChoice
+import com.niimbot.printagent.pos.PosSubmissionOutcome
+import com.niimbot.printagent.pos.PosSubmissionWorkflow
 import com.niimbot.printagent.service.PrintForegroundService
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.NumberFormat
 import java.util.Locale
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.launch
 
@@ -49,11 +49,13 @@ class LabelFragment : Fragment() {
     private lateinit var tilHargaBeli: TextInputLayout
     private lateinit var tilHargaJual: TextInputLayout
     private lateinit var tilQty: TextInputLayout
+    private lateinit var tilJumlahBarangMasuk: TextInputLayout
     private lateinit var etSku: EditText
     private lateinit var etNama: EditText
     private lateinit var etHargaBeli: EditText
     private lateinit var etHargaJual: EditText
     private lateinit var etQty: EditText
+    private lateinit var etJumlahBarangMasuk: EditText
     private lateinit var ivPreview: ImageView
     private lateinit var switchPos: SwitchMaterial
     private lateinit var btnPreview: View
@@ -69,9 +71,17 @@ class LabelFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
         etQty.setText("1")
+        etJumlahBarangMasuk.setText("0")
+        updateIncomingStockState()
 
         listOf(etSku, etNama, etHargaBeli, etHargaJual, etQty).forEach { editText ->
             editText.doAfterTextChanged { updatePreview(showErrors = false) }
+        }
+        etJumlahBarangMasuk.doAfterTextChanged {
+            tilJumlahBarangMasuk.error = null
+        }
+        switchPos.setOnCheckedChangeListener { _, _ ->
+            updateIncomingStockState()
         }
         btnPreview.setOnClickListener { updatePreview(showErrors = true) }
         btnPrint.setOnClickListener { submit() }
@@ -83,27 +93,32 @@ class LabelFragment : Fragment() {
         tilHargaBeli = view.findViewById(R.id.til_label_harga_beli)
         tilHargaJual = view.findViewById(R.id.til_label_harga_jual)
         tilQty = view.findViewById(R.id.til_label_qty)
+        tilJumlahBarangMasuk = view.findViewById(R.id.til_jumlah_barang_masuk)
         etSku = view.findViewById(R.id.et_label_sku)
         etNama = view.findViewById(R.id.et_label_nama)
         etHargaBeli = view.findViewById(R.id.et_label_harga_beli)
         etHargaJual = view.findViewById(R.id.et_label_harga_jual)
         etQty = view.findViewById(R.id.et_label_qty)
+        etJumlahBarangMasuk = view.findViewById(R.id.et_jumlah_barang_masuk)
         ivPreview = view.findViewById(R.id.iv_create_label_preview)
         switchPos = view.findViewById(R.id.switch_add_to_pos)
         btnPreview = view.findViewById(R.id.btn_update_label_preview)
         btnPrint = view.findViewById(R.id.btn_create_and_print)
     }
 
-    private fun currentInput() = LabelFormInput(
+    private fun currentInput(addToPos: Boolean = switchPos.isChecked) = LabelFormInput(
         sku = etSku.text.toString(),
         nama = etNama.text.toString(),
         hargaBeli = etHargaBeli.text.toString(),
         hargaJual = etHargaJual.text.toString(),
-        qty = etQty.text.toString()
+        qty = etQty.text.toString(),
+        jumlahBarangMasuk = etJumlahBarangMasuk.text.toString(),
+        addToPos = addToPos
     )
 
     private fun updatePreview(showErrors: Boolean): LabelData? {
-        val validation = LabelFormRules.validate(currentInput())
+        // Stock quantity must never affect label rendering or preview validation.
+        val validation = LabelFormRules.validate(currentInput(addToPos = false))
         if (showErrors) showValidationErrors(validation.errors)
         val data = validation.data ?: return null
         ivPreview.setImageBitmap(
@@ -122,6 +137,7 @@ class LabelFragment : Fragment() {
         showValidationErrors(validation.errors)
         val form = validation.data ?: return
         updatePreview(showErrors = false)
+        val operationId = UUID.randomUUID().toString()
 
         if (!switchPos.isChecked) {
             enqueue(form)
@@ -135,41 +151,49 @@ class LabelFragment : Fragment() {
         }
         setBusy(true)
         viewLifecycleOwner.lifecycleScope.launch {
-            val result = runCatching {
-                posApiClient.lookup(configStore.getBaseUrl(), key, form.sku)
-            }.getOrElse { PosApiResult.Failure(it.message ?: getString(R.string.pos_request_failed)) }
-            setBusy(false)
-            when (result) {
-                PosApiResult.NotFound -> createThenPrint(form, key)
-                is PosApiResult.Success -> handleExisting(form, result.value, key)
-                is PosApiResult.Failure -> showError(result.message)
-            }
+            val result = PosSubmissionWorkflow(posApiClient).submit(
+                configStore.getBaseUrl(),
+                key,
+                form,
+                operationId
+            )
+            handlePosOutcome(result)
         }
     }
 
-    private fun createThenPrint(form: LabelData, key: String) {
+    private fun handlePosOutcome(result: PosSubmissionOutcome) {
+        when (result) {
+            is PosSubmissionOutcome.ReadyToQueue -> enqueue(
+                result.labelData,
+                result.stockAdded,
+                result.currentStock
+            )
+            is PosSubmissionOutcome.Conflict -> {
+                setBusy(false)
+                showConflictDialog(result)
+            }
+            is PosSubmissionOutcome.Failure -> {
+                setBusy(false)
+                showError(result.message)
+            }
+            PosSubmissionOutcome.Cancelled -> setBusy(false)
+        }
+    }
+
+    private fun resolveConflict(
+        conflict: PosSubmissionOutcome.Conflict,
+        choice: PosConflictChoice
+    ) {
         setBusy(true)
         viewLifecycleOwner.lifecycleScope.launch {
-            val result = runCatching {
-                posApiClient.create(configStore.getBaseUrl(), key, form)
-            }.getOrElse { PosApiResult.Failure(it.message ?: getString(R.string.pos_request_failed)) }
-            setBusy(false)
-            when (result) {
-                is PosApiResult.Success -> enqueue(PosProductRules.toLabelData(result.value, form.qty))
-                is PosApiResult.Failure -> showError(result.message)
-                PosApiResult.NotFound -> showError(getString(R.string.pos_request_failed))
-            }
+            val result = PosSubmissionWorkflow(posApiClient).resolveConflict(conflict, choice)
+            handlePosOutcome(result)
         }
     }
 
-    private fun handleExisting(form: LabelData, product: PosProduct, key: String) {
-        when (PosProductRules.decideExisting(form, product)) {
-            PosLookupDecision.PRINT_POS -> enqueue(PosProductRules.toLabelData(product, form.qty))
-            PosLookupDecision.SHOW_CONFLICT -> showConflictDialog(form, product, key)
-        }
-    }
-
-    private fun showConflictDialog(form: LabelData, product: PosProduct, key: String) {
+    private fun showConflictDialog(conflict: PosSubmissionOutcome.Conflict) {
+        val form = conflict.form
+        val product = conflict.product
         val currency = NumberFormat.getNumberInstance(Locale("id", "ID"))
         val comparison = getString(
             R.string.pos_conflict_comparison,
@@ -186,31 +210,22 @@ class LabelFragment : Fragment() {
             .setTitle(R.string.pos_conflict_title)
             .setMessage(comparison)
             .setNegativeButton(R.string.use_pos_and_print) { _, _ ->
-                enqueue(PosProductRules.toLabelData(product, form.qty))
+                resolveConflict(conflict, PosConflictChoice.USE_POS)
             }
             .setPositiveButton(R.string.update_pos_and_print) { _, _ ->
-                updateThenPrint(form, key)
+                resolveConflict(conflict, PosConflictChoice.UPDATE_POS)
             }
-            .setNeutralButton(android.R.string.cancel, null)
+            .setNeutralButton(android.R.string.cancel) { _, _ ->
+                handlePosOutcome(PosSubmissionOutcome.Cancelled)
+            }
             .show()
     }
 
-    private fun updateThenPrint(form: LabelData, key: String) {
-        setBusy(true)
-        viewLifecycleOwner.lifecycleScope.launch {
-            val result = runCatching {
-                posApiClient.update(configStore.getBaseUrl(), key, form)
-            }.getOrElse { PosApiResult.Failure(it.message ?: getString(R.string.pos_request_failed)) }
-            setBusy(false)
-            when (result) {
-                is PosApiResult.Success -> enqueue(PosProductRules.toLabelData(result.value, form.qty))
-                is PosApiResult.Failure -> showError(result.message)
-                PosApiResult.NotFound -> showError(getString(R.string.pos_request_failed))
-            }
-        }
-    }
-
-    private fun enqueue(data: LabelData) {
+    private fun enqueue(
+        data: LabelData,
+        stockAdded: Int? = null,
+        currentStock: Int? = null
+    ) {
         setBusy(true)
         viewLifecycleOwner.lifecycleScope.launch {
             val job = PrintJob(
@@ -233,7 +248,17 @@ class LabelFragment : Fragment() {
             }
             ContextCompat.startForegroundService(requireContext(), intent)
             setBusy(false)
-            Toast.makeText(requireContext(), getString(R.string.label_queued, jobId), Toast.LENGTH_SHORT).show()
+            val message = if (stockAdded != null && currentStock != null) {
+                getString(
+                    R.string.label_queued_with_stock,
+                    data.qty,
+                    stockAdded,
+                    currentStock
+                )
+            } else {
+                getString(R.string.label_queued, data.qty)
+            }
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -243,12 +268,25 @@ class LabelFragment : Fragment() {
         tilHargaBeli.error = errors[LabelField.HARGA_BELI]
         tilHargaJual.error = errors[LabelField.HARGA_JUAL]
         tilQty.error = errors[LabelField.QTY]
+        tilJumlahBarangMasuk.error = errors[LabelField.JUMLAH_BARANG_MASUK]
+    }
+
+    private fun updateIncomingStockState() {
+        tilJumlahBarangMasuk.visibility = View.VISIBLE
+        tilJumlahBarangMasuk.isEnabled = switchPos.isChecked
+        etJumlahBarangMasuk.isEnabled = switchPos.isChecked
+        if (!switchPos.isChecked && etJumlahBarangMasuk.text.toString() != "0") {
+            etJumlahBarangMasuk.setText("0")
+        }
+        if (!switchPos.isChecked) tilJumlahBarangMasuk.error = null
     }
 
     private fun setBusy(busy: Boolean) {
         btnPrint.isEnabled = !busy
         btnPreview.isEnabled = !busy
         switchPos.isEnabled = !busy
+        tilJumlahBarangMasuk.isEnabled = !busy && switchPos.isChecked
+        etJumlahBarangMasuk.isEnabled = !busy && switchPos.isChecked
     }
 
     private fun showError(message: String) {
