@@ -20,6 +20,27 @@
         <item name="materialCardViewStyle">@style/Widget.NiimbotPrintAgent.Card</item>
         <item name="materialButtonStyle">@style/Widget.NiimbotPrintAgent.Button</item>
         <item name="bottomNavigationStyle">@style/Widget.NiimbotPrintAgent.BottomNavigation</item>
+        <item name="textInputStyle">@style/Widget.NiimbotPrintAgent.TextInput</item>
+    </style>
+
+    <style name="Widget.NiimbotPrintAgent.TextInput" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/surface</item>
+        <item name="boxStrokeColor">@color/primary</item>
+        <item name="hintTextColor">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
+        <item name="helperTextTextColor">@color/text_secondary</item>
+        <item name="prefixTextColor">@color/text_secondary</item>
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+    </style>
+
+    <style name="Widget.NiimbotPrintAgent.FormEditText" parent="Widget.MaterialComponents.TextInputEditText.OutlinedBox">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textSize">16sp</item>
     </style>
 
     <style name="Widget.NiimbotPrintAgent.Card" parent="Widget.MaterialComponents.CardView">

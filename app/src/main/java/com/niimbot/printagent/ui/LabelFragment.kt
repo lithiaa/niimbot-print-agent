@@ -6,6 +6,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -25,6 +28,8 @@ import com.niimbot.printagent.label.LabelField
 import com.niimbot.printagent.label.LabelFormInput
 import com.niimbot.printagent.label.LabelFormRules
 import com.niimbot.printagent.label.LabelGenerator
+import com.niimbot.printagent.label.LabelLayout
+import com.niimbot.printagent.label.LabelSize
 import com.niimbot.printagent.pos.IntegrationConfigStore
 import com.niimbot.printagent.pos.PosApiClient
 import com.niimbot.printagent.pos.PosConflictChoice
@@ -58,6 +63,8 @@ class LabelFragment : Fragment() {
     private lateinit var etJumlahBarangMasuk: EditText
     private lateinit var ivPreview: ImageView
     private lateinit var switchPos: SwitchMaterial
+    private lateinit var dropdownLabelSize: AutoCompleteTextView
+    private lateinit var dropdownLabelLayout: AutoCompleteTextView
     private lateinit var btnPreview: View
     private lateinit var btnPrint: View
 
@@ -72,6 +79,7 @@ class LabelFragment : Fragment() {
         bindViews(view)
         etQty.setText("1")
         etJumlahBarangMasuk.setText("0")
+        setupLabelOptions()
         updateIncomingStockState()
 
         listOf(etSku, etNama, etHargaBeli, etHargaJual, etQty).forEach { editText ->
@@ -80,6 +88,8 @@ class LabelFragment : Fragment() {
         etJumlahBarangMasuk.doAfterTextChanged {
             tilJumlahBarangMasuk.error = null
         }
+        dropdownLabelSize.setOnItemClickListener { _, _, _, _ -> updatePreview(showErrors = false) }
+        dropdownLabelLayout.setOnItemClickListener { _, _, _, _ -> updatePreview(showErrors = false) }
         switchPos.setOnCheckedChangeListener { _, _ ->
             updateIncomingStockState()
         }
@@ -102,6 +112,8 @@ class LabelFragment : Fragment() {
         etJumlahBarangMasuk = view.findViewById(R.id.et_jumlah_barang_masuk)
         ivPreview = view.findViewById(R.id.iv_create_label_preview)
         switchPos = view.findViewById(R.id.switch_add_to_pos)
+        dropdownLabelSize = view.findViewById(R.id.dropdown_label_size)
+        dropdownLabelLayout = view.findViewById(R.id.dropdown_label_layout)
         btnPreview = view.findViewById(R.id.btn_update_label_preview)
         btnPrint = view.findViewById(R.id.btn_create_and_print)
     }
@@ -113,7 +125,9 @@ class LabelFragment : Fragment() {
         hargaJual = etHargaJual.text.toString(),
         qty = etQty.text.toString(),
         jumlahBarangMasuk = etJumlahBarangMasuk.text.toString(),
-        addToPos = addToPos
+        addToPos = addToPos,
+        labelSize = selectedLabelSize(),
+        labelLayout = selectedLabelLayout()
     )
 
     private fun updatePreview(showErrors: Boolean): LabelData? {
@@ -121,14 +135,16 @@ class LabelFragment : Fragment() {
         val validation = LabelFormRules.validate(currentInput(addToPos = false))
         if (showErrors) showValidationErrors(validation.errors)
         val data = validation.data ?: return null
-        ivPreview.setImageBitmap(
-            LabelGenerator.generateLabel(
+        val bitmap = LabelGenerator.generateLabel(
                 nama = data.nama,
                 hargaJual = data.hargaJual,
                 hargaBeli = data.hargaBeli,
-                sku = data.sku
+                sku = data.sku,
+                labelSize = data.labelSize,
+                labelLayout = data.labelLayout
             )
-        )
+        ivPreview.setImageBitmap(bitmap)
+        updatePreviewDimensions(data.labelSize)
         return data
     }
 
@@ -233,7 +249,9 @@ class LabelFragment : Fragment() {
                 hargaJual = data.hargaJual,
                 hargaBeli = data.hargaBeli,
                 sku = data.sku,
-                qty = data.qty
+                qty = data.qty,
+                labelSize = data.labelSize.name,
+                labelLayout = data.labelLayout.name
             )
             val jobId = database.printJobDao().insert(job)
             if (jobId <= 0) {
@@ -279,6 +297,34 @@ class LabelFragment : Fragment() {
             etJumlahBarangMasuk.setText("0")
         }
         if (!switchPos.isChecked) tilJumlahBarangMasuk.error = null
+    }
+
+    private fun setupLabelOptions() {
+        dropdownLabelSize.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, LabelSize.entries.map { it.displayName }))
+        dropdownLabelLayout.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, LabelLayout.entries.map { it.displayName }))
+        dropdownLabelSize.setText(LabelSize.MM_50_X_30.displayName, false)
+        dropdownLabelLayout.setText(LabelLayout.STANDARD.displayName, false)
+    }
+
+    private fun selectedLabelSize(): LabelSize = LabelSize.entries.firstOrNull {
+        it.displayName == dropdownLabelSize.text.toString()
+    } ?: LabelSize.MM_50_X_30
+
+    private fun selectedLabelLayout(): LabelLayout = LabelLayout.entries.firstOrNull {
+        it.displayName == dropdownLabelLayout.text.toString()
+    } ?: LabelLayout.STANDARD
+
+    private fun updatePreviewDimensions(size: LabelSize) {
+        val density = resources.displayMetrics.density
+        val maxWidth = (520 * density).toInt().coerceAtMost(resources.displayMetrics.widthPixels - (96 * density).toInt())
+        val maxHeight = (240 * density).toInt()
+        var width = maxWidth
+        var height = (width * size.heightMm / size.widthMm.toFloat()).toInt()
+        if (height > maxHeight) {
+            height = maxHeight
+            width = (height * size.widthMm / size.heightMm.toFloat()).toInt()
+        }
+        ivPreview.layoutParams = FrameLayout.LayoutParams(width, height, android.view.Gravity.CENTER)
     }
 
     private fun setBusy(busy: Boolean) {

@@ -21,6 +21,8 @@ import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintLog
 import com.niimbot.printagent.data.PrintStatus
 import com.niimbot.printagent.label.LabelGenerator
+import com.niimbot.printagent.label.LabelLayout
+import com.niimbot.printagent.label.LabelSize
 import com.niimbot.printagent.server.PrintServer
 import com.niimbot.printagent.ui.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -300,7 +302,9 @@ class PrintForegroundService : Service() {
                     hargaBeli = job.hargaBeli,
                     sku = job.sku,
                     satuan = job.satuan,
-                    barcodeData = job.barcode
+                    barcodeData = job.barcode,
+                    labelSize = LabelSize.fromName(job.labelSize),
+                    labelLayout = LabelLayout.fromName(job.labelLayout)
                 )
 
                 val requestedCopies = job.qty.coerceAtLeast(1)

@@ -70,6 +70,10 @@
     <string name="label_sku_description">Masukkan SKU manual</string>
     <string name="label_nama">Nama barang</string>
     <string name="label_nama_description">Masukkan nama barang</string>
+    <string name="label_size">Ukuran label</string>
+    <string name="label_size_description">Pilih ukuran fisik media label</string>
+    <string name="label_layout">Layout label</string>
+    <string name="label_layout_description">Pilih susunan isi label</string>
     <string name="label_harga_beli">Harga beli</string>
     <string name="label_harga_beli_description">Masukkan harga beli berupa angka</string>
     <string name="label_harga_jual">Harga jual</string>

@@ -9,7 +9,9 @@ data class LabelFormInput(
     val hargaJual: String,
     val qty: String,
     val jumlahBarangMasuk: String,
-    val addToPos: Boolean
+    val addToPos: Boolean,
+    val labelSize: LabelSize = LabelSize.MM_50_X_30,
+    val labelLayout: LabelLayout = LabelLayout.STANDARD
 )
 
 data class LabelData(
@@ -18,7 +20,9 @@ data class LabelData(
     val hargaBeli: Long,
     val hargaJual: Long,
     val qty: Int,
-    val jumlahBarangMasuk: Int
+    val jumlahBarangMasuk: Int,
+    val labelSize: LabelSize = LabelSize.MM_50_X_30,
+    val labelLayout: LabelLayout = LabelLayout.STANDARD
 )
 
 enum class LabelField {
@@ -67,7 +71,9 @@ object LabelFormRules {
                 hargaBeli!!,
                 hargaJual!!,
                 qty!!,
-                jumlahBarangMasuk!!
+                jumlahBarangMasuk!!,
+                input.labelSize,
+                input.labelLayout
             )
         } else {
             null

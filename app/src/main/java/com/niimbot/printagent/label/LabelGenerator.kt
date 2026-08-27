@@ -12,14 +12,13 @@ import com.google.zxing.common.BitMatrix
 import java.util.EnumMap
 
 /**
- * Label Generator for Niimbot B1 Pro (50x30mm @ 300dpi = 584x354px)
+ * Label generator for supported Niimbot media at 300 dpi.
  */
 object LabelGenerator {
     
-    // B1 Pro label dimensions
-    const val LABEL_WIDTH = 584
+    const val LABEL_WIDTH = 590
     const val LABEL_HEIGHT = 354
-    const val DPI = 300
+    const val DPI = LabelSize.DPI
     
     // Margins
     const val MARGIN_LEFT = 15
@@ -45,9 +44,13 @@ object LabelGenerator {
         hargaBeli: Long,
         sku: String,
         satuan: String = "pcs",
-        barcodeData: String? = null
+        barcodeData: String? = null,
+        labelSize: LabelSize = LabelSize.MM_50_X_30,
+        labelLayout: LabelLayout = LabelLayout.STANDARD
     ): Bitmap {
-        val bitmap = Bitmap.createBitmap(LABEL_WIDTH, LABEL_HEIGHT, Bitmap.Config.ARGB_8888)
+        val width = labelSize.widthPx
+        val height = labelSize.heightPx
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         
         // White background
@@ -59,59 +62,15 @@ object LabelGenerator {
             typeface = Typeface.DEFAULT_BOLD
         }
         
-        // ============ BARCODE (Code128) - TOP ============
         val barcodeContent = barcodeData ?: sku
-        val barcodeBitmap = generateCode128(barcodeContent, LABEL_WIDTH - MARGIN_LEFT - MARGIN_RIGHT, 75)
-        
-        // Center barcode at top
-        val barcodeX = (LABEL_WIDTH - barcodeBitmap.width) / 2
-        var y = MARGIN_TOP.toFloat()
-        canvas.drawBitmap(barcodeBitmap, barcodeX.toFloat(), y, null)
-        y += barcodeBitmap.height + 16f
-        
-        // ============ BARCODE TEXT BELOW BARCODE ============
-        paint.textSize = 16f
-        paint.isFakeBoldText = false
-        val barcodeTextWidth = paint.measureText(barcodeContent)
-        val barcodeTextX = (LABEL_WIDTH - barcodeTextWidth) / 2
-        canvas.drawText(barcodeContent, barcodeTextX, y, paint)
-        y += 24f
-        
-        // ============ NAMA BARANG (Bold, Large) ============
-        paint.textSize = 36f
-        paint.isFakeBoldText = true
-        
-        // Fix baseline: drawText y is font baseline, so add textSize to MARGIN_TOP
-        // y already positioned after barcode
-        
-        // Dynamic measure & truncate if too long for label width
-        val maxNamaWidth = (LABEL_WIDTH - MARGIN_LEFT - MARGIN_RIGHT).toFloat()
-        var displayNama = nama
-        if (paint.measureText(displayNama) > maxNamaWidth) {
-            while (displayNama.isNotEmpty() && paint.measureText("$displayNama...") > maxNamaWidth) {
-                displayNama = displayNama.dropLast(1)
-            }
-            displayNama = "$displayNama..."
-        }
-        canvas.drawText(displayNama, MARGIN_LEFT.toFloat(), y, paint)
-        y += 48f
-        
-        // ============ HARGA JUAL + HARGA BELI (SAME LINE) ============
-        paint.textSize = 48f
-        paint.isFakeBoldText = true
-        
         val hargaJualText = "Rp ${formatRupiah(hargaJual)}"
         val hargaBeliEncoded = hargaEncode(hargaBeli)
-        val hargaLine = "$hargaBeliEncoded  $hargaJualText"
-        
-        canvas.drawText(hargaLine, MARGIN_LEFT.toFloat(), y, paint)
-        y += 56f
-        
-        // ============ SKU (Medium) ============
-        paint.textSize = 24f
-        paint.isFakeBoldText = false
-        
-        canvas.drawText("SKU: $sku", MARGIN_LEFT.toFloat(), y, paint)
+
+        if (labelLayout == LabelLayout.COMPACT) {
+            drawCompact(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, sku, barcodeContent)
+        } else {
+            drawStandard(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, sku, barcodeContent)
+        }
         
         return bitmap
     }
@@ -129,6 +88,66 @@ object LabelGenerator {
 
             return generateLabel(nama, hargaJual, hargaBeli, sku, satuan, barcodeData)
         }
+
+    private fun drawStandard(
+        canvas: Canvas, paint: Paint, width: Int, height: Int, nama: String,
+        hargaJual: String, hargaBeli: String, sku: String, barcodeContent: String
+    ) {
+        val scale = height / LABEL_HEIGHT.toFloat()
+        val barcodeHeight = (72 * scale).toInt().coerceAtLeast(44)
+        val barcode = generateCode128(barcodeContent, width - MARGIN_LEFT - MARGIN_RIGHT, barcodeHeight)
+        var y = (height * .05f)
+        canvas.drawBitmap(barcode, ((width - barcode.width) / 2f), y, null)
+        y += barcode.height + 14f * scale
+        drawCenteredText(canvas, paint, barcodeContent, width, y, 16f * scale, false)
+        y += 28f * scale
+        drawCenteredFittedText(canvas, paint, nama, width, y, 36f * scale, true)
+        y += 52f * scale
+        drawCenteredFittedText(canvas, paint, "$hargaBeli  $hargaJual", width, y, 48f * scale, true)
+        y += 50f * scale
+        drawCenteredFittedText(canvas, paint, "SKU: $sku", width, y, 24f * scale, false)
+    }
+
+    private fun drawCompact(
+        canvas: Canvas, paint: Paint, width: Int, height: Int, nama: String,
+        hargaJual: String, hargaBeli: String, sku: String, barcodeContent: String
+    ) {
+        val padding = (width * .035f).toInt()
+        val barcodeWidth = (width * .38f).toInt()
+        val contentWidth = width - barcodeWidth - padding * 3
+        val barcode = generateCode128(barcodeContent, barcodeWidth, (height * .62f).toInt())
+        canvas.drawBitmap(barcode, (width - padding - barcodeWidth).toFloat(), (height * .10f), null)
+        drawCenteredText(canvas, paint, barcodeContent, barcodeWidth,
+            height * .82f, (height * .055f), false, width - padding - barcodeWidth)
+        drawFittedText(canvas, paint, nama, padding.toFloat(), height * .25f, contentWidth.toFloat(), height * .13f, true)
+        drawFittedText(canvas, paint, hargaJual, padding.toFloat(), height * .53f, contentWidth.toFloat(), height * .16f, true)
+        drawFittedText(canvas, paint, hargaBeli, padding.toFloat(), height * .72f, contentWidth.toFloat(), height * .09f, true)
+        drawFittedText(canvas, paint, "SKU: $sku", padding.toFloat(), height * .88f, contentWidth.toFloat(), height * .075f, false)
+    }
+
+    private fun drawCenteredFittedText(canvas: Canvas, paint: Paint, text: String, width: Int, y: Float, size: Float, bold: Boolean) {
+        fitPaint(paint, text, width - MARGIN_LEFT - MARGIN_RIGHT.toFloat(), size, bold)
+        canvas.drawText(text, (width - paint.measureText(text)) / 2f, y, paint)
+    }
+
+    private fun drawCenteredText(canvas: Canvas, paint: Paint, text: String, width: Int, y: Float, size: Float, bold: Boolean, offset: Int = 0) {
+        paint.textSize = size
+        paint.isFakeBoldText = bold
+        canvas.drawText(text, offset + (width - paint.measureText(text)) / 2f, y, paint)
+    }
+
+    private fun drawFittedText(canvas: Canvas, paint: Paint, text: String, x: Float, y: Float, maxWidth: Float, size: Float, bold: Boolean) {
+        fitPaint(paint, text, maxWidth, size, bold)
+        canvas.drawText(text, x, y, paint)
+    }
+
+    private fun fitPaint(paint: Paint, text: String, maxWidth: Float, preferredSize: Float, bold: Boolean) {
+        paint.textSize = preferredSize
+        paint.isFakeBoldText = bold
+        if (paint.measureText(text) > maxWidth) {
+            paint.textSize *= maxWidth / paint.measureText(text)
+        }
+    }
     
     /**
      * Generate Code128 barcode bitmap

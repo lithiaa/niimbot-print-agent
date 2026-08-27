@@ -80,8 +80,6 @@ class NiimbotBluetoothManager(private val context: Context) {
         private const val RESPONSE_TIMEOUT_MS = 3000L
         private const val PRINT_TIMEOUT_MS = 25_000L
         private const val WRITE_DELAY_MS = 15L
-        private const val LABEL_WIDTH = 584
-        private const val LABEL_HEIGHT = 354
         private const val ROW_RUN_LIMIT = 200
 
         private val CONNECTION_PACKET = byteArrayOf(
@@ -548,8 +546,10 @@ class NiimbotBluetoothManager(private val context: Context) {
                     sendCommand(
                         CMD_SET_PAGE_SIZE,
                         byteArrayOf(
-                            0x01, 0x62,
-                            0x02, 0x48,
+                            ((bitmap.height shr 8) and 0xFF).toByte(),
+                            (bitmap.height and 0xFF).toByte(),
+                            ((bitmap.width shr 8) and 0xFF).toByte(),
+                            (bitmap.width and 0xFF).toByte(),
                             0x00, 0x01,
                             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
                         ),
@@ -613,15 +613,9 @@ class NiimbotBluetoothManager(private val context: Context) {
     }
 
     private suspend fun sendRows(bitmap: android.graphics.Bitmap) {
-        val scaledBitmap = if (bitmap.width != LABEL_WIDTH || bitmap.height != LABEL_HEIGHT) {
-            android.graphics.Bitmap.createScaledBitmap(bitmap, LABEL_WIDTH, LABEL_HEIGHT, true)
-        } else {
-            bitmap
-        }
-
-        val rows = ArrayList<EncodedRow>(LABEL_HEIGHT)
-        for (rowIndex in 0 until LABEL_HEIGHT) {
-            rows += encodeRow(scaledBitmap, rowIndex)
+        val rows = ArrayList<EncodedRow>(bitmap.height)
+        for (rowIndex in 0 until bitmap.height) {
+            rows += encodeRow(bitmap, rowIndex)
         }
 
         var rowIndex = 0
@@ -664,11 +658,11 @@ class NiimbotBluetoothManager(private val context: Context) {
     }
 
     private fun encodeRow(bitmap: android.graphics.Bitmap, rowIndex: Int): EncodedRow {
-        val stride = (LABEL_WIDTH + 7) / 8
+        val stride = (bitmap.width + 7) / 8
         val rowBytes = ByteArray(stride)
         var blackPixels = 0
 
-        for (x in 0 until LABEL_WIDTH) {
+        for (x in 0 until bitmap.width) {
             val pixel = bitmap.getPixel(x, rowIndex)
             val gray = (
                 0.299 * android.graphics.Color.red(pixel) +
