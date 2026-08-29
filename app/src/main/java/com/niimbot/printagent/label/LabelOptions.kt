@@ -7,7 +7,9 @@ data class LabelSize(
     val heightMm: Int
 ) {
 
-    val widthPx: Int get() = mmToPx(widthMm)
+    // A 50 mm B1 Pro roll has a validated printable width of 584 px. The raw
+    // 300-dpi conversion is 590 px, which the printer rejects at SetPageSize.
+    val widthPx: Int get() = if (widthMm == 50) 584 else mmToPx(widthMm)
     val heightPx: Int get() = mmToPx(heightMm)
 
     companion object {

@@ -20,6 +20,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -91,6 +92,10 @@ class NiimbotBluetoothManager(private val context: Context) {
         private const val RESPONSE_TIMEOUT_MS = 3000L
         private const val PRINT_TIMEOUT_MS = 25_000L
         private const val WRITE_DELAY_MS = 15L
+        private const val WRITE_RETRY_DELAY_MS = 20L
+        private const val MAX_WRITE_ATTEMPTS = 5
+        private const val CONNECTION_SETTLE_MS = 200L
+        private const val MTU_FALLBACK_MS = 500L
         private const val ROW_RUN_LIMIT = 200
 
         private val CONNECTION_PACKET = byteArrayOf(
@@ -133,12 +138,15 @@ class NiimbotBluetoothManager(private val context: Context) {
     private val writeScope = CoroutineScope(Dispatchers.IO)
     private val printMutex = Mutex()
     private var writeJob: Job? = null
+    private var sessionInitJob: Job? = null
+    private var sessionInitializationStarted = false
 
     private val pendingResponses = mutableMapOf<Int, CompletableDeferred<ProtocolFrame>>()
     private val pendingResponsesLock = Any()
     private var notifyBuffer = ByteArray(0)
 
     private var targetMac: String? = null
+    private var connectedMac: String? = null
     private var connectionCallback: ((Boolean) -> Unit)? = null
     private var connectionPacketSent = false
     private var retryCount = 0
@@ -215,18 +223,44 @@ class NiimbotBluetoothManager(private val context: Context) {
 
     // ===================== CONNECT =====================
 
+    @Synchronized
     fun connect(mac: String, callback: (Boolean) -> Unit) {
-        if (connectionState.value == STATE_CONNECTED) {
+        val requestedMac = mac.trim()
+        if (requestedMac.isEmpty()) {
+            callback(false)
+            return
+        }
+
+        if (gatt != null && connectedMac.equals(requestedMac, ignoreCase = true)) {
             callback(true)
             return
         }
 
-        targetMac = mac
+        if (
+            gatt != null &&
+            connectedMac == null &&
+            targetMac.equals(requestedMac, ignoreCase = true)
+        ) {
+            val pendingCallback = connectionCallback
+            connectionCallback = { success ->
+                pendingCallback?.invoke(success)
+                callback(success)
+            }
+            return
+        }
+
+        // A connected GATT is reusable only for the same physical printer.
+        // Close it before switching so writes cannot keep going to the old MAC.
+        closeCurrentGatt()
+        connectionCallback?.invoke(false)
+
+        targetMac = requestedMac
+        connectedMac = null
         connectionCallback = callback
         connectionState.postValue(STATE_CONNECTING)
 
         try {
-            val device = bluetoothAdapter.getRemoteDevice(mac)
+            val device = bluetoothAdapter.getRemoteDevice(requestedMac)
             gatt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
             } else {
@@ -235,28 +269,31 @@ class NiimbotBluetoothManager(private val context: Context) {
             }
         } catch (e: Exception) {
             Log.e("NiimbotBLE", "connect() error: ${e.message}")
-            callback(false)
+            finishConnectionAttempt(false)
             connectionState.postValue(STATE_DISCONNECTED)
         }
     }
 
+    @Synchronized
     fun disconnect() {
-        try {
-            gatt?.disconnect()
-            gatt?.close()
-        } catch (e: Exception) {
-            Log.w("NiimbotBLE", "disconnect error: ${e.message}")
-        }
-        gatt = null
-        writeCharacteristic = null
-        notifyCharacteristic = null
-        connectionPacketSent = false
-        failPendingResponses("Printer disconnected")
+        // Explicit disconnects, including "Forget printer", must not be retried by a
+        // late callback from the GATT that is being closed.
+        targetMac = null
+        connectedMac = null
+        retryCount = 0
+        closeCurrentGatt()
+        finishConnectionAttempt(false)
         connectionState.postValue(STATE_DISCONNECTED)
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+            if (gatt !== this@NiimbotBluetoothManager.gatt) {
+                Log.d("NiimbotBLE", "Ignoring state from stale GATT: ${gatt.device.address}")
+                gatt.close()
+                return
+            }
+
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     Log.i("NiimbotBLE", "Connected, discovering services...")
@@ -271,12 +308,13 @@ class NiimbotBluetoothManager(private val context: Context) {
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+            if (gatt !== this@NiimbotBluetoothManager.gatt) return
+
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 setupCharacteristics(gatt)
             } else {
                 Log.e("NiimbotBLE", "Service discovery failed: $status")
-                connectionCallback?.invoke(false)
-                connectionState.postValue(STATE_DISCONNECTED)
+                failConnection(gatt)
             }
         }
 
@@ -285,6 +323,8 @@ class NiimbotBluetoothManager(private val context: Context) {
             characteristic: BluetoothGattCharacteristic,
             status: Int
         ) {
+            if (gatt !== this@NiimbotBluetoothManager.gatt) return
+
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 Log.e("NiimbotBLE", "Write failed: $status")
             }
@@ -295,7 +335,9 @@ class NiimbotBluetoothManager(private val context: Context) {
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic
         ) {
-            handleNotify(characteristic.value)
+            if (gatt === this@NiimbotBluetoothManager.gatt) {
+                handleNotify(characteristic.value)
+            }
         }
 
         override fun onCharacteristicChanged(
@@ -303,7 +345,9 @@ class NiimbotBluetoothManager(private val context: Context) {
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
-            handleNotify(value)
+            if (gatt === this@NiimbotBluetoothManager.gatt) {
+                handleNotify(value)
+            }
         }
 
         override fun onDescriptorWrite(
@@ -311,22 +355,61 @@ class NiimbotBluetoothManager(private val context: Context) {
             descriptor: BluetoothGattDescriptor,
             status: Int
         ) {
+            if (gatt !== this@NiimbotBluetoothManager.gatt) return
+
             if (descriptor.uuid == CCCD_UUID && status == BluetoothGatt.GATT_SUCCESS) {
                 Log.i("NiimbotBLE", "Notifications enabled")
-                startWriteLoop()
-                connectionState.postValue(STATE_CONNECTED)
-                retryCount = 0
-
-                if (!connectionPacketSent) {
-                    connectionPacketSent = writeChannel.trySend(CONNECTION_PACKET.copyOf()).isSuccess
+                // GATT permits only one control operation at a time. Request MTU after
+                // the descriptor write completes, then begin the Niimbot handshake.
+                val mtuRequested = try {
+                    gatt.requestMtu(MTU_SIZE)
+                } catch (e: Exception) {
+                    Log.w("NiimbotBLE", "MTU request failed: ${e.message}")
+                    false
                 }
-
-                connectionCallback?.invoke(true)
+                sessionInitJob?.cancel()
+                sessionInitJob = writeScope.launch {
+                    delay(if (mtuRequested) MTU_FALLBACK_MS else 0L)
+                    beginGattSession(gatt)
+                }
+            } else if (descriptor.uuid == CCCD_UUID) {
+                Log.e("NiimbotBLE", "Failed to enable notifications: $status")
+                failConnection(gatt)
             }
         }
 
         override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
-            Log.i("NiimbotBLE", "MTU changed to $mtu")
+            if (gatt !== this@NiimbotBluetoothManager.gatt) return
+            Log.i("NiimbotBLE", "MTU changed to $mtu (status=$status)")
+            sessionInitJob?.cancel()
+            beginGattSession(gatt)
+        }
+    }
+
+    private fun beginGattSession(sessionGatt: BluetoothGatt) {
+        if (sessionGatt !== gatt || sessionInitializationStarted) return
+        sessionInitializationStarted = true
+        startWriteLoop()
+
+        sessionInitJob = writeScope.launch {
+            try {
+                Log.d("NiimbotBLE", "TX handshake C1")
+                sendPacket(CONNECTION_PACKET.copyOf())
+                connectionPacketSent = true
+
+                // B1 Pro firmware needs time to arm after the raw C1 packet. Sending
+                // SetDensity immediately makes this unit silently ignore the command.
+                delay(CONNECTION_SETTLE_MS)
+                if (sessionGatt !== gatt) return@launch
+
+                connectedMac = sessionGatt.device.address
+                connectionState.postValue(STATE_CONNECTED)
+                retryCount = 0
+                finishConnectionAttempt(true)
+            } catch (e: Exception) {
+                Log.e("NiimbotBLE", "Session handshake failed", e)
+                failConnection(sessionGatt)
+            }
         }
     }
 
@@ -338,10 +421,24 @@ class NiimbotBluetoothManager(private val context: Context) {
                 try {
                     writeCharacteristic?.let { characteristic ->
                         characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-                        @Suppress("DEPRECATION")
-                        characteristic.value = data
-                        @Suppress("DEPRECATION")
-                        gatt?.writeCharacteristic(characteristic)
+                        var accepted = false
+                        for (attempt in 0 until MAX_WRITE_ATTEMPTS) {
+                            val currentGatt = gatt ?: break
+                            @Suppress("DEPRECATION")
+                            characteristic.value = data
+                            @Suppress("DEPRECATION")
+                            accepted = currentGatt.writeCharacteristic(characteristic)
+                            if (accepted) break
+                            if (attempt < MAX_WRITE_ATTEMPTS - 1) {
+                                delay(WRITE_RETRY_DELAY_MS)
+                            }
+                        }
+                        if (!accepted) {
+                            Log.e(
+                                "NiimbotBLE",
+                                "GATT rejected write after $MAX_WRITE_ATTEMPTS attempts"
+                            )
+                        }
                     }
                     delay(WRITE_DELAY_MS)
                 } catch (e: Exception) {
@@ -367,8 +464,7 @@ class NiimbotBluetoothManager(private val context: Context) {
 
         if (service == null) {
             Log.e("NiimbotBLE", "No supported Niimbot service found")
-            connectionCallback?.invoke(false)
-            connectionState.postValue(STATE_DISCONNECTED)
+            failConnection(gatt)
             return
         }
 
@@ -377,8 +473,7 @@ class NiimbotBluetoothManager(private val context: Context) {
 
         if (writeCharacteristic == null || notifyCharacteristic == null) {
             Log.e("NiimbotBLE", "Failed to get characteristics for service")
-            connectionCallback?.invoke(false)
-            connectionState.postValue(STATE_DISCONNECTED)
+            failConnection(gatt)
             return
         }
 
@@ -387,8 +482,7 @@ class NiimbotBluetoothManager(private val context: Context) {
         val descriptor = notifyCharacteristic?.getDescriptor(CCCD_UUID)
         if (descriptor == null) {
             Log.e("NiimbotBLE", "Notification characteristic has no CCCD")
-            connectionCallback?.invoke(false)
-            connectionState.postValue(STATE_DISCONNECTED)
+            failConnection(gatt)
             return
         }
 
@@ -400,22 +494,65 @@ class NiimbotBluetoothManager(private val context: Context) {
             gatt.writeDescriptor(descriptor)
         }
 
-        gatt.requestMtu(MTU_SIZE)
     }
 
     private fun handleDisconnect(status: Int) {
+        val disconnectedMac = targetMac
+        closeCurrentGatt()
+        connectedMac = null
         writeJob?.cancel()
         connectionPacketSent = false
         failPendingResponses("Printer disconnected")
         connectionState.postValue(STATE_DISCONNECTED)
-        connectionCallback?.invoke(false)
+        finishConnectionAttempt(false)
 
-        if (targetMac != null && retryCount < MAX_RETRY) {
+        if (disconnectedMac != null && retryCount < MAX_RETRY) {
             retryCount++
             CoroutineScope(Dispatchers.IO).launch {
                 delay(RETRY_DELAY_MS * retryCount)
-                targetMac?.let { connect(it) { } }
+                if (targetMac.equals(disconnectedMac, ignoreCase = true)) {
+                    connect(disconnectedMac) { }
+                }
             }
+        }
+    }
+
+    private fun finishConnectionAttempt(success: Boolean) {
+        val callback = connectionCallback
+        connectionCallback = null
+        callback?.invoke(success)
+    }
+
+    private fun failConnection(failedGatt: BluetoothGatt) {
+        if (failedGatt !== gatt) return
+        closeCurrentGatt()
+        connectedMac = null
+        finishConnectionAttempt(false)
+        connectionState.postValue(STATE_DISCONNECTED)
+    }
+
+    private fun closeCurrentGatt() {
+        val currentGatt = gatt
+        // Clear first so a late callback cannot mutate a replacement connection.
+        gatt = null
+        writeJob?.cancel()
+        sessionInitJob?.cancel()
+        sessionInitJob = null
+        sessionInitializationStarted = false
+        writeCharacteristic = null
+        notifyCharacteristic = null
+        connectionPacketSent = false
+        notifyBuffer = ByteArray(0)
+        while (writeChannel.tryReceive().isSuccess) {
+            // Discard packets queued for a GATT that is no longer current.
+        }
+        failPendingResponses("Printer disconnected")
+
+        try {
+            currentGatt?.disconnect()
+            currentGatt?.close()
+        } catch (e: Exception) {
+            Log.w("NiimbotBLE", "close GATT error: ${e.message}")
         }
     }
 
@@ -495,6 +632,19 @@ class NiimbotBluetoothManager(private val context: Context) {
     }
 
     private fun routeResponse(frame: ProtocolFrame) {
+        Log.d(
+            "NiimbotBLE",
+            "RX 0x${frame.command.toString(16).padStart(2, '0')} " +
+                frame.data.joinToString(" ") { "%02x".format(it.toInt() and 0xFF) }
+        )
+
+        if (frame.command == 0x00 || frame.command == 0xDB) {
+            failPendingResponses(
+                "Printer rejected command: response 0x${frame.command.toString(16)}"
+            )
+            return
+        }
+
         if (frame.command == RESPONSE_PRINT_STATUS) {
             val page = if (frame.data.size >= 2) {
                 ((frame.data[0].toInt() and 0xFF) shl 8) or (frame.data[1].toInt() and 0xFF)
@@ -599,7 +749,7 @@ class NiimbotBluetoothManager(private val context: Context) {
                     )
                     sendCommand(
                         CMD_PRINT_START,
-                        byteArrayOf(0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00),
+                        byteArrayOf(0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00),
                         RESPONSE_PRINT_START
                     )
 
@@ -661,9 +811,23 @@ class NiimbotBluetoothManager(private val context: Context) {
         }
 
         try {
+            Log.d(
+                "NiimbotBLE",
+                "TX 0x${command.toString(16).padStart(2, '0')} " +
+                    data.joinToString(" ") { "%02x".format(it.toInt() and 0xFF) } +
+                    " expecting 0x${responseCommand.toString(16).padStart(2, '0')}"
+            )
             sendPacket(buildFrame(command, data))
-            return withTimeout(RESPONSE_TIMEOUT_MS) {
-                waiter.await()
+            return try {
+                withTimeout(RESPONSE_TIMEOUT_MS) {
+                    waiter.await()
+                }
+            } catch (e: TimeoutCancellationException) {
+                throw IllegalStateException(
+                    "No response to command 0x${command.toString(16)} " +
+                        "(expected 0x${responseCommand.toString(16)}) after ${RESPONSE_TIMEOUT_MS}ms",
+                    e
+                )
             }
         } finally {
             synchronized(pendingResponsesLock) {

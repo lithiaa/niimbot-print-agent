@@ -77,9 +77,15 @@ class PrintForegroundService : Service() {
         updateNotification()
         when (state) {
             NiimbotBluetoothManager.STATE_CONNECTED -> {
+                reconnectJob?.cancel()
                 Log.i(TAG, "BLE Connected ✅")
                 prefs.edit().putLong("last_connected", System.currentTimeMillis()).apply()
                 queueSignal.trySend(Unit)
+            }
+            NiimbotBluetoothManager.STATE_CONNECTING -> {
+                // Do not let a scheduled reconnect restore the old saved printer while
+                // the user is deliberately switching to another one.
+                reconnectJob?.cancel()
             }
             NiimbotBluetoothManager.STATE_DISCONNECTED -> {
                 Log.w(TAG, "BLE Disconnected — scheduling reconnect")

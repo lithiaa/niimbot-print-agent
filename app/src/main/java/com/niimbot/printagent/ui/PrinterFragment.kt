@@ -147,6 +147,7 @@ class PrinterFragment : Fragment() {
     private fun pairPrinter(device: android.bluetooth.BluetoothDevice) {
         val bleManager = (requireActivity().applicationContext as com.niimbot.printagent.NiimbotPrintApplication)
             .getNiimbotManager()
+        bleManager.stopScan()
         
         val prefs = requireContext().getSharedPreferences("niimbot_prefs", android.content.Context.MODE_PRIVATE)
         

@@ -16,7 +16,7 @@ import java.util.EnumMap
  */
 object LabelGenerator {
     
-    const val LABEL_WIDTH = 590
+    const val LABEL_WIDTH = 584
     const val LABEL_HEIGHT = 354
     const val DPI = LabelSize.DPI
     
