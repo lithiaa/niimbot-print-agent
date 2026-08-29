@@ -34,6 +34,15 @@ import java.util.UUID
  */
 class NiimbotBluetoothManager(private val context: Context) {
 
+    data class LabelRollStatus(
+        val barcode: String,
+        val serialNumber: String,
+        val totalLabels: Int,
+        val usedLabels: Int
+    ) {
+        val remainingLabels: Int get() = (totalLabels - usedLabels).coerceAtLeast(0)
+    }
+
     companion object {
         val SERVICE_UUID: UUID = UUID.fromString("e7810a71-73ae-499d-8c15-faa9aef0c3f2")
         val WRITE_UUID: UUID = UUID.fromString("bef8d6c9-9c21-4c9e-b632-bd58c1009f9f")
@@ -63,6 +72,7 @@ class NiimbotBluetoothManager(private val context: Context) {
         private const val CMD_PRINT_START = 0x01
         private const val CMD_PRINT_STATUS = 0xA3
         private const val CMD_SET_PAGE_SIZE = 0x13
+        private const val CMD_GET_RFID = 0x1A
         private const val CMD_PRINT_EMPTY_ROW = 0x84
         private const val CMD_PRINT_BITMAP_ROW = 0x85
         private const val CMD_PRINT_END_PAGE = 0xE3
@@ -74,6 +84,7 @@ class NiimbotBluetoothManager(private val context: Context) {
         private const val RESPONSE_PRINT_START = 0x02
         private const val RESPONSE_PRINT_STATUS = 0xB3
         private const val RESPONSE_SET_PAGE_SIZE = 0x14
+        private const val RESPONSE_GET_RFID = 0x1B
         private const val RESPONSE_PRINT_END_PAGE = 0xE4
         private const val RESPONSE_PRINT_END = 0xF4
 
@@ -510,6 +521,58 @@ class NiimbotBluetoothManager(private val context: Context) {
 
     // ===================== PRINT =====================
 
+    fun readLabelRollStatus(callback: (LabelRollStatus?, String?) -> Unit) {
+        if (connectionState.value != STATE_CONNECTED || writeCharacteristic == null) {
+            callback(null, "Printer not connected")
+            return
+        }
+
+        writeScope.launch {
+            printMutex.withLock {
+                try {
+                    ensureConnectionPacket()
+                    val frame = sendCommand(
+                        CMD_GET_RFID,
+                        byteArrayOf(0x01),
+                        RESPONSE_GET_RFID
+                    )
+                    callback(parseLabelRollStatus(frame.data), null)
+                } catch (e: Exception) {
+                    Log.w("NiimbotBLE", "Unable to read remaining labels", e)
+                    callback(null, e.message ?: "Unable to read label roll")
+                }
+            }
+        }
+    }
+
+    private fun parseLabelRollStatus(data: ByteArray): LabelRollStatus? {
+        if (data.size <= 1) return null
+        var offset = 8 // RFID UUID
+
+        fun readVariableString(): String? {
+            if (offset >= data.size) return null
+            val length = data[offset].toInt() and 0xFF
+            offset++
+            if (offset + length > data.size) return null
+            val value = data.copyOfRange(offset, offset + length).toString(Charsets.UTF_8)
+            offset += length
+            return value
+        }
+
+        val barcode = readVariableString() ?: return null
+        val serialNumber = readVariableString() ?: return null
+        if (offset + 4 > data.size) return null
+        val total = ((data[offset].toInt() and 0xFF) shl 8) or
+            (data[offset + 1].toInt() and 0xFF)
+        val used = ((data[offset + 2].toInt() and 0xFF) shl 8) or
+            (data[offset + 3].toInt() and 0xFF)
+        Log.d(
+            "NiimbotBLE",
+            "RFID roll barcode=$barcode serial=$serialNumber total=$total used=$used"
+        )
+        return LabelRollStatus(barcode, serialNumber, total, used)
+    }
+
     /**
      * Print a 1-bit bitmap (584x354) to the Niimbot B1 Pro printer.
      */
@@ -587,7 +650,11 @@ class NiimbotBluetoothManager(private val context: Context) {
         }
     }
 
-    private suspend fun sendCommand(command: Int, data: ByteArray, responseCommand: Int) {
+    private suspend fun sendCommand(
+        command: Int,
+        data: ByteArray,
+        responseCommand: Int
+    ): ProtocolFrame {
         val waiter = CompletableDeferred<ProtocolFrame>()
         synchronized(pendingResponsesLock) {
             pendingResponses[responseCommand] = waiter
@@ -595,7 +662,7 @@ class NiimbotBluetoothManager(private val context: Context) {
 
         try {
             sendPacket(buildFrame(command, data))
-            withTimeout(RESPONSE_TIMEOUT_MS) {
+            return withTimeout(RESPONSE_TIMEOUT_MS) {
                 waiter.await()
             }
         } finally {

@@ -18,6 +18,7 @@ data class PrintJob(
     val nama: String,
     val hargaJual: Long,
     val hargaBeli: Long,
+    val kodeHargaBeli: String? = null,
     val sku: String,
     val stok: Int = 0,
     val satuan: String = "pcs",

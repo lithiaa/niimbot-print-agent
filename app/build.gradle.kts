@@ -94,6 +94,7 @@ dependencies {
 
     // ZXing Barcode (core only — no Android embedded scanner needed)
     implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 
     // Hilt (Dependency Injection)
     val hilt_version = "2.51.1"

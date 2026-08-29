@@ -46,7 +46,8 @@ object LabelGenerator {
         satuan: String = "pcs",
         barcodeData: String? = null,
         labelSize: LabelSize = LabelSize.MM_50_X_30,
-        labelLayout: LabelLayout = LabelLayout.STANDARD
+        labelLayout: LabelLayout = LabelLayout.STANDARD,
+        kodeHargaBeli: String? = null
     ): Bitmap {
         val width = labelSize.widthPx
         val height = labelSize.heightPx
@@ -64,12 +65,12 @@ object LabelGenerator {
         
         val barcodeContent = barcodeData ?: sku
         val hargaJualText = "Rp ${formatRupiah(hargaJual)}"
-        val hargaBeliEncoded = hargaEncode(hargaBeli)
+        val hargaBeliEncoded = kodeHargaBeli?.trim()?.takeIf { it.isNotEmpty() } ?: hargaEncode(hargaBeli)
 
-        if (labelLayout == LabelLayout.COMPACT) {
-            drawCompact(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, sku, barcodeContent)
-        } else {
-            drawStandard(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, sku, barcodeContent)
+        when (labelLayout) {
+            LabelLayout.COMPACT -> drawCompact(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, barcodeContent)
+            LabelLayout.BARCODE_BOTTOM -> drawBarcodeBottom(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, barcodeContent)
+            LabelLayout.STANDARD -> drawStandard(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, barcodeContent)
         }
         
         return bitmap
@@ -91,38 +92,45 @@ object LabelGenerator {
 
     private fun drawStandard(
         canvas: Canvas, paint: Paint, width: Int, height: Int, nama: String,
-        hargaJual: String, hargaBeli: String, sku: String, barcodeContent: String
+        hargaJual: String, hargaBeli: String, barcodeContent: String
     ) {
         val scale = height / LABEL_HEIGHT.toFloat()
-        val barcodeHeight = (72 * scale).toInt().coerceAtLeast(44)
+        val barcodeHeight = (height * .22f).toInt().coerceAtLeast(40)
         val barcode = generateCode128(barcodeContent, width - MARGIN_LEFT - MARGIN_RIGHT, barcodeHeight)
-        var y = (height * .05f)
-        canvas.drawBitmap(barcode, ((width - barcode.width) / 2f), y, null)
-        y += barcode.height + 14f * scale
-        drawCenteredText(canvas, paint, barcodeContent, width, y, 16f * scale, false)
-        y += 28f * scale
-        drawCenteredFittedText(canvas, paint, nama, width, y, 36f * scale, true)
-        y += 52f * scale
-        drawCenteredFittedText(canvas, paint, "$hargaBeli  $hargaJual", width, y, 48f * scale, true)
-        y += 50f * scale
-        drawCenteredFittedText(canvas, paint, "SKU: $sku", width, y, 24f * scale, false)
+        canvas.drawBitmap(barcode, (width - barcode.width) / 2f, height * .08f, null)
+        drawCenteredText(canvas, paint, barcodeContent, width, height * .37f, 16f * scale, false)
+        drawCenteredFittedText(canvas, paint, nama, width, height * .57f, 44f * scale, true)
+        drawCenteredFittedText(canvas, paint, "$hargaBeli  $hargaJual", width, height * .80f, 46f * scale, true)
     }
 
     private fun drawCompact(
         canvas: Canvas, paint: Paint, width: Int, height: Int, nama: String,
-        hargaJual: String, hargaBeli: String, sku: String, barcodeContent: String
+        hargaJual: String, hargaBeli: String, barcodeContent: String
     ) {
         val padding = (width * .035f).toInt()
         val barcodeWidth = (width * .38f).toInt()
         val contentWidth = width - barcodeWidth - padding * 3
-        val barcode = generateCode128(barcodeContent, barcodeWidth, (height * .62f).toInt())
-        canvas.drawBitmap(barcode, (width - padding - barcodeWidth).toFloat(), (height * .10f), null)
+        val barcode = generateCode128(barcodeContent, barcodeWidth, (height * .58f).toInt())
+        canvas.drawBitmap(barcode, (width - padding - barcodeWidth).toFloat(), (height * .12f), null)
         drawCenteredText(canvas, paint, barcodeContent, barcodeWidth,
             height * .82f, (height * .055f), false, width - padding - barcodeWidth)
-        drawFittedText(canvas, paint, nama, padding.toFloat(), height * .25f, contentWidth.toFloat(), height * .13f, true)
-        drawFittedText(canvas, paint, hargaJual, padding.toFloat(), height * .53f, contentWidth.toFloat(), height * .16f, true)
-        drawFittedText(canvas, paint, hargaBeli, padding.toFloat(), height * .72f, contentWidth.toFloat(), height * .09f, true)
-        drawFittedText(canvas, paint, "SKU: $sku", padding.toFloat(), height * .88f, contentWidth.toFloat(), height * .075f, false)
+        drawFittedText(canvas, paint, nama, padding.toFloat(), height * .27f, contentWidth.toFloat(), height * .16f, true)
+        drawFittedText(canvas, paint, hargaJual, padding.toFloat(), height * .55f, contentWidth.toFloat(), height * .15f, true)
+        drawFittedText(canvas, paint, hargaBeli, padding.toFloat(), height * .75f, contentWidth.toFloat(), height * .10f, true)
+    }
+
+    private fun drawBarcodeBottom(
+        canvas: Canvas, paint: Paint, width: Int, height: Int, nama: String,
+        hargaJual: String, hargaBeli: String, barcodeContent: String
+    ) {
+        val scale = height / LABEL_HEIGHT.toFloat()
+        // Keep the first baseline well inside the printer's effective top margin.
+        drawCenteredFittedText(canvas, paint, nama, width, height * .21f, 44f * scale, true)
+        drawCenteredFittedText(canvas, paint, "$hargaBeli  $hargaJual", width, height * .37f, 42f * scale, true)
+        val barcodeHeight = (72 * scale).toInt().coerceAtLeast(44)
+        val barcode = generateCode128(barcodeContent, width - MARGIN_LEFT - MARGIN_RIGHT, barcodeHeight)
+        canvas.drawBitmap(barcode, (width - barcode.width) / 2f, height * .48f, null)
+        drawCenteredText(canvas, paint, barcodeContent, width, height * .86f, 16f * scale, false)
     }
 
     private fun drawCenteredFittedText(canvas: Canvas, paint: Paint, text: String, width: Int, y: Float, size: Float, bold: Boolean) {

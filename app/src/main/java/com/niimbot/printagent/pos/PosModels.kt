@@ -19,6 +19,9 @@ data class PosProduct(
 internal data class PosProductEnvelope(val data: PosProduct)
 
 @Serializable
+data class PosProductSearchResponse(val data: List<PosProduct>)
+
+@Serializable
 internal data class PosProductWriteRequest(
     val sku: String,
     val nama: String,

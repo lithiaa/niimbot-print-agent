@@ -64,6 +64,28 @@ class PosApiClientRequestTest {
         )
     }
 
+    @Test
+    fun `search sends query and integration key then decodes product list`() = runBlocking {
+        val recorder = RecordingResponder("""{"data":[$responseJson]}""")
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.searchProducts(
+            "https://pos.example/base/",
+            "secret",
+            "Barang",
+            limit = 7
+        )
+
+        assertTrue(result is PosApiResult.Success)
+        assertEquals("GET", recorder.request.method)
+        assertEquals("/base/api/integration/barang/search", recorder.request.url.encodedPath)
+        assertEquals("Barang", recorder.request.url.queryParameter("q"))
+        assertEquals("7", recorder.request.url.queryParameter("limit"))
+        assertEquals("secret", recorder.request.header("X-Integration-Key"))
+        assertEquals(1, (result as PosApiResult.Success).value.size)
+        assertEquals("SKU-1", result.value.single().sku)
+    }
+
     private class RecordingResponder(responseJson: String) {
         lateinit var request: Request
         val client = OkHttpClient.Builder()

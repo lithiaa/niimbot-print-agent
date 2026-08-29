@@ -23,7 +23,14 @@
             android:textSize="24sp"
             android:textStyle="bold" />
 
+        <LinearLayout
+            android:id="@+id/label_content_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_label_form"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
@@ -55,12 +62,16 @@
 
                         <AutoCompleteTextView
                             android:id="@+id/dropdown_label_size"
-                            style="@style/Widget.NiimbotPrintAgent.FormEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:contentDescription="@string/label_size_description"
                             android:inputType="none"
-                            android:minHeight="56dp" />
+                            android:minHeight="56dp"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="8dp"
+                            android:popupBackground="@color/surface"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -74,12 +85,16 @@
 
                         <AutoCompleteTextView
                             android:id="@+id/dropdown_label_layout"
-                            style="@style/Widget.NiimbotPrintAgent.FormEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:contentDescription="@string/label_layout_description"
                             android:inputType="none"
-                            android:minHeight="56dp" />
+                            android:minHeight="56dp"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="8dp"
+                            android:popupBackground="@color/surface"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -89,7 +104,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="@string/label_sku">
+                    android:hint="@string/label_sku"
+                    app:helperText="@string/label_sku_auto_help">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_label_sku"
@@ -103,6 +119,15 @@
                         android:maxLines="1" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_scan_label_sku"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="48dp"
+                    android:text="@string/label_scan_sku" />
+
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/til_label_nama"
                     style="@style/Widget.NiimbotPrintAgent.TextInput"
@@ -111,31 +136,54 @@
                     android:layout_marginTop="12dp"
                     android:hint="@string/label_nama">
 
-                    <com.google.android.material.textfield.TextInputEditText
+                    <AutoCompleteTextView
                         android:id="@+id/et_label_nama"
-                        style="@style/Widget.NiimbotPrintAgent.FormEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:contentDescription="@string/label_nama_description"
                         android:imeOptions="actionNext"
                         android:inputType="textCapSentences"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:popupBackground="@color/surface"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
                         android:minHeight="48dp"
                         android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/til_label_kode_harga_beli"
+                    style="@style/Widget.NiimbotPrintAgent.TextInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:hint="@string/label_kode_harga_beli"
+                    app:helperText="@string/label_kode_harga_beli_help">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_label_kode_harga_beli"
+                        style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/label_kode_harga_beli_description"
+                        android:imeOptions="actionNext"
+                        android:inputType="textCapCharacters"
+                        android:maxLines="1"
+                        android:minHeight="48dp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:orientation="horizontal">
+                    android:orientation="vertical">
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/til_label_harga_beli"
                         style="@style/Widget.NiimbotPrintAgent.TextInput"
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="6dp"
-                        android:layout_weight="1"
                         android:hint="@string/label_harga_beli"
                         app:prefixText="Rp ">
 
@@ -154,10 +202,9 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/til_label_harga_jual"
                         style="@style/Widget.NiimbotPrintAgent.TextInput"
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
+                        android:layout_marginTop="12dp"
                         android:hint="@string/label_harga_jual"
                         app:prefixText="Rp ">
 
@@ -231,6 +278,7 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_label_preview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
@@ -285,6 +333,44 @@
                     android:text="@string/update_preview" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tv_label_remaining"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/label_remaining_unknown"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_refresh_label_remaining"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/refresh_label_remaining_description"
+                android:minHeight="48dp"
+                android:text="@string/refresh" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_reset_label_form"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:contentDescription="@string/reset_label_form_description"
+            android:minHeight="48dp"
+            android:text="@string/reset_label_form" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_create_and_print"

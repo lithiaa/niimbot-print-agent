@@ -304,7 +304,8 @@ class PrintForegroundService : Service() {
                     satuan = job.satuan,
                     barcodeData = job.barcode,
                     labelSize = LabelSize.fromName(job.labelSize),
-                    labelLayout = LabelLayout.fromName(job.labelLayout)
+                    labelLayout = LabelLayout.fromName(job.labelLayout),
+                    kodeHargaBeli = job.kodeHargaBeli
                 )
 
                 val requestedCopies = job.qty.coerceAtLeast(1)
@@ -314,6 +315,11 @@ class PrintForegroundService : Service() {
                     printViaBleBlocking(bitmap, job.id)
                 ) {
                     printedCopies++
+                    // PRINT_END acknowledges the protocol session before the printer's
+                    // mechanical feed/buffer is always ready for another full bitmap.
+                    // Starting the next copy immediately caused longer runs to stop
+                    // consistently after several labels (commonly 5 of 10).
+                    if (printedCopies < requestedCopies) delay(1_200L)
                 }
 
                 if (printedCopies == requestedCopies) {

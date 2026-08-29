@@ -63,6 +63,40 @@ class PosApiClient(
             allowNotFound = true
         )
 
+    suspend fun searchProducts(
+        baseUrl: String,
+        integrationKey: String,
+        query: String,
+        limit: Int = 10
+    ): PosApiResult<List<PosProduct>> = withContext(Dispatchers.IO) {
+        val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
+            ?: return@withContext PosApiResult.Failure("URL Lithia POS tidak valid")
+        val url = parsedBase.newBuilder()
+            .addPathSegments("api/integration/barang/search")
+            .addQueryParameter("q", query.trim())
+            .addQueryParameter("limit", limit.coerceIn(1, 20).toString())
+            .build()
+        val request = Request.Builder()
+            .url(url)
+            .header("X-Integration-Key", integrationKey)
+            .header("Accept", "application/json")
+            .get()
+            .build()
+        try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext failureForStatus(response.code)
+                val body = response.body?.string().orEmpty()
+                runCatching { json.decodeFromString<PosProductSearchResponse>(body).data }
+                    .fold(
+                        onSuccess = { PosApiResult.Success(it) },
+                        onFailure = { PosApiResult.Failure("Respons pencarian Lithia POS tidak valid.") }
+                    )
+            }
+        } catch (_: IOException) {
+            PosApiResult.Failure("Tidak dapat terhubung ke Lithia POS. Periksa URL dan jaringan.")
+        }
+    }
+
     override suspend fun create(
         baseUrl: String,
         integrationKey: String,

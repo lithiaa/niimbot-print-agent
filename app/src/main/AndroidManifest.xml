@@ -23,12 +23,16 @@
     <application
         android:name=".NiimbotPrintApplication"
         android:allowBackup="true"
-        android:icon="@drawable/ic_launcher_foreground"
+        android:icon="@drawable/niimbot_app_icon"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/ic_launcher_foreground"
+        android:roundIcon="@drawable/niimbot_app_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.NiimbotPrintAgent"
         tools:targetApi="31">
+
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
 
         <activity
             android:name=".ui.MainActivity"
