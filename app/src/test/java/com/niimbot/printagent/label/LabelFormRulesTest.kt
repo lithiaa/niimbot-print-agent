@@ -103,4 +103,32 @@ class LabelFormRulesTest {
         assertEquals(3, result.data?.qty)
         assertEquals(0, result.data?.jumlahBarangMasuk)
     }
+
+    @Test
+    fun `item quantity is separate and supplier code is preserved for label`() {
+        val result = LabelFormRules.validate(
+            LabelFormInput(
+                "SKU-1", "Barang", "10", "12", "3", "0", false,
+                itemQty = "6",
+                supplierCode = "SUP-A"
+            )
+        )
+
+        assertTrue(result.errors.isEmpty())
+        assertEquals(3, result.data?.qty)
+        assertEquals(6, result.data?.itemQty)
+        assertEquals("SUP-A", result.data?.supplierCode)
+    }
+
+    @Test
+    fun `item quantity must be positive`() {
+        val result = LabelFormRules.validate(
+            LabelFormInput(
+                "SKU-1", "Barang", "10", "12", "1", "0", false,
+                itemQty = "0"
+            )
+        )
+
+        assertEquals(setOf(LabelField.ITEM_QTY), result.errors.keys)
+    }
 }

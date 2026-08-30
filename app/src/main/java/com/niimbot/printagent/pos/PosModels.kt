@@ -22,10 +22,23 @@ internal data class PosProductEnvelope(val data: PosProduct)
 data class PosProductSearchResponse(val data: List<PosProduct>)
 
 @Serializable
+data class PosSupplier(
+    val id: Long,
+    val nama: String,
+    val kode: String? = null
+) {
+    val codeForLabel: String get() = kode?.trim()?.takeIf { it.isNotEmpty() } ?: nama.trim()
+}
+
+@Serializable
+internal data class PosSupplierEnvelope(val data: List<PosSupplier>)
+
+@Serializable
 internal data class PosProductWriteRequest(
     val sku: String,
     val nama: String,
     @SerialName("harga_beli") val hargaBeli: Long,
+    @SerialName("harga_beli_kode") val hargaBeliKode: String,
     @SerialName("harga_jual") val hargaJual: Long,
     @SerialName("jumlah_barang_masuk") val jumlahBarangMasuk: Int,
     @SerialName("operation_id") val operationId: String,
@@ -43,5 +56,6 @@ internal data class PosStockInRequest(
 internal data class PosProductUpdateRequest(
     val nama: String,
     @SerialName("harga_beli") val hargaBeli: Long,
+    @SerialName("harga_beli_kode") val hargaBeliKode: String?,
     @SerialName("harga_jual") val hargaJual: Long
 )

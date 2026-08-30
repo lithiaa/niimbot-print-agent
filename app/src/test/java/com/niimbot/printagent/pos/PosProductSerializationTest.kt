@@ -15,6 +15,7 @@ class PosProductSerializationTest {
             sku = "GULA-1",
             nama = "Gula",
             hargaBeli = 10_000L,
+            hargaBeliKode = "AUP",
             hargaJual = 12_000L,
             jumlahBarangMasuk = 6,
             operationId = operationId,
@@ -23,7 +24,7 @@ class PosProductSerializationTest {
 
         assertEquals(
             "{\"sku\":\"GULA-1\",\"nama\":\"Gula\",\"harga_beli\":10000," +
-                "\"harga_jual\":12000,\"jumlah_barang_masuk\":6," +
+                "\"harga_beli_kode\":\"AUP\",\"harga_jual\":12000,\"jumlah_barang_masuk\":6," +
                 "\"operation_id\":\"$operationId\",\"satuan\":\"pcs\"}",
             Json.encodeToString(request)
         )
@@ -49,11 +50,12 @@ class PosProductSerializationTest {
         val request = PosProductUpdateRequest(
             nama = "Gula",
             hargaBeli = 10_000L,
+            hargaBeliKode = "AUP",
             hargaJual = 12_000L
         )
 
         assertEquals(
-            "{\"nama\":\"Gula\",\"harga_beli\":10000,\"harga_jual\":12000}",
+            "{\"nama\":\"Gula\",\"harga_beli\":10000,\"harga_beli_kode\":\"AUP\",\"harga_jual\":12000}",
             Json.encodeToString(request)
         )
     }

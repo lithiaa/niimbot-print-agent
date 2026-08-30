@@ -309,10 +309,12 @@ class PrintForegroundService : Service() {
                     sku = job.sku,
                     satuan = job.satuan,
                     barcodeData = job.barcode,
-                    labelSize = LabelSize.fromName(job.labelSize),
-                    labelLayout = LabelLayout.fromName(job.labelLayout),
-                    kodeHargaBeli = job.kodeHargaBeli
-                )
+                labelSize = LabelSize.fromName(job.labelSize),
+                labelLayout = LabelLayout.fromName(job.labelLayout),
+                kodeHargaBeli = job.kodeHargaBeli,
+                itemQty = job.itemQty,
+                supplierCode = job.supplierCode
+            )
 
                 val requestedCopies = job.qty.coerceAtLeast(1)
                 var printedCopies = 0

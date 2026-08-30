@@ -15,7 +15,7 @@ import com.niimbot.printagent.data.converters.DateConverter
         PrinterConfig::class,
         PrintLog::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(DateConverter::class)
@@ -44,6 +44,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE print_jobs ADD COLUMN itemQty INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE print_jobs ADD COLUMN supplierCode TEXT")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -54,7 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "niimbot_print_agent.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

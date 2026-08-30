@@ -46,6 +46,7 @@ import com.niimbot.printagent.pos.PosSubmissionOutcome
 import com.niimbot.printagent.pos.PosSubmissionWorkflow
 import com.niimbot.printagent.pos.PosProductRules
 import com.niimbot.printagent.pos.PosProduct
+import com.niimbot.printagent.pos.PosSupplier
 import com.niimbot.printagent.service.PrintForegroundService
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.NumberFormat
@@ -68,6 +69,8 @@ class LabelFragment : Fragment() {
     private lateinit var tilHargaBeli: TextInputLayout
     private lateinit var tilHargaJual: TextInputLayout
     private lateinit var tilQty: TextInputLayout
+    private lateinit var tilItemQty: TextInputLayout
+    private lateinit var tilSupplier: TextInputLayout
     private lateinit var tilJumlahBarangMasuk: TextInputLayout
     private lateinit var etSku: EditText
     private lateinit var etNama: AutoCompleteTextView
@@ -75,6 +78,8 @@ class LabelFragment : Fragment() {
     private lateinit var etHargaBeli: EditText
     private lateinit var etHargaJual: EditText
     private lateinit var etQty: EditText
+    private lateinit var etItemQty: EditText
+    private lateinit var dropdownSupplier: AutoCompleteTextView
     private lateinit var etJumlahBarangMasuk: EditText
     private lateinit var ivPreview: ImageView
     private lateinit var switchPos: SwitchMaterial
@@ -91,6 +96,8 @@ class LabelFragment : Fragment() {
     private lateinit var previewCard: MaterialCardView
     private var productSearchJob: Job? = null
     private var productSuggestions: List<PosProduct> = emptyList()
+    private var supplierSuggestions: List<PosSupplier> = emptyList()
+    private var selectedSupplierCode: String? = null
     private var applyingProductSuggestion = false
     private val availableLabelSizes = LabelSize.entries.toMutableList()
     private var metadataConsentPromptShown = false
@@ -106,11 +113,12 @@ class LabelFragment : Fragment() {
         bindViews(view)
         configureResponsiveLayout()
         setupLabelOptions()
+        setupSupplierDropdown()
         restoreDraft()
         setupProductAutocomplete()
         updateIncomingStockState()
 
-        listOf(etSku, etNama, etKodeHargaBeli, etHargaBeli, etHargaJual, etQty).forEach { editText ->
+        listOf(etSku, etNama, etKodeHargaBeli, etHargaBeli, etHargaJual, etQty, etItemQty).forEach { editText ->
             editText.doAfterTextChanged {
                 saveDraft()
                 updatePreview(showErrors = false)
@@ -128,6 +136,14 @@ class LabelFragment : Fragment() {
             updatePreview(showErrors = false)
         }
         dropdownLabelLayout.setOnItemClickListener { _, _, _, _ ->
+            saveDraft()
+            updatePreview(showErrors = false)
+        }
+        dropdownSupplier.setOnItemClickListener { parent, _, position, _ ->
+            val selectedLabel = parent.getItemAtPosition(position)?.toString()
+            selectedSupplierCode = supplierSuggestions
+                .firstOrNull { supplierSuggestionLabel(it) == selectedLabel }
+                ?.codeForLabel
             saveDraft()
             updatePreview(showErrors = false)
         }
@@ -150,6 +166,8 @@ class LabelFragment : Fragment() {
         tilHargaBeli = view.findViewById(R.id.til_label_harga_beli)
         tilHargaJual = view.findViewById(R.id.til_label_harga_jual)
         tilQty = view.findViewById(R.id.til_label_qty)
+        tilItemQty = view.findViewById(R.id.til_label_item_qty)
+        tilSupplier = view.findViewById(R.id.til_label_supplier)
         tilJumlahBarangMasuk = view.findViewById(R.id.til_jumlah_barang_masuk)
         etSku = view.findViewById(R.id.et_label_sku)
         etNama = view.findViewById(R.id.et_label_nama)
@@ -157,6 +175,8 @@ class LabelFragment : Fragment() {
         etHargaBeli = view.findViewById(R.id.et_label_harga_beli)
         etHargaJual = view.findViewById(R.id.et_label_harga_jual)
         etQty = view.findViewById(R.id.et_label_qty)
+        etItemQty = view.findViewById(R.id.et_label_item_qty)
+        dropdownSupplier = view.findViewById(R.id.dropdown_label_supplier)
         etJumlahBarangMasuk = view.findViewById(R.id.et_jumlah_barang_masuk)
         ivPreview = view.findViewById(R.id.iv_create_label_preview)
         switchPos = view.findViewById(R.id.switch_add_to_pos)
@@ -277,6 +297,9 @@ class LabelFragment : Fragment() {
         etHargaBeli.text?.clear()
         etHargaJual.text?.clear()
         etQty.setText("1")
+        etItemQty.setText("1")
+        dropdownSupplier.setText("", false)
+        selectedSupplierCode = null
         etJumlahBarangMasuk.setText("0")
         switchPos.isChecked = false
         dropdownLabelSize.setText(LabelSize.MM_50_X_30.displayName, false)
@@ -328,6 +351,55 @@ class LabelFragment : Fragment() {
                 ?.let(::applyProductSuggestion)
         }
     }
+
+    private fun setupSupplierDropdown() {
+        dropdownSupplier.setAdapter(
+            ArrayAdapter(requireContext(), R.layout.item_label_dropdown, emptyList<String>())
+        )
+        loadSuppliers()
+    }
+
+    private fun loadSuppliers() {
+        val token = configStore.getSupplierAccessToken()
+        if (token.isNullOrBlank()) {
+            tilSupplier.helperText = getString(R.string.label_supplier_token_required)
+            return
+        }
+        tilSupplier.helperText = getString(R.string.label_supplier_loading)
+        viewLifecycleOwner.lifecycleScope.launch {
+            when (val result = posApiClient.listSuppliers(configStore.getBaseUrl(), token)) {
+                is PosApiResult.Success -> {
+                    supplierSuggestions = result.value.sortedBy { it.nama.lowercase(Locale("id", "ID")) }
+                    dropdownSupplier.setAdapter(
+                        ArrayAdapter(
+                            requireContext(),
+                            R.layout.item_label_dropdown,
+                            supplierSuggestions.map(::supplierSuggestionLabel)
+                        )
+                    )
+                    val selectedText = dropdownSupplier.text.toString()
+                    supplierSuggestions.firstOrNull { supplierSuggestionLabel(it) == selectedText }
+                        ?.let { selectedSupplierCode = it.codeForLabel }
+                    tilSupplier.helperText = getString(R.string.label_supplier_hint)
+                }
+                PosApiResult.NotFound -> {
+                    supplierSuggestions = emptyList()
+                    tilSupplier.helperText = getString(R.string.label_supplier_hint)
+                }
+                is PosApiResult.Failure -> {
+                    supplierSuggestions = emptyList()
+                    tilSupplier.helperText = getString(R.string.label_supplier_load_failed, result.message)
+                }
+            }
+        }
+    }
+
+    private fun supplierSuggestionLabel(supplier: PosSupplier): String =
+        if (supplier.codeForLabel == supplier.nama.trim()) {
+            supplier.nama
+        } else {
+            "${supplier.nama} - ${supplier.codeForLabel}"
+        }
 
     private fun scheduleProductSearch(query: String) {
         productSearchJob?.cancel()
@@ -437,7 +509,9 @@ class LabelFragment : Fragment() {
         addToPos = addToPos,
         labelSize = selectedLabelSize(),
         labelLayout = selectedLabelLayout(),
-        kodeHargaBeli = etKodeHargaBeli.text.toString()
+        kodeHargaBeli = etKodeHargaBeli.text.toString(),
+        itemQty = etItemQty.text.toString(),
+        supplierCode = selectedSupplierCode.orEmpty()
     )
 
     private fun updatePreview(showErrors: Boolean): LabelData? {
@@ -460,7 +534,9 @@ class LabelFragment : Fragment() {
                 sku = previewSku,
                 labelSize = selectedLabelSize(),
                 labelLayout = selectedLabelLayout(),
-                kodeHargaBeli = etKodeHargaBeli.text.toString()
+                kodeHargaBeli = etKodeHargaBeli.text.toString(),
+                itemQty = etItemQty.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 1,
+                supplierCode = selectedSupplierCode
             )
         ivPreview.setImageBitmap(bitmap)
         updatePreviewDimensions(selectedLabelSize())
@@ -572,7 +648,9 @@ class LabelFragment : Fragment() {
                 sku = data.sku,
                 qty = data.qty,
                 labelSize = data.labelSize.name,
-                labelLayout = data.labelLayout.name
+                labelLayout = data.labelLayout.name,
+                itemQty = data.itemQty,
+                supplierCode = data.supplierCode
             )
             val jobId = database.printJobDao().insert(job)
             if (jobId <= 0) {
@@ -607,6 +685,7 @@ class LabelFragment : Fragment() {
         tilHargaBeli.error = errors[LabelField.HARGA_BELI]
         tilHargaJual.error = errors[LabelField.HARGA_JUAL]
         tilQty.error = errors[LabelField.QTY]
+        tilItemQty.error = errors[LabelField.ITEM_QTY]
         tilJumlahBarangMasuk.error = errors[LabelField.JUMLAH_BARANG_MASUK]
     }
 
@@ -616,6 +695,7 @@ class LabelFragment : Fragment() {
         if (LabelField.HARGA_BELI !in errors) tilHargaBeli.error = null
         if (LabelField.HARGA_JUAL !in errors) tilHargaJual.error = null
         if (LabelField.QTY !in errors) tilQty.error = null
+        if (LabelField.ITEM_QTY !in errors) tilItemQty.error = null
         if (LabelField.JUMLAH_BARANG_MASUK !in errors) tilJumlahBarangMasuk.error = null
     }
 
@@ -654,6 +734,9 @@ class LabelFragment : Fragment() {
         etHargaBeli.setText(draft.getString(DRAFT_HARGA_BELI, "").orEmpty())
         etHargaJual.setText(draft.getString(DRAFT_HARGA_JUAL, "").orEmpty())
         etQty.setText(draft.getString(DRAFT_QTY, "1").orEmpty().ifBlank { "1" })
+        etItemQty.setText(draft.getString(DRAFT_ITEM_QTY, "1").orEmpty().ifBlank { "1" })
+        dropdownSupplier.setText(draft.getString(DRAFT_SUPPLIER_DISPLAY, "").orEmpty(), false)
+        selectedSupplierCode = draft.getString(DRAFT_SUPPLIER_CODE, null)
         etJumlahBarangMasuk.setText(
             draft.getString(DRAFT_JUMLAH_BARANG_MASUK, "0").orEmpty().ifBlank { "0" }
         )
@@ -679,6 +762,9 @@ class LabelFragment : Fragment() {
             .putString(DRAFT_HARGA_BELI, etHargaBeli.text.toString())
             .putString(DRAFT_HARGA_JUAL, etHargaJual.text.toString())
             .putString(DRAFT_QTY, etQty.text.toString())
+            .putString(DRAFT_ITEM_QTY, etItemQty.text.toString())
+            .putString(DRAFT_SUPPLIER_DISPLAY, dropdownSupplier.text.toString())
+            .putString(DRAFT_SUPPLIER_CODE, selectedSupplierCode)
             .putString(DRAFT_JUMLAH_BARANG_MASUK, etJumlahBarangMasuk.text.toString())
             .putBoolean(DRAFT_ADD_TO_POS, switchPos.isChecked)
             .putString(DRAFT_LABEL_SIZE, selectedLabelSize().name)
@@ -713,6 +799,9 @@ class LabelFragment : Fragment() {
         btnScanSku.isEnabled = !busy
         btnResetForm.isEnabled = !busy
         switchPos.isEnabled = !busy
+        tilItemQty.isEnabled = !busy
+        tilSupplier.isEnabled = !busy
+        dropdownSupplier.isEnabled = !busy
         tilJumlahBarangMasuk.isEnabled = !busy && switchPos.isChecked
         etJumlahBarangMasuk.isEnabled = !busy && switchPos.isChecked
     }
@@ -735,6 +824,9 @@ class LabelFragment : Fragment() {
         const val DRAFT_HARGA_BELI = "harga_beli"
         const val DRAFT_HARGA_JUAL = "harga_jual"
         const val DRAFT_QTY = "qty"
+        const val DRAFT_ITEM_QTY = "item_qty"
+        const val DRAFT_SUPPLIER_DISPLAY = "supplier_display"
+        const val DRAFT_SUPPLIER_CODE = "supplier_code"
         const val DRAFT_JUMLAH_BARANG_MASUK = "jumlah_barang_masuk"
         const val DRAFT_ADD_TO_POS = "add_to_pos"
         const val DRAFT_LABEL_SIZE = "label_size"

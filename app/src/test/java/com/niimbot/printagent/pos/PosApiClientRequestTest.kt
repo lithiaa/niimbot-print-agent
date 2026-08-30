@@ -31,7 +31,7 @@ class PosApiClientRequestTest {
         assertEquals("/base/api/integration/barang", recorder.request.url.encodedPath)
         assertEquals(
             "{\"sku\":\"SKU-1\",\"nama\":\"Barang\",\"harga_beli\":100," +
-                "\"harga_jual\":150,\"jumlah_barang_masuk\":4," +
+                "\"harga_beli_kode\":\"SP\",\"harga_jual\":150,\"jumlah_barang_masuk\":4," +
                 "\"operation_id\":\"$operationId\",\"satuan\":\"pcs\"}",
             recorder.request.bodyText()
         )
@@ -84,6 +84,20 @@ class PosApiClientRequestTest {
         assertEquals("secret", recorder.request.header("X-Integration-Key"))
         assertEquals(1, (result as PosApiResult.Success).value.size)
         assertEquals("SKU-1", result.value.single().sku)
+    }
+
+    @Test
+    fun `supplier list uses bearer token and decodes direct list`() = runBlocking {
+        val recorder = RecordingResponder("""[{"id":7,"nama":"SUP-A","kode":"SA"}]""")
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.listSuppliers("https://pos.example/base/", "supplier-token")
+
+        assertTrue(result is PosApiResult.Success)
+        assertEquals("GET", recorder.request.method)
+        assertEquals("/base/api/supplier", recorder.request.url.encodedPath)
+        assertEquals("Bearer supplier-token", recorder.request.header("Authorization"))
+        assertEquals("SA", (result as PosApiResult.Success).value.single().codeForLabel)
     }
 
     private class RecordingResponder(responseJson: String) {

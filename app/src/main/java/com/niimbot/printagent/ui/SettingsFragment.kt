@@ -39,6 +39,7 @@ class SettingsFragment : Fragment() {
 
     private var etPosBaseUrl: EditText? = null
     private var etPosIntegrationKey: EditText? = null
+    private var etPosSupplierToken: EditText? = null
     private var btnSavePosConfig: Button? = null
     private var btnTestPosConnection: Button? = null
     
@@ -73,6 +74,7 @@ class SettingsFragment : Fragment() {
     private fun bindViews(view: View) {
         etPosBaseUrl = view.findViewById(R.id.et_pos_base_url)
         etPosIntegrationKey = view.findViewById(R.id.et_pos_integration_key)
+        etPosSupplierToken = view.findViewById(R.id.et_pos_supplier_token)
         btnSavePosConfig = view.findViewById(R.id.btn_save_pos_config)
         btnTestPosConnection = view.findViewById(R.id.btn_test_pos_connection)
 
@@ -104,6 +106,9 @@ class SettingsFragment : Fragment() {
         etPosIntegrationKey?.setText(
             if (integrationConfigStore.hasIntegrationKey()) IntegrationConfigStore.MASKED_KEY else ""
         )
+        etPosSupplierToken?.setText(
+            if (integrationConfigStore.hasSupplierAccessToken()) IntegrationConfigStore.MASKED_KEY else ""
+        )
     }
     
     private fun setupClickListeners() {
@@ -112,6 +117,11 @@ class SettingsFragment : Fragment() {
         etPosIntegrationKey?.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus && etPosIntegrationKey?.text.toString() == IntegrationConfigStore.MASKED_KEY) {
                 etPosIntegrationKey?.text?.clear()
+            }
+        }
+        etPosSupplierToken?.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && etPosSupplierToken?.text.toString() == IntegrationConfigStore.MASKED_KEY) {
+                etPosSupplierToken?.text?.clear()
             }
         }
 
@@ -191,8 +201,15 @@ class SettingsFragment : Fragment() {
         if (enteredKey.isNotBlank() && enteredKey != IntegrationConfigStore.MASKED_KEY) {
             integrationConfigStore.setIntegrationKey(enteredKey)
         }
+        val enteredSupplierToken = etPosSupplierToken?.text.toString()
+        if (enteredSupplierToken.isNotBlank() && enteredSupplierToken != IntegrationConfigStore.MASKED_KEY) {
+            integrationConfigStore.setSupplierAccessToken(enteredSupplierToken)
+        }
         etPosIntegrationKey?.setText(
             if (integrationConfigStore.hasIntegrationKey()) IntegrationConfigStore.MASKED_KEY else ""
+        )
+        etPosSupplierToken?.setText(
+            if (integrationConfigStore.hasSupplierAccessToken()) IntegrationConfigStore.MASKED_KEY else ""
         )
         Toast.makeText(requireContext(), R.string.pos_config_saved, Toast.LENGTH_SHORT).show()
     }

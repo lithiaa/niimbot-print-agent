@@ -12,7 +12,9 @@ data class LabelFormInput(
     val addToPos: Boolean,
     val labelSize: LabelSize = LabelSize.MM_50_X_30,
     val labelLayout: LabelLayout = LabelLayout.STANDARD,
-    val kodeHargaBeli: String = ""
+    val kodeHargaBeli: String = "",
+    val itemQty: String = "1",
+    val supplierCode: String = ""
 )
 
 data class LabelData(
@@ -24,11 +26,13 @@ data class LabelData(
     val jumlahBarangMasuk: Int,
     val labelSize: LabelSize = LabelSize.MM_50_X_30,
     val labelLayout: LabelLayout = LabelLayout.STANDARD,
-    val kodeHargaBeli: String? = null
+    val kodeHargaBeli: String? = null,
+    val itemQty: Int = 1,
+    val supplierCode: String? = null
 )
 
 enum class LabelField {
-    SKU, NAMA, HARGA_BELI, HARGA_JUAL, QTY, JUMLAH_BARANG_MASUK
+    SKU, NAMA, HARGA_BELI, HARGA_JUAL, QTY, ITEM_QTY, JUMLAH_BARANG_MASUK
 }
 
 data class LabelValidationResult(
@@ -44,6 +48,7 @@ object LabelFormRules {
         val hargaBeli = input.hargaBeli.trim().toLongOrNull()
         val hargaJual = input.hargaJual.trim().toLongOrNull()
         val qty = input.qty.trim().toIntOrNull()
+        val itemQty = input.itemQty.trim().toIntOrNull()
         val jumlahBarangMasuk = if (input.addToPos) {
             input.jumlahBarangMasuk.trim().toIntOrNull()
         } else {
@@ -61,6 +66,9 @@ object LabelFormRules {
         if (qty == null || qty <= 0) {
             errors[LabelField.QTY] = "Jumlah label minimal 1"
         }
+        if (itemQty == null || itemQty <= 0) {
+            errors[LabelField.ITEM_QTY] = "Kuantitas barang pada label minimal 1"
+        }
         if (input.addToPos && (jumlahBarangMasuk == null || jumlahBarangMasuk < 0)) {
             errors[LabelField.JUMLAH_BARANG_MASUK] =
                 "Jumlah barang masuk untuk stok POS harus berupa bilangan bulat nol atau lebih"
@@ -76,7 +84,9 @@ object LabelFormRules {
                 jumlahBarangMasuk!!,
                 input.labelSize,
                 input.labelLayout,
-                input.kodeHargaBeli.trim().ifEmpty { null }
+                input.kodeHargaBeli.trim().ifEmpty { null },
+                itemQty!!,
+                input.supplierCode.trim().ifEmpty { null }
             )
         } else {
             null

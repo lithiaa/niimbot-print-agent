@@ -31,6 +31,8 @@ data class PrintJob(
     val printDirection: String = "top", // "top" or "left"
     val labelSize: String = "MM_50_X_30",
     val labelLayout: String = "STANDARD",
+    val itemQty: Int = 1,
+    val supplierCode: String? = null,
     
     // Queue status
     val status: PrintStatus = PrintStatus.PENDING,

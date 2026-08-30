@@ -19,6 +19,8 @@ class IntegrationConfigStore(context: Context) {
         private const val PREF_BASE_URL = "base_url"
         private const val PREF_KEY_CIPHERTEXT = "key_ciphertext"
         private const val PREF_KEY_IV = "key_iv"
+        private const val PREF_SUPPLIER_TOKEN_CIPHERTEXT = "supplier_token_ciphertext"
+        private const val PREF_SUPPLIER_TOKEN_IV = "supplier_token_iv"
         private const val KEY_ALIAS = "niimbot_pos_integration_key"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
     }
@@ -36,24 +38,52 @@ class IntegrationConfigStore(context: Context) {
     fun hasIntegrationKey(): Boolean = prefs.contains(PREF_KEY_CIPHERTEXT) && getIntegrationKey() != null
 
     fun setIntegrationKey(value: String) {
-        val cleanValue = value.trim()
-        if (cleanValue.isEmpty()) {
+        if (value.isBlank()) {
             clearIntegrationKey()
             return
         }
+        setEncryptedValue(value, PREF_KEY_CIPHERTEXT, PREF_KEY_IV)
+    }
+
+    fun getIntegrationKey(): String? = getEncryptedValue(PREF_KEY_CIPHERTEXT, PREF_KEY_IV)
+
+    fun clearIntegrationKey() {
+        prefs.edit().remove(PREF_KEY_CIPHERTEXT).remove(PREF_KEY_IV).apply()
+    }
+
+    fun hasSupplierAccessToken(): Boolean =
+        prefs.contains(PREF_SUPPLIER_TOKEN_CIPHERTEXT) && getSupplierAccessToken() != null
+
+    fun setSupplierAccessToken(value: String) {
+        if (value.isBlank()) {
+            clearSupplierAccessToken()
+            return
+        }
+        setEncryptedValue(value, PREF_SUPPLIER_TOKEN_CIPHERTEXT, PREF_SUPPLIER_TOKEN_IV)
+    }
+
+    fun getSupplierAccessToken(): String? =
+        getEncryptedValue(PREF_SUPPLIER_TOKEN_CIPHERTEXT, PREF_SUPPLIER_TOKEN_IV)
+
+    fun clearSupplierAccessToken() {
+        prefs.edit().remove(PREF_SUPPLIER_TOKEN_CIPHERTEXT).remove(PREF_SUPPLIER_TOKEN_IV).apply()
+    }
+
+    private fun setEncryptedValue(value: String, ciphertextPreference: String, ivPreference: String) {
+        val cleanValue = value.trim()
         val cipher = Cipher.getInstance(TRANSFORMATION).apply {
             init(Cipher.ENCRYPT_MODE, getOrCreateSecretKey())
         }
         val encrypted = cipher.doFinal(cleanValue.toByteArray(Charsets.UTF_8))
         prefs.edit()
-            .putString(PREF_KEY_CIPHERTEXT, Base64.encodeToString(encrypted, Base64.NO_WRAP))
-            .putString(PREF_KEY_IV, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
+            .putString(ciphertextPreference, Base64.encodeToString(encrypted, Base64.NO_WRAP))
+            .putString(ivPreference, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
             .apply()
     }
 
-    fun getIntegrationKey(): String? {
-        val ciphertext = prefs.getString(PREF_KEY_CIPHERTEXT, null) ?: return null
-        val iv = prefs.getString(PREF_KEY_IV, null) ?: return null
+    private fun getEncryptedValue(ciphertextPreference: String, ivPreference: String): String? {
+        val ciphertext = prefs.getString(ciphertextPreference, null) ?: return null
+        val iv = prefs.getString(ivPreference, null) ?: return null
         return runCatching {
             val cipher = Cipher.getInstance(TRANSFORMATION).apply {
                 init(
@@ -64,10 +94,6 @@ class IntegrationConfigStore(context: Context) {
             }
             cipher.doFinal(Base64.decode(ciphertext, Base64.NO_WRAP)).toString(Charsets.UTF_8)
         }.getOrNull()
-    }
-
-    fun clearIntegrationKey() {
-        prefs.edit().remove(PREF_KEY_CIPHERTEXT).remove(PREF_KEY_IV).apply()
     }
 
     private fun getOrCreateSecretKey(): SecretKey {

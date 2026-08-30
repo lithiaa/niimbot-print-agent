@@ -95,6 +95,15 @@
     <string name="label_qty">Jumlah Label</string>
     <string name="label_qty_description">Masukkan jumlah salinan label yang akan dicetak, minimal satu</string>
     <string name="label_qty_help">Menentukan jumlah salinan label cetak; tidak mengubah stok POS.</string>
+    <string name="label_item_qty">Qty Barang</string>
+    <string name="label_item_qty_description">Masukkan kuantitas barang yang dicetak di sebelah kiri SKU</string>
+    <string name="label_item_qty_help">Dicetak dengan format 1 QTY.</string>
+    <string name="label_supplier_code">Kode Supplier</string>
+    <string name="label_supplier_code_description">Pilih supplier dari Lithia POS untuk dicetak di sebelah kanan SKU</string>
+    <string name="label_supplier_loading">Memuat supplier dari Lithia POS...</string>
+    <string name="label_supplier_hint">Pilih supplier Lithia POS; kode digunakan bila tersedia, jika tidak nama supplier.</string>
+    <string name="label_supplier_token_required">Isi Supplier API token di Pengaturan agar dropdown supplier aktif.</string>
+    <string name="label_supplier_load_failed">Supplier gagal dimuat: %1$s</string>
     <string name="incoming_stock_qty">Jumlah Barang Masuk</string>
     <string name="incoming_stock_qty_description">Masukkan jumlah barang yang ditambahkan ke stok POS, minimal nol</string>
     <string name="incoming_stock_qty_help">Menambah stok Lithia POS; tidak mengubah jumlah label yang dicetak.</string>
@@ -145,6 +154,9 @@
     <string name="pos_base_url_description">Masukkan alamat dasar API Lithia POS</string>
     <string name="pos_integration_key">Integration key</string>
     <string name="pos_integration_key_description">Masukkan integration key Lithia POS; nilai selalu disamarkan</string>
+    <string name="pos_supplier_token">Supplier API token</string>
+    <string name="pos_supplier_token_description">Masukkan Bearer token Lithia POS untuk mengambil daftar supplier; nilai selalu disamarkan</string>
+    <string name="pos_supplier_token_help">Diperlukan oleh endpoint supplier; berbeda dari integration key barang.</string>
     <string name="save_pos_config">Simpan konfigurasi POS</string>
     <string name="test_pos_connection">Tes koneksi</string>
     <string name="pos_config_saved">Konfigurasi POS tersimpan aman.</string>
