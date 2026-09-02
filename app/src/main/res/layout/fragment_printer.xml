@@ -54,7 +54,7 @@
                             android:contentDescription="@string/printer_title"
                             android:padding="13dp"
                             android:src="@drawable/ic_printer"
-                            android:tint="@color/primary" />
+                            app:tint="@color/primary" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -139,6 +139,28 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.NiimbotPrintAgent.TextInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:hint="@string/printer_connection_type"
+                    app:endIconMode="dropdown_menu"
+                    app:helperText="@string/printer_connection_type_help">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/dropdown_printer_type"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:inputType="none"
+                        android:maxLines="1"
+                        android:minHeight="52dp"
+                        android:popupBackground="@color/surface"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -216,10 +238,14 @@
 
                     <TextView
                         android:id="@+id/tv_printer_name"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
                         android:fontFamily="sans-serif-medium"
-                        android:maxWidth="190dp"
+                        android:gravity="end"
+                        android:maxLines="2"
                         android:text="Niimbot B1 Pro"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
@@ -243,9 +269,14 @@
 
                     <TextView
                         android:id="@+id/tv_printer_mac"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:ellipsize="middle"
                         android:fontFamily="monospace"
+                        android:gravity="end"
+                        android:maxLines="1"
                         android:text="Not paired"
                         android:textColor="@color/text_primary"
                         android:textSize="13sp" />
@@ -473,5 +504,43 @@
             android:text="Connect a printer to enable test printing"
             android:textColor="@color/text_muted"
             android:textSize="11sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/printer_queue_title"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="10dp"
+            android:text="@string/printer_queue_subtitle"
+            android:textColor="@color/text_muted"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tv_printer_queue_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/list_empty_panel"
+            android:gravity="center"
+            android:padding="24dp"
+            android:text="@string/no_jobs"
+            android:textColor="@color/list_text_secondary"
+            android:textSize="14sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_printer_queue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipToPadding="false"
+            android:nestedScrollingEnabled="false"
+            android:paddingBottom="88dp"
+            android:visibility="gone" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

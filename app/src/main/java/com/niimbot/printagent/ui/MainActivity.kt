@@ -102,23 +102,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showDestination(itemId: Int): Boolean {
-        val showGlobalHeader = itemId == R.id.nav_queue
-        appBar.visibility = if (showGlobalHeader) View.VISIBLE else View.GONE
+        appBar.visibility = View.GONE
         val containerParams = fragmentContainer.layoutParams as CoordinatorLayout.LayoutParams
-        containerParams.topMargin = if (showGlobalHeader) {
-            (84 * resources.displayMetrics.density).toInt()
-        } else {
-            0
-        }
+        containerParams.topMargin = 0
         fragmentContainer.layoutParams = containerParams
         val fragment = when (itemId) {
             R.id.nav_dashboard -> DashboardFragment().also { toolbar.title = getString(R.string.dashboard_title) }
             R.id.nav_printer   -> PrinterFragment().also { toolbar.title = getString(R.string.printer_title) }
-            R.id.nav_queue     -> PrintQueueFragment().also { toolbar.title = getString(R.string.queue_title) }
+            R.id.nav_product_info -> ProductInfoFragment().also { toolbar.title = getString(R.string.product_info_title) }
             R.id.nav_label     -> LabelFragment().also { toolbar.title = getString(R.string.create_label_title) }
             R.id.nav_settings  -> SettingsFragment().also { toolbar.title = getString(R.string.settings_title) }
             else -> return false
         }
+        supportFragmentManager.popBackStack(
+            null,
+            androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE
+        )
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, fragment)
             .commit()
@@ -135,7 +134,7 @@ class MainActivity : AppCompatActivity() {
             listOf(PrintStatus.PENDING, PrintStatus.PRINTING)
         ).observe(this) { jobs ->
             val count = jobs?.size ?: 0
-            bottomNav.getOrCreateBadge(R.id.nav_queue).apply {
+            bottomNav.getOrCreateBadge(R.id.nav_printer).apply {
                 isVisible = count > 0
                 number = count
             }

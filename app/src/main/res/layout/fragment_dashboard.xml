@@ -120,7 +120,7 @@
                             android:contentDescription="Printer"
                             android:padding="14dp"
                             android:src="@drawable/ic_printer"
-                            android:tint="#5547E8" />
+                            app:tint="#5547E8" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -246,7 +246,7 @@
                     android:fontFamily="sans-serif-medium"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:text="Open Queue"
+                    android:text="Printer &amp; Queue"
                     android:textAllCaps="false"
                     android:textColor="#5547E8"
                     android:textSize="13sp"
@@ -368,7 +368,7 @@
                                     android:contentDescription="Total jobs"
                                     android:padding="9dp"
                                     android:src="@drawable/ic_dashboard"
-                                    android:tint="#5547E8" />
+                                    app:tint="#5547E8" />
                             </com.google.android.material.card.MaterialCardView>
 
                             <TextView
@@ -446,7 +446,7 @@
                                     android:contentDescription="Pending jobs"
                                     android:padding="9dp"
                                     android:src="@drawable/ic_queue"
-                                    android:tint="#2586D9" />
+                                    app:tint="#2586D9" />
                             </com.google.android.material.card.MaterialCardView>
 
                             <TextView
@@ -531,7 +531,7 @@
                                     android:contentDescription="Done jobs"
                                     android:padding="9dp"
                                     android:src="@drawable/ic_printer"
-                                    android:tint="#21A66C" />
+                                    app:tint="#21A66C" />
                             </com.google.android.material.card.MaterialCardView>
 
                             <TextView
@@ -609,7 +609,7 @@
                                     android:contentDescription="Failed jobs"
                                     android:padding="9dp"
                                     android:src="@drawable/ic_logs"
-                                    android:tint="#DF5670" />
+                                    app:tint="#DF5670" />
                             </com.google.android.material.card.MaterialCardView>
 
                             <TextView

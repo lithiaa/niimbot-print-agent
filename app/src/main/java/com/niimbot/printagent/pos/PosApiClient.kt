@@ -101,15 +101,53 @@ class PosApiClient(
         }
     }
 
+    suspend fun listProducts(
+        baseUrl: String,
+        integrationKey: String,
+        query: String = "",
+        page: Int = 1,
+        limit: Int = 50
+    ): PosApiResult<PosProductListResponse> = withContext(Dispatchers.IO) {
+        val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
+            ?: return@withContext PosApiResult.Failure("URL Lithia POS tidak valid")
+        val url = parsedBase.newBuilder()
+            .addPathSegments("api/integration/barang")
+            .apply {
+                query.trim().takeIf { it.isNotEmpty() }?.let { addQueryParameter("q", it) }
+            }
+            .addQueryParameter("page", page.coerceAtLeast(1).toString())
+            .addQueryParameter("limit", limit.coerceIn(1, 100).toString())
+            .build()
+        val request = Request.Builder()
+            .url(url)
+            .header("X-Integration-Key", integrationKey)
+            .header("Accept", "application/json")
+            .get()
+            .build()
+        try {
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
+                runCatching { json.decodeFromString<PosProductListResponse>(body) }
+                    .fold(
+                        onSuccess = { PosApiResult.Success(it) },
+                        onFailure = { PosApiResult.Failure("Respons daftar barang Lithia POS tidak valid.") }
+                    )
+            }
+        } catch (_: IOException) {
+            PosApiResult.Failure("Tidak dapat mengambil daftar barang Lithia POS. Periksa URL dan jaringan.")
+        }
+    }
+
     suspend fun listSuppliers(
         baseUrl: String,
-        bearerToken: String
+        integrationKey: String
     ): PosApiResult<List<PosSupplier>> = withContext(Dispatchers.IO) {
         val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
             ?: return@withContext PosApiResult.Failure("URL Lithia POS tidak valid")
         val request = Request.Builder()
-            .url(parsedBase.newBuilder().addPathSegments("api/supplier").build())
-            .header("Authorization", "Bearer ${bearerToken.trim()}")
+            .url(parsedBase.newBuilder().addPathSegments("api/integration/suppliers").build())
+            .header("X-Integration-Key", integrationKey.trim())
             .header("Accept", "application/json")
             .get()
             .build()
@@ -125,6 +163,77 @@ class PosApiClient(
         } catch (_: IOException) {
             PosApiResult.Failure("Tidak dapat mengambil supplier dari Lithia POS. Periksa URL dan jaringan.")
         }
+    }
+
+    suspend fun getProductById(
+        baseUrl: String,
+        integrationKey: String,
+        productId: Long
+    ): PosApiResult<PosProduct> = executeProductRequest(
+        Request.Builder()
+            .url(productByIdUrl(baseUrl, productId))
+            .header("X-Integration-Key", integrationKey)
+            .header("Accept", "application/json")
+            .get()
+            .build(),
+        allowNotFound = true
+    )
+
+    suspend fun getProductMeta(
+        baseUrl: String,
+        integrationKey: String
+    ): PosApiResult<PosProductMeta> = withContext(Dispatchers.IO) {
+        val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
+            ?: return@withContext PosApiResult.Failure("URL Lithia POS tidak valid")
+        val request = Request.Builder()
+            .url(parsedBase.newBuilder().addPathSegments("api/integration/barang/meta").build())
+            .header("X-Integration-Key", integrationKey)
+            .header("Accept", "application/json")
+            .get()
+            .build()
+        try {
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
+                runCatching { json.decodeFromString<PosProductMeta>(body) }
+                    .fold(
+                        onSuccess = { PosApiResult.Success(it) },
+                        onFailure = { PosApiResult.Failure("Respons metadata barang Lithia POS tidak valid.") }
+                    )
+            }
+        } catch (_: IOException) {
+            PosApiResult.Failure("Tidak dapat mengambil metadata barang Lithia POS.")
+        }
+    }
+
+    suspend fun updateProductById(
+        baseUrl: String,
+        integrationKey: String,
+        productId: Long,
+        input: PosProductEditInput
+    ): PosApiResult<PosProduct> {
+        val requestBody = PosProductUpdateByIdRequest(
+            sku = input.sku,
+            nama = input.nama,
+            merek = input.merek,
+            kategoriId = input.kategoriId,
+            supplierId = input.supplierId,
+            hargaBeli = input.hargaBeli,
+            hargaBeliKode = input.hargaBeliKode,
+            hargaJual = input.hargaJual,
+            stokMinimum = input.stokMinimum,
+            satuan = input.satuan,
+            deskripsi = input.deskripsi
+        )
+        return executeProductRequest(
+            Request.Builder()
+                .url(productByIdUrl(baseUrl, productId))
+                .header("X-Integration-Key", integrationKey)
+                .header("Accept", "application/json")
+                .put(json.encodeToString(requestBody).toRequestBody(JSON_MEDIA_TYPE))
+                .build(),
+            allowNotFound = true
+        )
     }
 
     override suspend fun create(
@@ -244,6 +353,15 @@ class PosApiClient(
             .header("Accept", "application/json")
     }
 
+    private fun productByIdUrl(baseUrl: String, productId: Long): okhttp3.HttpUrl {
+        val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
+            ?: throw IllegalArgumentException("URL Lithia POS tidak valid")
+        return parsedBase.newBuilder()
+            .addPathSegments("api/integration/barang")
+            .addPathSegment(productId.toString())
+            .build()
+    }
+
     private fun decodeProduct(body: String): PosProduct? =
         runCatching { json.decodeFromString<PosProduct>(body) }.getOrNull()
             ?: runCatching { json.decodeFromString<PosProductEnvelope>(body).data }.getOrNull()
@@ -251,7 +369,7 @@ class PosApiClient(
     private fun failureForStatus(code: Int, responseBody: String = ""): PosApiResult.Failure {
         val detail = extractApiDetail(responseBody)
         return when (code) {
-            401, 403 -> PosApiResult.Failure("Autentikasi Lithia POS ditolak. Periksa integration key atau token supplier.", code)
+            401, 403 -> PosApiResult.Failure("Autentikasi Lithia POS ditolak. Periksa integration key.", code)
             422 -> PosApiResult.Failure(
                 detail?.let { "Data ditolak Lithia POS: $it" }
                     ?: "Data ditolak Lithia POS karena ada isian yang tidak valid.",

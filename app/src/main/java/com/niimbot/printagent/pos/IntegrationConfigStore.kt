@@ -19,13 +19,20 @@ class IntegrationConfigStore(context: Context) {
         private const val PREF_BASE_URL = "base_url"
         private const val PREF_KEY_CIPHERTEXT = "key_ciphertext"
         private const val PREF_KEY_IV = "key_iv"
-        private const val PREF_SUPPLIER_TOKEN_CIPHERTEXT = "supplier_token_ciphertext"
-        private const val PREF_SUPPLIER_TOKEN_IV = "supplier_token_iv"
         private const val KEY_ALIAS = "niimbot_pos_integration_key"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    init {
+        // Supplier endpoints now use the same integration key. Remove obsolete
+        // separately encrypted credentials left by older app versions.
+        prefs.edit()
+            .remove("supplier_token_ciphertext")
+            .remove("supplier_token_iv")
+            .apply()
+    }
 
     fun getBaseUrl(): String = PosProductRules.normalizeBaseUrl(
         prefs.getString(PREF_BASE_URL, DEFAULT_BASE_URL) ?: DEFAULT_BASE_URL
@@ -49,24 +56,6 @@ class IntegrationConfigStore(context: Context) {
 
     fun clearIntegrationKey() {
         prefs.edit().remove(PREF_KEY_CIPHERTEXT).remove(PREF_KEY_IV).apply()
-    }
-
-    fun hasSupplierAccessToken(): Boolean =
-        prefs.contains(PREF_SUPPLIER_TOKEN_CIPHERTEXT) && getSupplierAccessToken() != null
-
-    fun setSupplierAccessToken(value: String) {
-        if (value.isBlank()) {
-            clearSupplierAccessToken()
-            return
-        }
-        setEncryptedValue(value, PREF_SUPPLIER_TOKEN_CIPHERTEXT, PREF_SUPPLIER_TOKEN_IV)
-    }
-
-    fun getSupplierAccessToken(): String? =
-        getEncryptedValue(PREF_SUPPLIER_TOKEN_CIPHERTEXT, PREF_SUPPLIER_TOKEN_IV)
-
-    fun clearSupplierAccessToken() {
-        prefs.edit().remove(PREF_SUPPLIER_TOKEN_CIPHERTEXT).remove(PREF_SUPPLIER_TOKEN_IV).apply()
     }
 
     private fun setEncryptedValue(value: String, ciphertextPreference: String, ivPreference: String) {

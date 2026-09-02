@@ -2,6 +2,7 @@ package com.niimbot.printagent.di
 
 import android.content.Context
 import com.niimbot.printagent.ble.NiimbotBluetoothManager
+import com.niimbot.printagent.ble.XPrinterBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.pos.IntegrationConfigStore
 import com.niimbot.printagent.pos.PosApiClient
@@ -53,6 +54,11 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideXPrinterBluetoothManager(@ApplicationContext context: Context): XPrinterBluetoothManager =
+        XPrinterBluetoothManager(context)
+
+    @Provides
+    @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
@@ -68,8 +74,9 @@ object AppModule {
     fun providePrintServer(
         @ApplicationContext context: Context,
         database: AppDatabase,
-        bleManager: NiimbotBluetoothManager
+        bleManager: NiimbotBluetoothManager,
+        xPrinterManager: XPrinterBluetoothManager
     ): PrintServer {
-        return PrintServer(context, database, bleManager)
+        return PrintServer(context, database, bleManager, xPrinterManager)
     }
 }

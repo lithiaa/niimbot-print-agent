@@ -4,11 +4,13 @@ import android.graphics.BitmapFactory
 import android.content.Intent
 import android.util.Log
 import com.niimbot.printagent.ble.NiimbotBluetoothManager
+import com.niimbot.printagent.ble.XPrinterBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.data.LogAction
 import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintLog
 import com.niimbot.printagent.data.PrintStatus
+import com.niimbot.printagent.data.PrinterConfig
 import com.niimbot.printagent.service.PrintForegroundService
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.PartData
@@ -44,6 +46,7 @@ data class PrintRequest(
     val stok: Int? = null,
     val satuan: String = "pcs",
     val barcode: String? = null,
+    val tanggalMasuk: String? = null,
     val qty: Int = 1,
     val printerMac: String? = null,
     val printerModel: String = "B1",
@@ -101,7 +104,8 @@ data class StatusResponse(
 class PrintServer(
     private val context: android.content.Context,
     private val database: AppDatabase,
-    private val bleManager: NiimbotBluetoothManager
+    private val bleManager: NiimbotBluetoothManager,
+    private val xPrinterManager: XPrinterBluetoothManager
 ) {
 
     private var server: ApplicationEngine? = null
@@ -120,9 +124,10 @@ class PrintServer(
             routing {
                 // ─── Health check ────────────────────────────────────────
                 get("/health") {
+                    val config = database.printerConfigDao().getConfigSync()
                     call.respond(
                         HealthResponse(
-                            printerConnected = bleManager.connectionStateLive.value == NiimbotBluetoothManager.STATE_CONNECTED,
+                            printerConnected = isPrinterConnected(config),
                             queueSize = getPendingCount(),
                             uptime = (System.currentTimeMillis() - startTime) / 1000
                         )
@@ -131,13 +136,12 @@ class PrintServer(
 
                 // ─── Full status ─────────────────────────────────────────
                 get("/status") {
-                    val connected = bleManager.connectionStateLive.value == NiimbotBluetoothManager.STATE_CONNECTED
                     val config = database.printerConfigDao().getConfigSync()
 
                     call.respond(
                         StatusResponse(
                             printer = PrinterStatus(
-                                connected = connected,
+                                connected = isPrinterConnected(config),
                                 mac = config?.macAddress,
                                 model = config?.model ?: "B1"
                             ),
@@ -249,6 +253,13 @@ class PrintServer(
         Log.i("PrintServer", "HTTP server started on $host:$port")
     }
 
+    private fun isPrinterConnected(config: PrinterConfig?): Boolean =
+        if (config?.printerType == "XPRINTER") {
+            xPrinterManager.connectionStateLive.value == XPrinterBluetoothManager.STATE_CONNECTED
+        } else {
+            bleManager.connectionStateLive.value == NiimbotBluetoothManager.STATE_CONNECTED
+        }
+
     fun stop() {
         server?.stop(1000, 2000)
         Log.i("PrintServer", "HTTP server stopped")
@@ -321,7 +332,8 @@ class PrintServer(
                 qty = request.qty,
                 printerMac = request.printerMac,
                 printerModel = request.printerModel,
-                printDirection = request.printDirection
+                printDirection = request.printDirection,
+                tanggalMasuk = request.tanggalMasuk
             )
         } catch (e: Exception) {
             Log.e("PrintServer", "Failed to parse JSON request: ${e.message}")

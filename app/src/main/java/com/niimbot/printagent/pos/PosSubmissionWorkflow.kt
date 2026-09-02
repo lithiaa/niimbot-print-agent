@@ -144,7 +144,8 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
                 labelLayout = form.labelLayout,
                 kodeHargaBeli = form.kodeHargaBeli,
                 itemQty = form.itemQty,
-                supplierCode = form.supplierCode
+                supplierCode = form.supplierCode,
+                tanggalMasuk = form.tanggalMasuk
             )
         } else {
             form

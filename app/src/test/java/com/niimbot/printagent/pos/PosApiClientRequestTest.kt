@@ -87,17 +87,92 @@ class PosApiClientRequestTest {
     }
 
     @Test
-    fun `supplier list uses bearer token and decodes direct list`() = runBlocking {
-        val recorder = RecordingResponder("""[{"id":7,"nama":"SUP-A","kode":"SA"}]""")
+    fun `supplier list uses integration key and decodes mobile supplier fields`() = runBlocking {
+        val recorder = RecordingResponder(
+            """[{"id":7,"nama_supplier":"Supplier A","kode_supplier":"SA"}]"""
+        )
         val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
 
-        val result = api.listSuppliers("https://pos.example/base/", "supplier-token")
+        val result = api.listSuppliers("https://pos.example/base/", "secret")
 
         assertTrue(result is PosApiResult.Success)
         assertEquals("GET", recorder.request.method)
-        assertEquals("/base/api/supplier", recorder.request.url.encodedPath)
-        assertEquals("Bearer supplier-token", recorder.request.header("Authorization"))
+        assertEquals("/base/api/integration/suppliers", recorder.request.url.encodedPath)
+        assertEquals("secret", recorder.request.header("X-Integration-Key"))
+        assertEquals(null, recorder.request.header("Authorization"))
         assertEquals("SA", (result as PosApiResult.Success).value.single().codeForLabel)
+    }
+
+    @Test
+    fun `detail gets product by id using integration key`() = runBlocking {
+        val recorder = RecordingResponder(responseJson)
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.getProductById("https://pos.example/base/", "secret", 42)
+
+        assertTrue(result is PosApiResult.Success)
+        assertEquals("GET", recorder.request.method)
+        assertEquals("/base/api/integration/barang/42", recorder.request.url.encodedPath)
+        assertEquals("secret", recorder.request.header("X-Integration-Key"))
+    }
+
+    @Test
+    fun `edit puts complete product metadata without stock`() = runBlocking {
+        val recorder = RecordingResponder(responseJson)
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.updateProductById(
+            "https://pos.example/base/",
+            "secret",
+            42,
+            PosProductEditInput(
+                sku = "SKU-1",
+                nama = "Barang Baru",
+                merek = "Merek",
+                kategoriId = 3,
+                supplierId = 7,
+                hargaBeli = 100,
+                hargaBeliKode = "SP",
+                hargaJual = 150,
+                stokMinimum = 2,
+                satuan = "pcs",
+                deskripsi = "Deskripsi"
+            )
+        )
+
+        assertTrue(result is PosApiResult.Success)
+        assertEquals("PUT", recorder.request.method)
+        assertEquals("/base/api/integration/barang/42", recorder.request.url.encodedPath)
+        assertEquals("secret", recorder.request.header("X-Integration-Key"))
+        val body = recorder.request.bodyText()
+        assertTrue(body.contains("\"supplier_id\":7"))
+        assertTrue(body.contains("\"stok_minimum\":2"))
+        assertTrue(!body.contains("\"stok\""))
+    }
+
+    @Test
+    fun `product list uses integration endpoint with pagination and optional query`() = runBlocking {
+        val recorder = RecordingResponder(
+            """{"data":[$responseJson],"total":21,"page":2,"limit":10}"""
+        )
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.listProducts(
+            "https://pos.example/base/",
+            "secret",
+            query = "Kopi",
+            page = 2,
+            limit = 10
+        )
+
+        assertTrue(result is PosApiResult.Success)
+        assertEquals("GET", recorder.request.method)
+        assertEquals("/base/api/integration/barang", recorder.request.url.encodedPath)
+        assertEquals("Kopi", recorder.request.url.queryParameter("q"))
+        assertEquals("2", recorder.request.url.queryParameter("page"))
+        assertEquals("10", recorder.request.url.queryParameter("limit"))
+        assertEquals("secret", recorder.request.header("X-Integration-Key"))
+        assertEquals(21, (result as PosApiResult.Success).value.total)
     }
 
     private class RecordingResponder(responseJson: String) {

@@ -131,4 +131,29 @@ class LabelFormRulesTest {
 
         assertEquals(setOf(LabelField.ITEM_QTY), result.errors.keys)
     }
+
+    @Test
+    fun `entry date must be an actual ISO calendar date`() {
+        val result = LabelFormRules.validate(
+            LabelFormInput(
+                "SKU-1", "Barang", "10", "12", "1", "0", false,
+                tanggalMasuk = "2026-02-30"
+            )
+        )
+
+        assertEquals(setOf(LabelField.TANGGAL_MASUK), result.errors.keys)
+    }
+
+    @Test
+    fun `valid entry date is preserved for preview queue and print`() {
+        val result = LabelFormRules.validate(
+            LabelFormInput(
+                "SKU-1", "Barang", "10", "12", "1", "0", false,
+                tanggalMasuk = "2026-08-31"
+            )
+        )
+
+        assertTrue(result.errors.isEmpty())
+        assertEquals("2026-08-31", result.data?.tanggalMasuk)
+    }
 }

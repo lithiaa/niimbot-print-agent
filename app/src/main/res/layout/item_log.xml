@@ -33,7 +33,7 @@
                 android:layout_gravity="center"
                 android:contentDescription="@string/logs_title"
                 android:src="@drawable/ic_logs"
-                android:tint="@color/list_accent" />
+                    app:tint="@color/list_accent" />
 
         </FrameLayout>
 

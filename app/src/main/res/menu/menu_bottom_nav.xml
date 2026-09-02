@@ -10,9 +10,9 @@
         android:icon="@drawable/ic_printer"
         android:title="@string/printer_title" />
     <item
-        android:id="@+id/nav_queue"
-        android:icon="@drawable/ic_queue"
-        android:title="@string/queue_title" />
+        android:id="@+id/nav_product_info"
+        android:icon="@drawable/ic_inventory"
+        android:title="@string/product_info_nav" />
     <item
         android:id="@+id/nav_label"
         android:icon="@drawable/ic_preview"

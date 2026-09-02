@@ -15,6 +15,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.niimbot.printagent.R
 import com.niimbot.printagent.ble.NiimbotBluetoothManager
+import com.niimbot.printagent.ble.XPrinterBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.data.LogAction
 import com.niimbot.printagent.data.PrintJob
@@ -39,6 +40,11 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class PrintForegroundService : Service() {
 
+    private data class BlePrintResult(
+        val success: Boolean,
+        val error: String? = null
+    )
+
     companion object {
         const val NOTIFICATION_ID = 1001
         const val CHANNEL_ID = "niimbot_print_channel"
@@ -52,6 +58,8 @@ class PrintForegroundService : Service() {
         const val EXTRA_SERVER_PORT = "server_port"
 
         private const val TAG = "PrintService"
+        private const val TYPE_NIIMBOT = "NIIMBOT"
+        private const val TYPE_XPRINTER = "XPRINTER"
     }
 
     @Inject
@@ -59,6 +67,9 @@ class PrintForegroundService : Service() {
 
     @Inject
     lateinit var bleManager: NiimbotBluetoothManager
+
+    @Inject
+    lateinit var xPrinterManager: XPrinterBluetoothManager
 
     @Inject
     lateinit var printServer: PrintServer
@@ -95,10 +106,21 @@ class PrintForegroundService : Service() {
     }
     private val printStatusObserver = androidx.lifecycle.Observer<Int> { status ->
         when (status) {
-            NiimbotBluetoothManager.STATUS_PAPER_OUT  -> logBleError("Paper out")
             NiimbotBluetoothManager.STATUS_COVER_OPEN -> logBleError("Cover open")
             NiimbotBluetoothManager.STATUS_LOW_BATTERY -> logBleError("Low battery")
             NiimbotBluetoothManager.STATUS_ERROR       -> logBleError("Printer error")
+        }
+    }
+    private val xPrinterConnectionObserver = androidx.lifecycle.Observer<Int> { state ->
+        updateNotification()
+        when (state) {
+            XPrinterBluetoothManager.STATE_CONNECTED -> {
+                reconnectJob?.cancel()
+                prefs.edit().putLong("last_connected", System.currentTimeMillis()).apply()
+                queueSignal.trySend(Unit)
+            }
+            XPrinterBluetoothManager.STATE_CONNECTING -> reconnectJob?.cancel()
+            XPrinterBluetoothManager.STATE_DISCONNECTED -> scheduleReconnect()
         }
     }
 
@@ -118,9 +140,13 @@ class PrintForegroundService : Service() {
 
         // Auto-connect to saved printer
         val savedMac = prefs.getString("printer_mac", null)
-        savedMac?.let {
-            bleManager.connect(it) { success ->
-                Log.i(TAG, "Auto-connect result: $success")
+        savedMac?.let { mac ->
+            if (selectedPrinterType() == TYPE_XPRINTER) {
+                xPrinterManager.connect(mac) { success, error ->
+                    Log.i(TAG, "XPrinter auto-connect result: $success ${error.orEmpty()}")
+                }
+            } else {
+                bleManager.connect(mac) { success -> Log.i(TAG, "Auto-connect result: $success") }
             }
         }
 
@@ -178,6 +204,7 @@ class PrintForegroundService : Service() {
         serviceScope.cancel()
         printServer.stop()
         bleManager.cleanup()
+        xPrinterManager.disconnect()
         releaseWakeLock()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -189,6 +216,7 @@ class PrintForegroundService : Service() {
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             bleManager.connectionStateLive.removeObserver(connectionObserver)
             bleManager.printStatusLive.removeObserver(printStatusObserver)
+            xPrinterManager.connectionStateLive.removeObserver(xPrinterConnectionObserver)
         }
         super.onDestroy()
         Log.i(TAG, "Service destroyed")
@@ -219,7 +247,11 @@ class PrintForegroundService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val connected = bleManager.connectionStateLive.value == NiimbotBluetoothManager.STATE_CONNECTED
+        val connected = if (selectedPrinterType() == TYPE_XPRINTER) {
+            xPrinterManager.connectionStateLive.value == XPrinterBluetoothManager.STATE_CONNECTED
+        } else {
+            bleManager.connectionStateLive.value == NiimbotBluetoothManager.STATE_CONNECTED
+        }
         val statusText = if (connected) "Printer Connected ✅" else "Printer Disconnected 🔴"
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
@@ -262,6 +294,7 @@ class PrintForegroundService : Service() {
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             bleManager.connectionStateLive.observeForever(connectionObserver)
             bleManager.printStatusLive.observeForever(printStatusObserver)
+            xPrinterManager.connectionStateLive.observeForever(xPrinterConnectionObserver)
         }
     }
 
@@ -271,9 +304,13 @@ class PrintForegroundService : Service() {
         reconnectJob = serviceScope.launch {
             delay(intervalMs)
             val mac = prefs.getString("printer_mac", null)
-            mac?.let {
-                bleManager.connect(it) { success ->
-                    Log.i(TAG, "Reconnect result: $success")
+            mac?.let { savedMac ->
+                if (selectedPrinterType() == TYPE_XPRINTER) {
+                    xPrinterManager.connect(savedMac) { success, error ->
+                        Log.i(TAG, "XPrinter reconnect result: $success ${error.orEmpty()}")
+                    }
+                } else {
+                    bleManager.connect(savedMac) { success -> Log.i(TAG, "Reconnect result: $success") }
                 }
             }
         }
@@ -288,7 +325,7 @@ class PrintForegroundService : Service() {
                 val job = database.printJobDao().getNextPendingSync() ?: break
 
                 // Check printer before claiming the Room job.
-                if (bleManager.connectionStateLive.value != NiimbotBluetoothManager.STATE_CONNECTED) {
+                if (!isSelectedPrinterConnected()) {
                     database.printJobDao().updateStatus(job.id, PrintStatus.PENDING, "Printer not connected")
                     serviceScope.launch {
                         delay(5000)
@@ -313,21 +350,33 @@ class PrintForegroundService : Service() {
                 labelLayout = LabelLayout.fromName(job.labelLayout),
                 kodeHargaBeli = job.kodeHargaBeli,
                 itemQty = job.itemQty,
-                supplierCode = job.supplierCode
+                supplierCode = job.supplierCode,
+                tanggalMasuk = job.tanggalMasuk
             )
 
                 val requestedCopies = job.qty.coerceAtLeast(1)
-                var printedCopies = 0
-                while (
-                    printedCopies < requestedCopies &&
-                    printViaBleBlocking(bitmap, job.id)
-                ) {
-                    printedCopies++
-                    // PRINT_END acknowledges the protocol session before the printer's
-                    // mechanical feed/buffer is always ready for another full bitmap.
-                    // Starting the next copy immediately caused longer runs to stop
-                    // consistently after several labels (commonly 5 of 10).
-                    if (printedCopies < requestedCopies) delay(1_200L)
+                var printedCopies = if (selectedPrinterType() == TYPE_XPRINTER) {
+                    val size = LabelSize.fromName(job.labelSize)
+                    if (printViaXPrinterBlocking(bitmap, size, requestedCopies, job.id)) requestedCopies else 0
+                } else {
+                    var completed = 0
+                    var printError: String? = null
+                    while (completed < requestedCopies) {
+                        val result = printViaBleBlocking(bitmap, job.id)
+                        if (!result.success) {
+                            printError = result.error
+                            break
+                        }
+                        completed++
+                        if (completed < requestedCopies) delay(1_200L)
+                    }
+                    if (completed == 0 && isRfidWriteFailure(printError)) {
+                        markPrintFailed(
+                            job.id,
+                            "Printer menolak cetak karena RFID roll tidak terbaca; pasang chip RFID roll yang valid"
+                        )
+                    }
+                    completed
                 }
 
                 if (printedCopies == requestedCopies) {
@@ -341,7 +390,7 @@ class PrintForegroundService : Service() {
                         job.id,
                         "Printed $printedCopies/$requestedCopies copies; automatic retry stopped to avoid duplicates"
                     )
-                } else {
+                } else if (database.printJobDao().getByIdSync(job.id)?.status != PrintStatus.FAILED) {
                     handlePrintFailure(job)
                 }
 
@@ -356,11 +405,14 @@ class PrintForegroundService : Service() {
         }
     }
 
-    private suspend fun printViaBleBlocking(bitmap: android.graphics.Bitmap, jobId: Long): Boolean {
-        val resultChannel = Channel<Boolean>(1)
+    private suspend fun printViaBleBlocking(
+        bitmap: android.graphics.Bitmap,
+        jobId: Long
+    ): BlePrintResult {
+        val resultChannel = Channel<BlePrintResult>(1)
 
         bleManager.printBitmap(bitmap) { success, error ->
-            resultChannel.trySend(success)
+            resultChannel.trySend(BlePrintResult(success, error))
             if (!success) Log.e(TAG, "BLE print error for job #$jobId: $error")
         }
 
@@ -368,8 +420,39 @@ class PrintForegroundService : Service() {
             resultChannel.receive()
         } ?: run {
             Log.e(TAG, "BLE print timeout for job #$jobId")
-            false
+            BlePrintResult(false, "BLE print timeout")
         }
+    }
+
+    private fun isRfidWriteFailure(error: String?): Boolean =
+        error?.contains("RFID write failed", ignoreCase = true) == true
+
+    private suspend fun printViaXPrinterBlocking(
+        bitmap: android.graphics.Bitmap,
+        size: LabelSize,
+        copies: Int,
+        jobId: Long
+    ): Boolean {
+        val resultChannel = Channel<Boolean>(1)
+        xPrinterManager.printBitmap(
+            bitmap = bitmap,
+            widthMm = size.widthMm,
+            heightMm = size.heightMm,
+            dpi = prefs.getInt("printer_dpi", 203),
+            copies = copies
+        ) { success, error ->
+            resultChannel.trySend(success)
+            if (!success) Log.e(TAG, "XPrinter print error for job #$jobId: $error")
+        }
+        return withTimeoutOrNull(45_000L) { resultChannel.receive() } ?: false
+    }
+
+    private fun selectedPrinterType(): String = prefs.getString("printer_type", TYPE_NIIMBOT) ?: TYPE_NIIMBOT
+
+    private fun isSelectedPrinterConnected(): Boolean = if (selectedPrinterType() == TYPE_XPRINTER) {
+        xPrinterManager.connectionStateLive.value == XPrinterBluetoothManager.STATE_CONNECTED
+    } else {
+        bleManager.connectionStateLive.value == NiimbotBluetoothManager.STATE_CONNECTED
     }
 
     private suspend fun handlePrintFailure(job: PrintJob) {

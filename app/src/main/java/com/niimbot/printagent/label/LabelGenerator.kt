@@ -49,7 +49,8 @@ object LabelGenerator {
         labelLayout: LabelLayout = LabelLayout.STANDARD,
         kodeHargaBeli: String? = null,
         itemQty: Int = 1,
-        supplierCode: String? = null
+        supplierCode: String? = null,
+        tanggalMasuk: String? = null
     ): Bitmap {
         val width = labelSize.widthPx
         val height = labelSize.heightPx
@@ -74,6 +75,7 @@ object LabelGenerator {
             LabelLayout.BARCODE_BOTTOM -> drawBarcodeBottom(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, barcodeContent, sku, itemQty, supplierCode)
             LabelLayout.STANDARD -> drawStandard(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, barcodeContent, sku, itemQty, supplierCode)
         }
+        drawEntryDate(canvas, paint, width, height, tanggalMasuk)
         
         return bitmap
     }
@@ -98,12 +100,30 @@ object LabelGenerator {
         itemQty: Int, supplierCode: String?
     ) {
         val scale = height / LABEL_HEIGHT.toFloat()
-        val barcodeHeight = (height * .22f).toInt().coerceAtLeast(40)
-        val barcode = generateCode128(barcodeContent, width - MARGIN_LEFT - MARGIN_RIGHT, barcodeHeight)
-        canvas.drawBitmap(barcode, (width - barcode.width) / 2f, height * .08f, null)
-        drawMetadataRow(canvas, paint, width, height * .37f, 16f * scale, sku, itemQty, supplierCode)
-        drawCenteredFittedText(canvas, paint, nama, width, height * .57f, 44f * scale, true)
-        drawCenteredFittedText(canvas, paint, "$hargaBeli  $hargaJual", width, height * .80f, 46f * scale, true)
+        val shortLabel = isShortLabel(height)
+        val barcodeMargin = barcodeHorizontalMargin(width)
+        val barcodeHeight = if (shortLabel) {
+            (height * .28f).toInt()
+        } else {
+            (height * .22f).toInt().coerceAtLeast(40)
+        }
+        val barcode = generateCode128(barcodeContent, width - barcodeMargin * 2, barcodeHeight)
+        val barcodeX = (width - barcode.width) / 2f
+        canvas.drawBitmap(barcode, barcodeX, height * if (shortLabel) .05f else .08f, null)
+        val barcodeBounds = visibleBarcodeBounds(barcode, barcodeX)
+        drawMetadataRow(
+            canvas,
+            paint,
+            barcodeBounds.first,
+            barcodeBounds.second,
+            height * if (shortLabel) .43f else .37f,
+            metadataTextSize(height),
+            sku,
+            itemQty,
+            supplierCode
+        )
+        drawCenteredFittedText(canvas, paint, nama, width, height * if (shortLabel) .64f else .57f, 44f * scale, true)
+        drawCenteredFittedText(canvas, paint, "$hargaBeli  $hargaJual", width, height * if (shortLabel) .87f else .80f, 46f * scale, true)
     }
 
     private fun drawCompact(
@@ -115,11 +135,23 @@ object LabelGenerator {
         val barcodeWidth = (width * .38f).toInt()
         val contentWidth = width - barcodeWidth - padding * 3
         val barcode = generateCode128(barcodeContent, barcodeWidth, (height * .58f).toInt())
-        canvas.drawBitmap(barcode, (width - padding - barcodeWidth).toFloat(), (height * .12f), null)
+        val barcodeX = (width - padding - barcodeWidth).toFloat()
+        canvas.drawBitmap(barcode, barcodeX, (height * .12f), null)
         drawFittedText(canvas, paint, nama, padding.toFloat(), height * .27f, contentWidth.toFloat(), height * .16f, true)
         drawFittedText(canvas, paint, hargaJual, padding.toFloat(), height * .55f, contentWidth.toFloat(), height * .15f, true)
         drawFittedText(canvas, paint, hargaBeli, padding.toFloat(), height * .75f, contentWidth.toFloat(), height * .10f, true)
-        drawMetadataRow(canvas, paint, width, height * .92f, height * .055f, sku, itemQty, supplierCode)
+        val barcodeBounds = visibleBarcodeBounds(barcode, barcodeX)
+        drawMetadataRow(
+            canvas,
+            paint,
+            barcodeBounds.first,
+            barcodeBounds.second,
+            height * if (isShortLabel(height)) .86f else .91f,
+            metadataTextSize(height),
+            sku,
+            itemQty,
+            supplierCode
+        )
     }
 
     private fun drawBarcodeBottom(
@@ -128,40 +160,117 @@ object LabelGenerator {
         itemQty: Int, supplierCode: String?
     ) {
         val scale = height / LABEL_HEIGHT.toFloat()
+        val shortLabel = isShortLabel(height)
         // Keep the first baseline well inside the printer's effective top margin.
-        drawCenteredFittedText(canvas, paint, nama, width, height * .21f, 44f * scale, true)
-        drawCenteredFittedText(canvas, paint, "$hargaBeli  $hargaJual", width, height * .37f, 42f * scale, true)
-        val barcodeHeight = (72 * scale).toInt().coerceAtLeast(44)
-        val barcode = generateCode128(barcodeContent, width - MARGIN_LEFT - MARGIN_RIGHT, barcodeHeight)
-        canvas.drawBitmap(barcode, (width - barcode.width) / 2f, height * .48f, null)
-        drawMetadataRow(canvas, paint, width, height * .78f, 16f * scale, sku, itemQty, supplierCode)
+        drawCenteredFittedText(canvas, paint, nama, width, height * if (shortLabel) .19f else .21f, 44f * scale, true)
+        drawCenteredFittedText(canvas, paint, "$hargaBeli  $hargaJual", width, height * if (shortLabel) .35f else .37f, 42f * scale, true)
+        val barcodeHeight = if (shortLabel) {
+            (height * .30f).toInt()
+        } else {
+            (72 * scale).toInt().coerceAtLeast(44)
+        }
+        val barcodeMargin = barcodeHorizontalMargin(width)
+        val barcode = generateCode128(barcodeContent, width - barcodeMargin * 2, barcodeHeight)
+        val barcodeX = (width - barcode.width) / 2f
+        canvas.drawBitmap(barcode, barcodeX, height * if (shortLabel) .43f else .48f, null)
+        val barcodeBounds = visibleBarcodeBounds(barcode, barcodeX)
+        drawMetadataRow(
+            canvas,
+            paint,
+            barcodeBounds.first,
+            barcodeBounds.second,
+            height * if (shortLabel) .87f else .78f,
+            metadataTextSize(height),
+            sku,
+            itemQty,
+            supplierCode
+        )
+    }
+
+    private fun isShortLabel(height: Int): Boolean = height <= LabelSize.MM_30_X_20.heightPx
+
+    private fun barcodeHorizontalMargin(width: Int): Int =
+        if (width <= LabelSize.MM_30_X_20.widthPx) 8 else MARGIN_LEFT
+
+    private fun metadataTextSize(height: Int): Float =
+        (16f * height / LABEL_HEIGHT).coerceAtLeast(if (isShortLabel(height)) 20f else 16f)
+
+    private fun drawEntryDate(
+        canvas: Canvas,
+        paint: Paint,
+        width: Int,
+        height: Int,
+        tanggalMasuk: String?
+    ) {
+        val displayDate = LabelDate.display(tanggalMasuk) ?: return
+        val size = if (isShortLabel(height)) 13f else 14f * height / LABEL_HEIGHT
+        drawCenteredFittedText(
+            canvas,
+            paint,
+            "Masuk $displayDate",
+            width,
+            height * .985f,
+            size.coerceAtLeast(13f),
+            false
+        )
     }
 
     private fun drawMetadataRow(
         canvas: Canvas,
         paint: Paint,
-        width: Int,
+        left: Float,
+        right: Float,
         y: Float,
         size: Float,
         sku: String,
         itemQty: Int,
         supplierCode: String?
     ) {
-        val contentWidth = width - MARGIN_LEFT - MARGIN_RIGHT.toFloat()
-        val sideWidth = contentWidth * .27f
-        val centerWidth = contentWidth - (sideWidth * 2f) - 12f
+        val contentWidth = (right - left).coerceAtLeast(1f)
+        val sideWidth = contentWidth * .25f
+        val gap = 8f
         val qtyText = "${itemQty.coerceAtLeast(1)} QTY"
         val supplierText = supplierCode?.trim().orEmpty()
 
         fitPaint(paint, qtyText, sideWidth, size, false)
-        canvas.drawText(qtyText, MARGIN_LEFT.toFloat(), y, paint)
+        val qtyWidth = paint.measureText(qtyText)
+        canvas.drawText(qtyText, left, y, paint)
 
-        fitPaint(paint, sku, centerWidth, size, true)
-        canvas.drawText(sku, (width - paint.measureText(sku)) / 2f, y, paint)
-
+        var supplierWidth = 0f
         if (supplierText.isNotEmpty()) {
             fitPaint(paint, supplierText, sideWidth, size, false)
-            canvas.drawText(supplierText, width - MARGIN_RIGHT - paint.measureText(supplierText), y, paint)
+            supplierWidth = paint.measureText(supplierText)
+            canvas.drawText(supplierText, right - supplierWidth, y, paint)
+        }
+
+        val centerX = left + contentWidth / 2f
+        val availableLeft = centerX - (left + qtyWidth + gap)
+        val availableRight = (right - supplierWidth - gap) - centerX
+        val centerWidth = (2f * minOf(availableLeft, availableRight)).coerceAtLeast(1f)
+        fitPaint(paint, sku, centerWidth, size, true)
+        canvas.drawText(sku, centerX - paint.measureText(sku) / 2f, y, paint)
+    }
+
+    private fun visibleBarcodeBounds(barcode: Bitmap, drawX: Float): Pair<Float, Float> {
+        var firstBlack = -1
+        var lastBlack = -1
+        for (x in 0 until barcode.width) {
+            var containsBlack = false
+            for (y in 0 until barcode.height) {
+                if (barcode.getPixel(x, y) == Color.BLACK) {
+                    containsBlack = true
+                    break
+                }
+            }
+            if (containsBlack) {
+                if (firstBlack < 0) firstBlack = x
+                lastBlack = x
+            }
+        }
+        return if (firstBlack >= 0) {
+            (drawX + firstBlack) to (drawX + lastBlack + 1)
+        } else {
+            drawX to (drawX + barcode.width)
         }
     }
 

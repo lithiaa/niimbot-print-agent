@@ -1,5 +1,6 @@
 package com.niimbot.printagent.ble
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
@@ -12,6 +13,7 @@ import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Context
+import android.graphics.Bitmap
 import android.os.Build
 import android.util.Log
 import androidx.lifecycle.LiveData
@@ -28,21 +30,19 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 
 /**
- * Niimbot Bluetooth Manager - Handles BLE communication with Niimbot B1 Pro printers.
+ * Niimbot Bluetooth Manager - Handles BLE communication with Niimbot B1/B1 Pro printers.
  */
+@SuppressLint("MissingPermission")
 class NiimbotBluetoothManager(private val context: Context) {
 
-    data class LabelRollStatus(
+    data class LabelRollIdentity(
         val barcode: String,
-        val serialNumber: String,
-        val totalLabels: Int,
-        val usedLabels: Int
-    ) {
-        val remainingLabels: Int get() = (totalLabels - usedLabels).coerceAtLeast(0)
-    }
+        val serialNumber: String
+    )
 
     companion object {
         val SERVICE_UUID: UUID = UUID.fromString("e7810a71-73ae-499d-8c15-faa9aef0c3f2")
@@ -60,7 +60,6 @@ class NiimbotBluetoothManager(private val context: Context) {
         const val STATUS_PRINTING = 0x01
         const val STATUS_DONE = 0x02
         const val STATUS_ERROR = 0x03
-        const val STATUS_PAPER_OUT = 0x04
         const val STATUS_COVER_OPEN = 0x05
         const val STATUS_LOW_BATTERY = 0x06
 
@@ -71,8 +70,12 @@ class NiimbotBluetoothManager(private val context: Context) {
         private const val CMD_SET_DENSITY = 0x21
         private const val CMD_SET_LABEL_TYPE = 0x23
         private const val CMD_PRINT_START = 0x01
+        private const val CMD_PRINT_PAGE_START = 0x03
         private const val CMD_PRINT_STATUS = 0xA3
         private const val CMD_SET_PAGE_SIZE = 0x13
+        private const val CMD_PRINTER_INFO = 0x40
+        private const val CMD_PRINTER_STATUS_DATA = 0xA5
+        private const val CMD_HEARTBEAT = 0xDC
         private const val CMD_GET_RFID = 0x1A
         private const val CMD_PRINT_EMPTY_ROW = 0x84
         private const val CMD_PRINT_BITMAP_ROW = 0x85
@@ -83,14 +86,19 @@ class NiimbotBluetoothManager(private val context: Context) {
         private const val RESPONSE_SET_DENSITY = 0x31
         private const val RESPONSE_SET_LABEL_TYPE = 0x33
         private const val RESPONSE_PRINT_START = 0x02
+        private const val RESPONSE_PRINT_PAGE_START = 0x04
         private const val RESPONSE_PRINT_STATUS = 0xB3
         private const val RESPONSE_SET_PAGE_SIZE = 0x14
+        private const val RESPONSE_PRINTER_MODEL = 0x48
+        private const val RESPONSE_PRINTER_STATUS_DATA = 0xB5
+        private const val RESPONSE_HEARTBEAT = 0xD9
         private const val RESPONSE_GET_RFID = 0x1B
         private const val RESPONSE_PRINT_END_PAGE = 0xE4
         private const val RESPONSE_PRINT_END = 0xF4
 
         private const val RESPONSE_TIMEOUT_MS = 3000L
         private const val PRINT_TIMEOUT_MS = 25_000L
+        private const val PRINT_STATUS_RESPONSE_TIMEOUT_MS = 900L
         private const val WRITE_DELAY_MS = 15L
         private const val WRITE_RETRY_DELAY_MS = 20L
         private const val MAX_WRITE_ATTEMPTS = 5
@@ -114,6 +122,21 @@ class NiimbotBluetoothManager(private val context: Context) {
     private data class ProtocolFrame(
         val command: Int,
         val data: ByteArray
+    )
+
+    private enum class PrintTask { B1, V4 }
+
+    private data class PrinterProfile(
+        val modelId: Int?,
+        val displayName: String,
+        val task: PrintTask,
+        val dpi: Int,
+        val maxWidthPx: Int?
+    )
+
+    private data class PendingResponse(
+        val requestCommand: Int,
+        val waiter: CompletableDeferred<ProtocolFrame>
     )
 
     private data class EncodedRow(
@@ -141,7 +164,7 @@ class NiimbotBluetoothManager(private val context: Context) {
     private var sessionInitJob: Job? = null
     private var sessionInitializationStarted = false
 
-    private val pendingResponses = mutableMapOf<Int, CompletableDeferred<ProtocolFrame>>()
+    private val pendingResponses = mutableMapOf<Int, PendingResponse>()
     private val pendingResponsesLock = Any()
     private var notifyBuffer = ByteArray(0)
 
@@ -150,6 +173,14 @@ class NiimbotBluetoothManager(private val context: Context) {
     private var connectionCallback: ((Boolean) -> Unit)? = null
     private var connectionPacketSent = false
     private var retryCount = 0
+    @Volatile
+    private var printerProfile = PrinterProfile(
+        modelId = null,
+        displayName = "Niimbot (compatibility mode)",
+        task = PrintTask.V4,
+        dpi = 300,
+        maxWidthPx = null
+    )
 
     val connectionStateLive: LiveData<Int> = connectionState
     val printStatusLive: LiveData<Int> = printStatus
@@ -402,6 +433,16 @@ class NiimbotBluetoothManager(private val context: Context) {
                 delay(CONNECTION_SETTLE_MS)
                 if (sessionGatt !== gatt) return@launch
 
+                printerProfile = detectPrinterProfile()
+                if (printerProfile.task == PrintTask.B1) {
+                    performB1Handshake()
+                }
+                Log.i(
+                    "NiimbotBLE",
+                    "Detected ${printerProfile.displayName}: task=${printerProfile.task}, " +
+                        "dpi=${printerProfile.dpi}, modelId=${printerProfile.modelId ?: "unknown"}"
+                )
+
                 connectedMac = sessionGatt.device.address
                 connectionState.postValue(STATE_CONNECTED)
                 retryCount = 0
@@ -542,6 +583,13 @@ class NiimbotBluetoothManager(private val context: Context) {
         writeCharacteristic = null
         notifyCharacteristic = null
         connectionPacketSent = false
+        printerProfile = PrinterProfile(
+            modelId = null,
+            displayName = "Niimbot (compatibility mode)",
+            task = PrintTask.V4,
+            dpi = 300,
+            maxWidthPx = null
+        )
         notifyBuffer = ByteArray(0)
         while (writeChannel.tryReceive().isSuccess) {
             // Discard packets queued for a GATT that is no longer current.
@@ -639,9 +687,27 @@ class NiimbotBluetoothManager(private val context: Context) {
         )
 
         if (frame.command == 0x00 || frame.command == 0xDB) {
-            failPendingResponses(
-                "Printer rejected command: response 0x${frame.command.toString(16)}"
-            )
+            val activeCommand = synchronized(pendingResponsesLock) {
+                pendingResponses.values.firstOrNull()?.requestCommand
+            }
+            val errorCode = frame.data.firstOrNull()?.toInt()?.and(0xFF)
+            val message = buildString {
+                append("Printer rejected")
+                if (activeCommand != null) {
+                    append(" command 0x")
+                    append(activeCommand.toString(16).padStart(2, '0'))
+                }
+                append(": response 0x")
+                append(frame.command.toString(16).padStart(2, '0'))
+                if (errorCode != null) {
+                    append(" error 0x")
+                    append(errorCode.toString(16).padStart(2, '0'))
+                    append(" (")
+                    append(describePrinterError(errorCode))
+                    append(')')
+                }
+            }
+            failPendingResponses(message)
             return
         }
 
@@ -657,21 +723,32 @@ class NiimbotBluetoothManager(private val context: Context) {
         val waiter = synchronized(pendingResponsesLock) {
             pendingResponses.remove(frame.command)
         }
-        waiter?.complete(frame)
+        waiter?.waiter?.complete(frame)
     }
 
     private fun failPendingResponses(message: String) {
         val waiters = synchronized(pendingResponsesLock) {
-            val current = pendingResponses.values.toList()
+            val current = pendingResponses.values.map { it.waiter }
             pendingResponses.clear()
             current
         }
         waiters.forEach { it.completeExceptionally(IllegalStateException(message)) }
     }
 
+    private fun describePrinterError(code: Int): String = when (code) {
+        0x01 -> "cover open"
+        0x02 -> "paper unavailable"
+        0x06 -> "invalid print data or command order"
+        0x10 -> "paper type mismatch"
+        0x11 -> "paper setup failed"
+        0x13 -> "density setup failed"
+        0x14 -> "RFID write failed"
+        else -> "printer error"
+    }
+
     // ===================== PRINT =====================
 
-    fun readLabelRollStatus(callback: (LabelRollStatus?, String?) -> Unit) {
+    fun readLabelRollIdentity(callback: (LabelRollIdentity?, String?) -> Unit) {
         if (connectionState.value != STATE_CONNECTED || writeCharacteristic == null) {
             callback(null, "Printer not connected")
             return
@@ -686,16 +763,16 @@ class NiimbotBluetoothManager(private val context: Context) {
                         byteArrayOf(0x01),
                         RESPONSE_GET_RFID
                     )
-                    callback(parseLabelRollStatus(frame.data), null)
+                    callback(parseLabelRollIdentity(frame.data), null)
                 } catch (e: Exception) {
-                    Log.w("NiimbotBLE", "Unable to read remaining labels", e)
+                    Log.w("NiimbotBLE", "Unable to read label roll identity", e)
                     callback(null, e.message ?: "Unable to read label roll")
                 }
             }
         }
     }
 
-    private fun parseLabelRollStatus(data: ByteArray): LabelRollStatus? {
+    private fun parseLabelRollIdentity(data: ByteArray): LabelRollIdentity? {
         if (data.size <= 1) return null
         var offset = 8 // RFID UUID
 
@@ -711,22 +788,11 @@ class NiimbotBluetoothManager(private val context: Context) {
 
         val barcode = readVariableString() ?: return null
         val serialNumber = readVariableString() ?: return null
-        if (offset + 4 > data.size) return null
-        val total = ((data[offset].toInt() and 0xFF) shl 8) or
-            (data[offset + 1].toInt() and 0xFF)
-        val used = ((data[offset + 2].toInt() and 0xFF) shl 8) or
-            (data[offset + 3].toInt() and 0xFF)
-        Log.d(
-            "NiimbotBLE",
-            "RFID roll barcode=$barcode serial=$serialNumber total=$total used=$used"
-        )
-        return LabelRollStatus(barcode, serialNumber, total, used)
+        Log.d("NiimbotBLE", "RFID roll identity received")
+        return LabelRollIdentity(barcode, serialNumber)
     }
 
-    /**
-     * Print a 1-bit bitmap (584x354) to the Niimbot B1 Pro printer.
-     */
-    fun printBitmap(bitmap: android.graphics.Bitmap, callback: (Boolean, String?) -> Unit) {
+    fun printBitmap(bitmap: Bitmap, callback: (Boolean, String?) -> Unit) {
         if (connectionState.value != STATE_CONNECTED || writeCharacteristic == null) {
             callback(false, "Printer not connected")
             return
@@ -734,8 +800,12 @@ class NiimbotBluetoothManager(private val context: Context) {
 
         writeScope.launch {
             printMutex.withLock {
+                var printableBitmap: Bitmap? = null
                 try {
                     ensureConnectionPacket()
+                    val profile = printerProfile
+                    val pageBitmap = adaptBitmapForPrinter(bitmap, profile)
+                    printableBitmap = pageBitmap
 
                     sendCommand(
                         CMD_SET_DENSITY,
@@ -747,29 +817,26 @@ class NiimbotBluetoothManager(private val context: Context) {
                         byteArrayOf(0x01),
                         RESPONSE_SET_LABEL_TYPE
                     )
-                    sendCommand(
-                        CMD_PRINT_START,
-                        byteArrayOf(0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00),
-                        RESPONSE_PRINT_START
-                    )
+                    sendPrintStart(profile)
 
-                    sendPacket(buildFrame(CMD_PRINT_STATUS, byteArrayOf(0x01)))
-                    delay(30)
+                    if (profile.task == PrintTask.B1) {
+                        sendCommand(
+                            CMD_PRINT_PAGE_START,
+                            byteArrayOf(0x01),
+                            RESPONSE_PRINT_PAGE_START
+                        )
+                    } else {
+                        sendPacket(buildFrame(CMD_PRINT_STATUS, byteArrayOf(0x01)))
+                        delay(30)
+                    }
 
                     sendCommand(
                         CMD_SET_PAGE_SIZE,
-                        byteArrayOf(
-                            ((bitmap.height shr 8) and 0xFF).toByte(),
-                            (bitmap.height and 0xFF).toByte(),
-                            ((bitmap.width shr 8) and 0xFF).toByte(),
-                            (bitmap.width and 0xFF).toByte(),
-                            0x00, 0x01,
-                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-                        ),
+                        buildPageSizeData(profile.task, pageBitmap),
                         RESPONSE_SET_PAGE_SIZE
                     )
 
-                    sendRows(bitmap)
+                    sendRows(pageBitmap)
 
                     sendCommand(
                         CMD_PRINT_END_PAGE,
@@ -777,19 +844,158 @@ class NiimbotBluetoothManager(private val context: Context) {
                         RESPONSE_PRINT_END_PAGE
                     )
 
-                    awaitPageCompletion()
+                    val pageConfirmed = awaitPageCompletion()
 
                     sendCommand(
                         CMD_PRINT_END,
                         byteArrayOf(0x01),
                         RESPONSE_PRINT_END
                     )
+                    if (!pageConfirmed) {
+                        throw IllegalStateException(
+                            "Print not confirmed after ${PRINT_TIMEOUT_MS / 1000}s; " +
+                                "PrintEnd was sent so the label was fed out"
+                        )
+                    }
                     callback(true, null)
                 } catch (e: Exception) {
                     Log.e("NiimbotBLE", "Print failed", e)
                     callback(false, e.message ?: "Print failed")
+                } finally {
+                    if (printableBitmap != null && printableBitmap !== bitmap) {
+                        printableBitmap.recycle()
+                    }
                 }
             }
+        }
+    }
+
+    private suspend fun sendPrintStart(profile: PrinterProfile) {
+        sendCommand(
+            CMD_PRINT_START,
+            if (profile.task == PrintTask.B1) {
+                byteArrayOf(0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00)
+            } else {
+                byteArrayOf(0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00)
+            },
+            RESPONSE_PRINT_START
+        )
+    }
+
+    private suspend fun detectPrinterProfile(): PrinterProfile {
+        var protocolVersion: Int? = null
+        var modelId: Int? = null
+
+        runCatching {
+            val status = sendCommand(
+                CMD_PRINTER_STATUS_DATA,
+                byteArrayOf(0x01),
+                RESPONSE_PRINTER_STATUS_DATA,
+                timeoutMs = 1000L
+            )
+            if (status.data.size >= 13) {
+                val rawVersion = (status.data[11].toInt() and 0xFF) * 100 +
+                    (status.data[12].toInt() and 0xFF)
+                protocolVersion = when {
+                    rawVersion in 204 until 300 -> 3
+                    rawVersion >= 302 -> 5
+                    rawVersion >= 300 -> 4
+                    else -> null
+                }
+            }
+        }.onFailure { Log.w("NiimbotBLE", "Protocol version probe unavailable: ${it.message}") }
+
+        runCatching {
+            val model = sendCommand(
+                CMD_PRINTER_INFO,
+                byteArrayOf(0x08),
+                RESPONSE_PRINTER_MODEL,
+                timeoutMs = 1000L
+            )
+            if (model.data.isNotEmpty()) {
+                modelId = if (model.data.size >= 2) {
+                    ((model.data[0].toInt() and 0xFF) shl 8) or
+                        (model.data[1].toInt() and 0xFF)
+                } else {
+                    (model.data[0].toInt() and 0xFF) shl 8
+                }
+            }
+        }.onFailure { Log.w("NiimbotBLE", "Printer model probe unavailable: ${it.message}") }
+
+        return when (modelId) {
+            0x1000 -> PrinterProfile(modelId, "Niimbot B1", PrintTask.B1, 203, 384)
+            0x1001 -> PrinterProfile(modelId, "Niimbot B1 Pro", PrintTask.V4, 300, 584)
+            0x1002 -> PrinterProfile(modelId, "Niimbot B1 SE", PrintTask.B1, 203, 384)
+            else -> if (protocolVersion == 3) {
+                PrinterProfile(modelId, "Niimbot protocol 3", PrintTask.B1, 203, 384)
+            } else {
+                PrinterProfile(modelId, "Niimbot protocol V4", PrintTask.V4, 300, null)
+            }
+        }
+    }
+
+    private suspend fun performB1Handshake() {
+        runCatching {
+            sendCommand(
+                CMD_PRINTER_STATUS_DATA,
+                byteArrayOf(0x01),
+                RESPONSE_PRINTER_STATUS_DATA,
+                timeoutMs = 1000L
+            )
+        }
+        val infoTypes = intArrayOf(0x08, 0x0B, 0x0D, 0x0A, 0x07, 0x03, 0x0C, 0x09)
+        infoTypes.forEach { infoType ->
+            runCatching {
+                sendCommand(
+                    CMD_PRINTER_INFO,
+                    byteArrayOf(infoType.toByte()),
+                    CMD_PRINTER_INFO + infoType,
+                    timeoutMs = 600L
+                )
+            }
+        }
+        runCatching {
+            sendCommand(
+                CMD_HEARTBEAT,
+                byteArrayOf(0x04),
+                RESPONSE_HEARTBEAT,
+                timeoutMs = 1000L
+            )
+        }
+    }
+
+    private fun adaptBitmapForPrinter(bitmap: Bitmap, profile: PrinterProfile): Bitmap {
+        if (profile.dpi == 300 && profile.maxWidthPx == null) return bitmap
+
+        val scale = profile.dpi / 300f
+        var targetWidth = (bitmap.width * scale).toInt().coerceAtLeast(8)
+        val targetHeight = (bitmap.height * scale).toInt().coerceAtLeast(1)
+        profile.maxWidthPx?.let { targetWidth = targetWidth.coerceAtMost(it) }
+        if (profile.task == PrintTask.B1 && profile.dpi == 203) {
+            targetWidth = ((targetWidth + 4) / 8 * 8)
+                .coerceAtMost(profile.maxWidthPx ?: targetWidth)
+        }
+
+        if (targetWidth == bitmap.width && targetHeight == bitmap.height) return bitmap
+        Log.i(
+            "NiimbotBLE",
+            "Raster adapted ${bitmap.width}x${bitmap.height} -> ${targetWidth}x$targetHeight " +
+                "for ${profile.displayName}"
+        )
+        return Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, false)
+    }
+
+    private fun buildPageSizeData(task: PrintTask, bitmap: Bitmap): ByteArray {
+        val base = byteArrayOf(
+            ((bitmap.height shr 8) and 0xFF).toByte(),
+            (bitmap.height and 0xFF).toByte(),
+            ((bitmap.width shr 8) and 0xFF).toByte(),
+            (bitmap.width and 0xFF).toByte(),
+            0x00,
+            0x01
+        )
+        return if (task == PrintTask.B1) base else {
+            base + byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
         }
     }
 
@@ -803,11 +1009,12 @@ class NiimbotBluetoothManager(private val context: Context) {
     private suspend fun sendCommand(
         command: Int,
         data: ByteArray,
-        responseCommand: Int
+        responseCommand: Int,
+        timeoutMs: Long = RESPONSE_TIMEOUT_MS
     ): ProtocolFrame {
         val waiter = CompletableDeferred<ProtocolFrame>()
         synchronized(pendingResponsesLock) {
-            pendingResponses[responseCommand] = waiter
+            pendingResponses[responseCommand] = PendingResponse(command, waiter)
         }
 
         try {
@@ -819,19 +1026,19 @@ class NiimbotBluetoothManager(private val context: Context) {
             )
             sendPacket(buildFrame(command, data))
             return try {
-                withTimeout(RESPONSE_TIMEOUT_MS) {
+                withTimeout(timeoutMs) {
                     waiter.await()
                 }
             } catch (e: TimeoutCancellationException) {
                 throw IllegalStateException(
                     "No response to command 0x${command.toString(16)} " +
-                        "(expected 0x${responseCommand.toString(16)}) after ${RESPONSE_TIMEOUT_MS}ms",
+                        "(expected 0x${responseCommand.toString(16)}) after ${timeoutMs}ms",
                     e
                 )
             }
         } finally {
             synchronized(pendingResponsesLock) {
-                if (pendingResponses[responseCommand] === waiter) {
+                if (pendingResponses[responseCommand]?.waiter === waiter) {
                     pendingResponses.remove(responseCommand)
                 }
             }
@@ -912,40 +1119,44 @@ class NiimbotBluetoothManager(private val context: Context) {
         return EncodedRow(rowBytes, blackPixels)
     }
 
-    private suspend fun awaitPageCompletion() {
-        withTimeout(PRINT_TIMEOUT_MS) {
-            var page = 0
-            while (page < 1) {
+    private suspend fun awaitPageCompletion(): Boolean =
+        withTimeoutOrNull(PRINT_TIMEOUT_MS) {
+            var completedPages = 0
+            while (completedPages < 1) {
                 val waiter = CompletableDeferred<ProtocolFrame>()
                 synchronized(pendingResponsesLock) {
-                    pendingResponses[RESPONSE_PRINT_STATUS] = waiter
+                    pendingResponses[RESPONSE_PRINT_STATUS] = PendingResponse(
+                        CMD_PRINT_STATUS,
+                        waiter
+                    )
                 }
 
-                try {
+                val response = try {
                     sendPacket(buildFrame(CMD_PRINT_STATUS, byteArrayOf(0x01)))
-                    val response = withTimeout(RESPONSE_TIMEOUT_MS) {
-                        waiter.await()
-                    }
-                    page = if (response.data.size >= 2) {
-                        ((response.data[0].toInt() and 0xFF) shl 8) or
-                            (response.data[1].toInt() and 0xFF)
-                    } else {
-                        0
+                    try {
+                        withTimeout(PRINT_STATUS_RESPONSE_TIMEOUT_MS) { waiter.await() }
+                    } catch (_: TimeoutCancellationException) {
+                        null
                     }
                 } finally {
                     synchronized(pendingResponsesLock) {
-                        if (pendingResponses[RESPONSE_PRINT_STATUS] === waiter) {
+                        if (pendingResponses[RESPONSE_PRINT_STATUS]?.waiter === waiter) {
                             pendingResponses.remove(RESPONSE_PRINT_STATUS)
                         }
                     }
                 }
 
-                if (page < 1) {
-                    delay(200)
+                completedPages = if (response != null && response.data.size >= 2) {
+                    ((response.data[0].toInt() and 0xFF) shl 8) or
+                        (response.data[1].toInt() and 0xFF)
+                } else {
+                    0
                 }
+                if (completedPages < 1) delay(150)
             }
+            true
         }
-    }
+            ?: false
 
     private fun buildFrame(command: Int, data: ByteArray): ByteArray {
         require(data.size <= 0xFF) { "Niimbot frame data is too large" }

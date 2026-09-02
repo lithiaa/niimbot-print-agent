@@ -23,7 +23,7 @@ interface PrintJobDao {
     @Query("SELECT * FROM print_jobs WHERE status = :status ORDER BY priority DESC, createdAt ASC")
     fun getByStatus(status: PrintStatus): LiveData<List<PrintJob>>
 
-    @Query("SELECT * FROM print_jobs WHERE status IN (:statuses) ORDER BY priority DESC, createdAt ASC")
+    @Query("SELECT * FROM print_jobs WHERE status IN (:statuses) ORDER BY createdAt DESC, id DESC")
     fun getByStatuses(statuses: List<PrintStatus>): LiveData<List<PrintJob>>
 
     @Query("SELECT * FROM print_jobs ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")

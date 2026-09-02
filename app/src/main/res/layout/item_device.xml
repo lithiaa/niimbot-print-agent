@@ -37,7 +37,7 @@
                 android:layout_gravity="center"
                 android:contentDescription="@string/printer_title"
                 android:src="@drawable/ic_bluetooth"
-                android:tint="@color/list_accent" />
+                    app:tint="@color/list_accent" />
 
         </com.google.android.material.card.MaterialCardView>
 
@@ -88,7 +88,7 @@
                 android:layout_gravity="center"
                 android:contentDescription="Pair"
                 android:src="@drawable/ic_chevron_right"
-                android:tint="@color/list_surface" />
+                    app:tint="@color/list_surface" />
 
         </com.google.android.material.card.MaterialCardView>
 

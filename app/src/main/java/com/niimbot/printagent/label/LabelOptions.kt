@@ -17,7 +17,8 @@ data class LabelSize(
         val MM_50_X_30 = LabelSize("MM_50_X_30", "50 × 30 mm", 50, 30)
         val MM_50_X_20 = LabelSize("MM_50_X_20", "50 × 20 mm", 50, 20)
         val MM_40_X_30 = LabelSize("MM_40_X_30", "40 × 30 mm", 40, 30)
-        val entries = listOf(MM_50_X_30, MM_50_X_20, MM_40_X_30)
+        val MM_30_X_20 = LabelSize("MM_30_X_20", "30 × 20 mm", 30, 20)
+        val entries = listOf(MM_50_X_30, MM_50_X_20, MM_40_X_30, MM_30_X_20)
 
         fun mmToPx(mm: Int): Int = (mm * DPI / 25.4f).toInt()
         fun detected(widthMm: Int, heightMm: Int): LabelSize =

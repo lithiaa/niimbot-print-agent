@@ -37,7 +37,7 @@
                     android:layout_gravity="center"
                     android:contentDescription="@string/printer_title"
                     android:src="@drawable/ic_printer"
-                    android:tint="@color/list_accent" />
+                    app:tint="@color/list_accent" />
 
             </FrameLayout>
 

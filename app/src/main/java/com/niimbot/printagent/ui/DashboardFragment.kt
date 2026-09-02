@@ -110,7 +110,7 @@ class DashboardFragment : Fragment() {
         view.findViewById<View>(R.id.btn_open_queue).setOnClickListener {
             requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
                 R.id.bottom_navigation
-            ).selectedItemId = R.id.nav_queue
+            ).selectedItemId = R.id.nav_printer
         }
     }
 

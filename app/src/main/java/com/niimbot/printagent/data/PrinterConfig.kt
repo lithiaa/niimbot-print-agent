@@ -14,6 +14,8 @@ data class PrinterConfig(
     val macAddress: String? = null,
     val model: String = "B1",
     val name: String = "Niimbot B1 Pro",
+    val printerType: String = "NIIMBOT",
+    val printerDpi: Int = 300,
     val isDefault: Boolean = true,
     
     // Connection settings

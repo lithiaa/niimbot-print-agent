@@ -1,6 +1,7 @@
 package com.niimbot.printagent.ui
 
 import android.content.Intent
+import android.app.DatePickerDialog
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -13,9 +14,9 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
-import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
+import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -32,11 +33,13 @@ import com.niimbot.printagent.data.LogAction
 import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintLog
 import com.niimbot.printagent.label.LabelData
+import com.niimbot.printagent.label.LabelDate
 import com.niimbot.printagent.label.LabelField
 import com.niimbot.printagent.label.LabelFormInput
 import com.niimbot.printagent.label.LabelFormRules
 import com.niimbot.printagent.label.LabelGenerator
 import com.niimbot.printagent.label.LabelLayout
+import com.niimbot.printagent.label.LabelSkuGenerator
 import com.niimbot.printagent.label.LabelSize
 import com.niimbot.printagent.pos.IntegrationConfigStore
 import com.niimbot.printagent.pos.PosApiClient
@@ -50,6 +53,8 @@ import com.niimbot.printagent.pos.PosSupplier
 import com.niimbot.printagent.service.PrintForegroundService
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
@@ -71,6 +76,7 @@ class LabelFragment : Fragment() {
     private lateinit var tilQty: TextInputLayout
     private lateinit var tilItemQty: TextInputLayout
     private lateinit var tilSupplier: TextInputLayout
+    private lateinit var tilTanggalMasuk: TextInputLayout
     private lateinit var tilJumlahBarangMasuk: TextInputLayout
     private lateinit var etSku: EditText
     private lateinit var etNama: AutoCompleteTextView
@@ -79,9 +85,12 @@ class LabelFragment : Fragment() {
     private lateinit var etHargaJual: EditText
     private lateinit var etQty: EditText
     private lateinit var etItemQty: EditText
+    private lateinit var etTanggalMasuk: EditText
     private lateinit var dropdownSupplier: AutoCompleteTextView
     private lateinit var etJumlahBarangMasuk: EditText
     private lateinit var ivPreview: ImageView
+    private lateinit var previewContainer: FrameLayout
+    private lateinit var labelScrollView: NestedScrollView
     private lateinit var switchPos: SwitchMaterial
     private lateinit var dropdownLabelSize: AutoCompleteTextView
     private lateinit var dropdownLabelLayout: AutoCompleteTextView
@@ -89,11 +98,11 @@ class LabelFragment : Fragment() {
     private lateinit var btnPrint: View
     private lateinit var btnScanSku: View
     private lateinit var btnResetForm: View
-    private lateinit var btnRefreshRemaining: View
-    private lateinit var tvLabelRemaining: TextView
     private lateinit var contentContainer: LinearLayout
     private lateinit var formCard: MaterialCardView
     private lateinit var previewCard: MaterialCardView
+    private lateinit var labelOptionsRow: LinearLayout
+    private lateinit var qtySupplierRow: LinearLayout
     private var productSearchJob: Job? = null
     private var productSuggestions: List<PosProduct> = emptyList()
     private var supplierSuggestions: List<PosSupplier> = emptyList()
@@ -101,6 +110,7 @@ class LabelFragment : Fragment() {
     private var applyingProductSuggestion = false
     private val availableLabelSizes = LabelSize.entries.toMutableList()
     private var metadataConsentPromptShown = false
+    private var isTabletLayout = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -118,7 +128,7 @@ class LabelFragment : Fragment() {
         setupProductAutocomplete()
         updateIncomingStockState()
 
-        listOf(etSku, etNama, etKodeHargaBeli, etHargaBeli, etHargaJual, etQty, etItemQty).forEach { editText ->
+        listOf(etSku, etNama, etKodeHargaBeli, etHargaBeli, etHargaJual, etQty, etItemQty, etTanggalMasuk).forEach { editText ->
             editText.doAfterTextChanged {
                 saveDraft()
                 updatePreview(showErrors = false)
@@ -152,8 +162,9 @@ class LabelFragment : Fragment() {
             saveDraft()
         }
         btnScanSku.setOnClickListener { scanSku() }
+        etTanggalMasuk.setOnClickListener { showEntryDatePicker() }
+        tilTanggalMasuk.setEndIconOnClickListener { showEntryDatePicker() }
         btnResetForm.setOnClickListener { confirmResetForm() }
-        btnRefreshRemaining.setOnClickListener { refreshRemainingLabels() }
         btnPreview.setOnClickListener { updatePreview(showErrors = true) }
         btnPrint.setOnClickListener { submit() }
         observePrinterConnection()
@@ -168,6 +179,7 @@ class LabelFragment : Fragment() {
         tilQty = view.findViewById(R.id.til_label_qty)
         tilItemQty = view.findViewById(R.id.til_label_item_qty)
         tilSupplier = view.findViewById(R.id.til_label_supplier)
+        tilTanggalMasuk = view.findViewById(R.id.til_label_tanggal_masuk)
         tilJumlahBarangMasuk = view.findViewById(R.id.til_jumlah_barang_masuk)
         etSku = view.findViewById(R.id.et_label_sku)
         etNama = view.findViewById(R.id.et_label_nama)
@@ -176,9 +188,12 @@ class LabelFragment : Fragment() {
         etHargaJual = view.findViewById(R.id.et_label_harga_jual)
         etQty = view.findViewById(R.id.et_label_qty)
         etItemQty = view.findViewById(R.id.et_label_item_qty)
+        etTanggalMasuk = view.findViewById(R.id.et_label_tanggal_masuk)
         dropdownSupplier = view.findViewById(R.id.dropdown_label_supplier)
         etJumlahBarangMasuk = view.findViewById(R.id.et_jumlah_barang_masuk)
         ivPreview = view.findViewById(R.id.iv_create_label_preview)
+        previewContainer = view.findViewById(R.id.preview_label_container)
+        labelScrollView = view.findViewById(R.id.label_scroll_view)
         switchPos = view.findViewById(R.id.switch_add_to_pos)
         dropdownLabelSize = view.findViewById(R.id.dropdown_label_size)
         dropdownLabelLayout = view.findViewById(R.id.dropdown_label_layout)
@@ -186,54 +201,37 @@ class LabelFragment : Fragment() {
         btnPrint = view.findViewById(R.id.btn_create_and_print)
         btnScanSku = view.findViewById(R.id.btn_scan_label_sku)
         btnResetForm = view.findViewById(R.id.btn_reset_label_form)
-        btnRefreshRemaining = view.findViewById(R.id.btn_refresh_label_remaining)
-        tvLabelRemaining = view.findViewById(R.id.tv_label_remaining)
         contentContainer = view.findViewById(R.id.label_content_container)
         formCard = view.findViewById(R.id.card_label_form)
         previewCard = view.findViewById(R.id.card_label_preview)
+        labelOptionsRow = view.findViewById(R.id.row_label_options)
+        qtySupplierRow = view.findViewById(R.id.row_label_qty_supplier)
     }
 
     private fun observePrinterConnection() {
         niimbotManager().connectionStateLive.observe(viewLifecycleOwner) { state ->
             if (state == NiimbotBluetoothManager.STATE_CONNECTED) {
-                refreshRemainingLabels()
-            } else {
-                btnRefreshRemaining.isEnabled = false
-                tvLabelRemaining.setText(R.string.label_remaining_disconnected)
+                refreshDetectedLabelSize()
             }
         }
     }
 
-    private fun refreshRemainingLabels() {
+    private fun refreshDetectedLabelSize() {
         val manager = niimbotManager()
         if (manager.connectionStateLive.value != NiimbotBluetoothManager.STATE_CONNECTED) {
-            btnRefreshRemaining.isEnabled = false
-            tvLabelRemaining.setText(R.string.label_remaining_disconnected)
             return
         }
-        btnRefreshRemaining.isEnabled = false
-        tvLabelRemaining.setText(R.string.label_remaining_unknown)
-        manager.readLabelRollStatus { roll, error ->
+        manager.readLabelRollIdentity { roll, _ ->
             view?.post {
                 if (!isAdded) return@post
-                btnRefreshRemaining.isEnabled = true
-                tvLabelRemaining.text = when {
-                    roll != null -> getString(R.string.label_remaining, roll.remainingLabels)
-                    error == null -> getString(R.string.label_remaining_no_rfid)
-                    else -> getString(R.string.label_remaining_unknown)
-                }
-                if (roll != null) resolveAndApplyLabelSize(roll.barcode, roll.remainingLabels)
+                if (roll != null) resolveAndApplyLabelSize(roll.barcode)
             }
         }
     }
 
-    private fun resolveAndApplyLabelSize(barcode: String, remainingLabels: Int) {
+    private fun resolveAndApplyLabelSize(barcode: String) {
         val preferences = requireContext().getSharedPreferences(METADATA_PREFERENCES, 0)
         if (!preferences.getBoolean(NIIMBOT_METADATA_CONSENT, false)) {
-            tvLabelRemaining.text = getString(
-                R.string.label_roll_status_size_permission,
-                remainingLabels
-            )
             if (!metadataConsentPromptShown) {
                 metadataConsentPromptShown = true
                 MaterialAlertDialogBuilder(requireContext())
@@ -242,38 +240,25 @@ class LabelFragment : Fragment() {
                     .setNegativeButton(R.string.not_now, null)
                     .setPositiveButton(R.string.allow_detection) { _, _ ->
                         preferences.edit().putBoolean(NIIMBOT_METADATA_CONSENT, true).apply()
-                        fetchAndApplyLabelSize(barcode, remainingLabels)
+                        fetchAndApplyLabelSize(barcode)
                     }
                     .show()
             }
             return
         }
-        fetchAndApplyLabelSize(barcode, remainingLabels)
+        fetchAndApplyLabelSize(barcode)
     }
 
-    private fun fetchAndApplyLabelSize(barcode: String, remainingLabels: Int) {
+    private fun fetchAndApplyLabelSize(barcode: String) {
         viewLifecycleOwner.lifecycleScope.launch {
             val detected = labelMetadataClient.getLabelSize(barcode)
-            if (!isAdded || detected == null) {
-                if (isAdded) {
-                    tvLabelRemaining.text = getString(
-                        R.string.label_roll_status_size_unknown,
-                        remainingLabels
-                    )
-                }
-                return@launch
-            }
+            if (!isAdded || detected == null) return@launch
             val size = LabelSize.detected(detected.widthMm, detected.heightMm)
             if (size !in availableLabelSizes) availableLabelSizes += size
             updateLabelSizeAdapter()
             dropdownLabelSize.setText(size.displayName, false)
             saveDraft()
             updatePreview(showErrors = false)
-            tvLabelRemaining.text = getString(
-                R.string.label_roll_status,
-                remainingLabels,
-                size.displayName
-            )
         }
     }
 
@@ -298,6 +283,7 @@ class LabelFragment : Fragment() {
         etHargaJual.text?.clear()
         etQty.setText("1")
         etItemQty.setText("1")
+        etTanggalMasuk.setText(LabelDate.todayIso())
         dropdownSupplier.setText("", false)
         selectedSupplierCode = null
         etJumlahBarangMasuk.setText("0")
@@ -312,7 +298,10 @@ class LabelFragment : Fragment() {
 
     private fun configureResponsiveLayout() {
         val isTablet = resources.configuration.smallestScreenWidthDp >= 600
+        isTabletLayout = isTablet
         val gap = (16 * resources.displayMetrics.density).toInt()
+        configureFormRow(labelOptionsRow, isTablet, gap)
+        configureFormRow(qtySupplierRow, isTablet, gap)
         contentContainer.orientation = if (isTablet) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
 
         if (isTablet) {
@@ -339,7 +328,55 @@ class LabelFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
+            btnPreview.visibility = View.GONE
+            previewContainer.layoutParams = previewContainer.layoutParams.apply {
+                height = dp(150)
+            }
+            previewCard.elevation = dp(10).toFloat()
+            labelScrollView.setOnScrollChangeListener(
+                NestedScrollView.OnScrollChangeListener { _, _, scrollY, _, _ ->
+                    val stickyStart = contentContainer.top + previewCard.top
+                    previewCard.translationY = (scrollY - stickyStart).coerceAtLeast(0).toFloat()
+                }
+            )
         }
+    }
+
+    private fun configureFormRow(row: LinearLayout, horizontal: Boolean, gap: Int) {
+        row.orientation = if (horizontal) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+        for (index in 0 until row.childCount) {
+            val child = row.getChildAt(index)
+            child.layoutParams = LinearLayout.LayoutParams(
+                if (horizontal) 0 else ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                if (horizontal) 1f else 0f
+            ).apply {
+                if (horizontal) {
+                    marginStart = if (index == 0) 0 else gap / 2
+                    marginEnd = if (index == row.childCount - 1) 0 else gap / 2
+                } else if (index > 0) {
+                    topMargin = gap / 2
+                }
+            }
+        }
+    }
+
+    private fun showEntryDatePicker() {
+        val calendar = Calendar.getInstance()
+        val current = etTanggalMasuk.text.toString().trim()
+        runCatching {
+            SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { isLenient = false }.parse(current)
+        }.getOrNull()?.let(calendar::setTime)
+        DatePickerDialog(
+            requireContext(),
+            { _, year, month, day ->
+                etTanggalMasuk.setText(String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, day))
+                tilTanggalMasuk.error = null
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
     }
 
     private fun setupProductAutocomplete() {
@@ -360,16 +397,16 @@ class LabelFragment : Fragment() {
     }
 
     private fun loadSuppliers() {
-        val token = configStore.getSupplierAccessToken()
-        if (token.isNullOrBlank()) {
-            tilSupplier.helperText = getString(R.string.label_supplier_token_required)
+        val integrationKey = configStore.getIntegrationKey()
+        if (integrationKey.isNullOrBlank()) {
+            tilSupplier.helperText = getString(R.string.label_supplier_key_required)
             return
         }
         tilSupplier.helperText = getString(R.string.label_supplier_loading)
         viewLifecycleOwner.lifecycleScope.launch {
-            when (val result = posApiClient.listSuppliers(configStore.getBaseUrl(), token)) {
+            when (val result = posApiClient.listSuppliers(configStore.getBaseUrl(), integrationKey)) {
                 is PosApiResult.Success -> {
-                    supplierSuggestions = result.value.sortedBy { it.nama.lowercase(Locale("id", "ID")) }
+                    supplierSuggestions = result.value.sortedBy { it.displayName.lowercase(Locale("id", "ID")) }
                     dropdownSupplier.setAdapter(
                         ArrayAdapter(
                             requireContext(),
@@ -395,10 +432,10 @@ class LabelFragment : Fragment() {
     }
 
     private fun supplierSuggestionLabel(supplier: PosSupplier): String =
-        if (supplier.codeForLabel == supplier.nama.trim()) {
-            supplier.nama
+        if (supplier.codeForLabel == supplier.displayName) {
+            supplier.displayName
         } else {
-            "${supplier.nama} - ${supplier.codeForLabel}"
+            "${supplier.displayName} - ${supplier.codeForLabel}"
         }
 
     private fun scheduleProductSearch(query: String) {
@@ -459,6 +496,7 @@ class LabelFragment : Fragment() {
         etHargaBeli.setText(product.hargaBeli.toString())
         etHargaJual.setText(product.hargaJual.toString())
         etKodeHargaBeli.setText(product.hargaBeliKode.orEmpty())
+        etTanggalMasuk.setText(LabelDate.fromTimestamp(product.createdAt) ?: LabelDate.todayIso())
         applyingProductSuggestion = false
         clearResolvedValidationErrors(emptyMap())
         updatePreview(showErrors = false)
@@ -489,7 +527,9 @@ class LabelFragment : Fragment() {
     private fun ensureSku(): String {
         val existing = PosProductRules.normalizeSku(etSku.text.toString())
         if (existing.isNotEmpty()) return existing
-        val generated = "AUTO-${UUID.randomUUID().toString().take(8).uppercase(Locale.ROOT)}"
+        val productName = etNama.text.toString().trim()
+        if (productName.isEmpty()) return ""
+        val generated = LabelSkuGenerator.generate(productName)
         etSku.setText(generated)
         Toast.makeText(
             requireContext(),
@@ -511,7 +551,8 @@ class LabelFragment : Fragment() {
         labelLayout = selectedLabelLayout(),
         kodeHargaBeli = etKodeHargaBeli.text.toString(),
         itemQty = etItemQty.text.toString(),
-        supplierCode = selectedSupplierCode.orEmpty()
+        supplierCode = selectedSupplierCode.orEmpty(),
+        tanggalMasuk = etTanggalMasuk.text.toString()
     )
 
     private fun updatePreview(showErrors: Boolean): LabelData? {
@@ -523,8 +564,10 @@ class LabelFragment : Fragment() {
             clearResolvedValidationErrors(validation.errors)
         }
         val data = validation.data
-        val previewSku = PosProductRules.normalizeSku(etSku.text.toString()).ifEmpty { "000000" }
         val previewNama = etNama.text.toString().trim().ifEmpty { getString(R.string.label_preview_name_placeholder) }
+        val previewSku = PosProductRules.normalizeSku(etSku.text.toString()).ifEmpty {
+            if (etNama.text.toString().isBlank()) "000000" else LabelSkuGenerator.generate(previewNama, "AUTO")
+        }
         val previewHargaBeli = etHargaBeli.text.toString().trim().toLongOrNull()?.coerceAtLeast(0) ?: 0L
         val previewHargaJual = etHargaJual.text.toString().trim().toLongOrNull()?.coerceAtLeast(0) ?: 0L
         val bitmap = LabelGenerator.generateLabel(
@@ -536,7 +579,8 @@ class LabelFragment : Fragment() {
                 labelLayout = selectedLabelLayout(),
                 kodeHargaBeli = etKodeHargaBeli.text.toString(),
                 itemQty = etItemQty.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 1,
-                supplierCode = selectedSupplierCode
+                supplierCode = selectedSupplierCode,
+                tanggalMasuk = etTanggalMasuk.text.toString()
             )
         ivPreview.setImageBitmap(bitmap)
         updatePreviewDimensions(selectedLabelSize())
@@ -650,7 +694,8 @@ class LabelFragment : Fragment() {
                 labelSize = data.labelSize.name,
                 labelLayout = data.labelLayout.name,
                 itemQty = data.itemQty,
-                supplierCode = data.supplierCode
+                supplierCode = data.supplierCode,
+                tanggalMasuk = data.tanggalMasuk
             )
             val jobId = database.printJobDao().insert(job)
             if (jobId <= 0) {
@@ -687,6 +732,7 @@ class LabelFragment : Fragment() {
         tilQty.error = errors[LabelField.QTY]
         tilItemQty.error = errors[LabelField.ITEM_QTY]
         tilJumlahBarangMasuk.error = errors[LabelField.JUMLAH_BARANG_MASUK]
+        tilTanggalMasuk.error = errors[LabelField.TANGGAL_MASUK]
     }
 
     private fun clearResolvedValidationErrors(errors: Map<LabelField, String>) {
@@ -697,6 +743,7 @@ class LabelFragment : Fragment() {
         if (LabelField.QTY !in errors) tilQty.error = null
         if (LabelField.ITEM_QTY !in errors) tilItemQty.error = null
         if (LabelField.JUMLAH_BARANG_MASUK !in errors) tilJumlahBarangMasuk.error = null
+        if (LabelField.TANGGAL_MASUK !in errors) tilTanggalMasuk.error = null
     }
 
     private fun updateIncomingStockState() {
@@ -735,6 +782,12 @@ class LabelFragment : Fragment() {
         etHargaJual.setText(draft.getString(DRAFT_HARGA_JUAL, "").orEmpty())
         etQty.setText(draft.getString(DRAFT_QTY, "1").orEmpty().ifBlank { "1" })
         etItemQty.setText(draft.getString(DRAFT_ITEM_QTY, "1").orEmpty().ifBlank { "1" })
+        etTanggalMasuk.setText(
+            draft.getString(DRAFT_TANGGAL_MASUK, LabelDate.todayIso())
+                .orEmpty()
+                .takeIf(LabelDate::isValid)
+                ?: LabelDate.todayIso()
+        )
         dropdownSupplier.setText(draft.getString(DRAFT_SUPPLIER_DISPLAY, "").orEmpty(), false)
         selectedSupplierCode = draft.getString(DRAFT_SUPPLIER_CODE, null)
         etJumlahBarangMasuk.setText(
@@ -763,6 +816,7 @@ class LabelFragment : Fragment() {
             .putString(DRAFT_HARGA_JUAL, etHargaJual.text.toString())
             .putString(DRAFT_QTY, etQty.text.toString())
             .putString(DRAFT_ITEM_QTY, etItemQty.text.toString())
+            .putString(DRAFT_TANGGAL_MASUK, etTanggalMasuk.text.toString())
             .putString(DRAFT_SUPPLIER_DISPLAY, dropdownSupplier.text.toString())
             .putString(DRAFT_SUPPLIER_CODE, selectedSupplierCode)
             .putString(DRAFT_JUMLAH_BARANG_MASUK, etJumlahBarangMasuk.text.toString())
@@ -781,9 +835,18 @@ class LabelFragment : Fragment() {
     } ?: LabelLayout.STANDARD
 
     private fun updatePreviewDimensions(size: LabelSize) {
+        previewContainer.post { applyPreviewDimensions(size) }
+    }
+
+    private fun applyPreviewDimensions(size: LabelSize) {
         val density = resources.displayMetrics.density
-        val maxWidth = (520 * density).toInt().coerceAtMost(resources.displayMetrics.widthPixels - (96 * density).toInt())
-        val maxHeight = (240 * density).toInt()
+        val maxWidthDp = if (isTabletLayout) 520 else 300
+        val maxHeightDp = if (isTabletLayout) 240 else 118
+        val containerWidth = (previewContainer.width - previewContainer.paddingLeft -
+            previewContainer.paddingRight).coerceAtLeast(1)
+        val maxWidth = (maxWidthDp * density).toInt()
+            .coerceAtMost(containerWidth)
+        val maxHeight = (maxHeightDp * density).toInt()
         var width = maxWidth
         var height = (width * size.heightMm / size.widthMm.toFloat()).toInt()
         if (height > maxHeight) {
@@ -792,6 +855,8 @@ class LabelFragment : Fragment() {
         }
         ivPreview.layoutParams = FrameLayout.LayoutParams(width, height, android.view.Gravity.CENTER)
     }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun setBusy(busy: Boolean) {
         btnPrint.isEnabled = !busy
@@ -825,6 +890,7 @@ class LabelFragment : Fragment() {
         const val DRAFT_HARGA_JUAL = "harga_jual"
         const val DRAFT_QTY = "qty"
         const val DRAFT_ITEM_QTY = "item_qty"
+        const val DRAFT_TANGGAL_MASUK = "tanggal_masuk"
         const val DRAFT_SUPPLIER_DISPLAY = "supplier_display"
         const val DRAFT_SUPPLIER_CODE = "supplier_code"
         const val DRAFT_JUMLAH_BARANG_MASUK = "jumlah_barang_masuk"

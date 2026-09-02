@@ -14,7 +14,8 @@ data class LabelFormInput(
     val labelLayout: LabelLayout = LabelLayout.STANDARD,
     val kodeHargaBeli: String = "",
     val itemQty: String = "1",
-    val supplierCode: String = ""
+    val supplierCode: String = "",
+    val tanggalMasuk: String = LabelDate.todayIso()
 )
 
 data class LabelData(
@@ -28,11 +29,12 @@ data class LabelData(
     val labelLayout: LabelLayout = LabelLayout.STANDARD,
     val kodeHargaBeli: String? = null,
     val itemQty: Int = 1,
-    val supplierCode: String? = null
+    val supplierCode: String? = null,
+    val tanggalMasuk: String = LabelDate.todayIso()
 )
 
 enum class LabelField {
-    SKU, NAMA, HARGA_BELI, HARGA_JUAL, QTY, ITEM_QTY, JUMLAH_BARANG_MASUK
+    SKU, NAMA, HARGA_BELI, HARGA_JUAL, QTY, ITEM_QTY, JUMLAH_BARANG_MASUK, TANGGAL_MASUK
 }
 
 data class LabelValidationResult(
@@ -73,6 +75,9 @@ object LabelFormRules {
             errors[LabelField.JUMLAH_BARANG_MASUK] =
                 "Jumlah barang masuk untuk stok POS harus berupa bilangan bulat nol atau lebih"
         }
+        if (!LabelDate.isValid(input.tanggalMasuk.trim())) {
+            errors[LabelField.TANGGAL_MASUK] = "Tanggal masuk tidak valid"
+        }
 
         val data = if (errors.isEmpty()) {
             LabelData(
@@ -86,7 +91,8 @@ object LabelFormRules {
                 input.labelLayout,
                 input.kodeHargaBeli.trim().ifEmpty { null },
                 itemQty!!,
-                input.supplierCode.trim().ifEmpty { null }
+                input.supplierCode.trim().ifEmpty { null },
+                input.tanggalMasuk.trim()
             )
         } else {
             null
