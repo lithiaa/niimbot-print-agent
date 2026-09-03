@@ -169,6 +169,6 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
     private fun genericFailure() = PosSubmissionOutcome.Failure(GENERIC_FAILURE)
 
     private companion object {
-        const val GENERIC_FAILURE = "Permintaan ke Lithia POS gagal. Label tidak dicetak."
+        const val GENERIC_FAILURE = "Permintaan ke Sistem gagal. Label tidak dicetak."
     }
 }

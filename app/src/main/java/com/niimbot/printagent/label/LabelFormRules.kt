@@ -71,7 +71,7 @@ object LabelFormRules {
         }
         if (input.addToPos && (jumlahBarangMasuk == null || jumlahBarangMasuk < 0)) {
             errors[LabelField.JUMLAH_BARANG_MASUK] =
-                "Jumlah barang masuk untuk stok POS harus berupa bilangan bulat nol atau lebih"
+                "Jumlah barang masuk untuk stok Sistem harus berupa bilangan bulat nol atau lebih"
         }
         if (!LabelDate.isValid(input.tanggalMasuk.trim())) {
             errors[LabelField.TANGGAL_MASUK] = "Tanggal masuk tidak valid"

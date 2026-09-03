@@ -33,7 +33,7 @@ class LabelFormRulesTest {
         )
         assertEquals("Jumlah label minimal 1", result.errors[LabelField.QTY])
         assertEquals(
-            "Jumlah barang masuk untuk stok POS harus berupa bilangan bulat nol atau lebih",
+            "Jumlah barang masuk untuk stok Sistem harus berupa bilangan bulat nol atau lebih",
             result.errors[LabelField.JUMLAH_BARANG_MASUK]
         )
     }
