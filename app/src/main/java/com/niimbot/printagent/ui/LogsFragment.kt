@@ -96,10 +96,20 @@ class LogAdapter : RecyclerView.Adapter<LogAdapter.LogViewHolder>() {
                 LogAction.RECONNECT_FAILED -> "🔴 "
                 LogAction.QUEUE_CLEARED -> "🗑 "
             }
-            tvAction.text = "$actionIcon${log.action}"
+            val actionLabel = when (log.action) {
+                LogAction.QUEUED -> "MASUK_ANTREAN"
+                LogAction.PRINTING_STARTED -> "PENCETAKAN_DIMULAI"
+                LogAction.PRINTING_COMPLETED -> "PENCETAKAN_SELESAI"
+                LogAction.PRINTING_FAILED -> "PENCETAKAN_GAGAL"
+                LogAction.RECONNECT_ATTEMPT -> "MENCOBA_MENGHUBUNGKAN_ULANG"
+                LogAction.RECONNECT_SUCCESS -> "TERHUBUNG_ULANG"
+                LogAction.RECONNECT_FAILED -> "GAGAL_MENGHUBUNGKAN_ULANG"
+                LogAction.QUEUE_CLEARED -> "ANTREAN_DIKOSONGKAN"
+            }
+            tvAction.text = "$actionIcon$actionLabel"
             
-            tvJobId.text = "Job #${log.printJobId}"
-            tvMessage.text = log.message ?: log.errorDetail ?: "—"
+            tvJobId.text = "Tugas #${log.printJobId}"
+            tvMessage.text = (log.message ?: log.errorDetail)?.let(::localizeLegacyPrintMessage) ?: "—"
             tvTime.text = formatTime(log.createdAt)
             
             // Color based on action

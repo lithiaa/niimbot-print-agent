@@ -67,7 +67,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
                             android:letterSpacing="0.12"
-                            android:text="PREFERENCES"
+                    android:text="PENGATURAN"
                             android:textColor="@color/primary_light"
                             android:textSize="11sp" />
 
@@ -76,7 +76,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Agent settings"
+                    android:text="Pengaturan agen"
                             android:textColor="@color/white"
                             android:textSize="22sp" />
                     </LinearLayout>
@@ -87,7 +87,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
                     android:lineSpacingExtra="2dp"
-                    android:text="Configure how this device receives jobs and prepares labels."
+                    android:text="Atur cara perangkat ini menerima tugas dan menyiapkan label."
                     android:textColor="@color/white"
                     android:textSize="13sp"
                     android:alpha="0.86" />
@@ -137,7 +137,7 @@
                             android:paddingTop="7dp"
                             android:paddingEnd="12dp"
                             android:paddingBottom="7dp"
-                            android:text="NETWORK"
+                            android:text="JARINGAN"
                             android:textColor="@color/white"
                             android:textSize="10sp" />
                     </com.google.android.material.card.MaterialCardView>
@@ -226,7 +226,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Secure product synchronization"
+                            android:text="Sinkronisasi produk aman"
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -372,7 +372,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Local print service endpoint"
+                            android:text="Alamat layanan cetak lokal"
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -408,7 +408,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="7dp"
-                    android:text="Valid ports range from 1 to 65535"
+                                android:text="Port yang valid berkisar dari 1 hingga 65535"
                     android:textColor="@color/text_muted"
                     android:textSize="11sp" />
 
@@ -486,7 +486,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Control remote and local access"
+                            android:text="Atur akses jarak jauh dan lokal"
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -555,7 +555,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Private remote access"
+                                android:text="Akses jarak jauh privat"
                                 android:textColor="@color/text_muted"
                                 android:textSize="11sp" />
                         </LinearLayout>
@@ -607,7 +607,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Accept requests from this network only"
+                                android:text="Hanya terima permintaan dari jaringan ini"
                                 android:textColor="@color/text_muted"
                                 android:textSize="11sp" />
                         </LinearLayout>
@@ -695,7 +695,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Check label output before printing"
+                                android:text="Periksa hasil label sebelum mencetak"
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
                     </LinearLayout>

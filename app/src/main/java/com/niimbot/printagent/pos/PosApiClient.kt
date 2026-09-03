@@ -157,11 +157,11 @@ class PosApiClient(
                 if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
                 val suppliers = runCatching { json.decodeFromString<List<PosSupplier>>(body) }.getOrNull()
                     ?: runCatching { json.decodeFromString<PosSupplierEnvelope>(body).data }.getOrNull()
-                    ?: return@withContext PosApiResult.Failure("Respons supplier Lithia POS tidak valid.")
+                    ?: return@withContext PosApiResult.Failure("Respons pemasok Lithia POS tidak valid.")
                 PosApiResult.Success(suppliers)
             }
         } catch (_: IOException) {
-            PosApiResult.Failure("Tidak dapat mengambil supplier dari Lithia POS. Periksa URL dan jaringan.")
+            PosApiResult.Failure("Tidak dapat mengambil pemasok dari Lithia POS. Periksa URL dan jaringan.")
         }
     }
 
@@ -369,7 +369,7 @@ class PosApiClient(
     private fun failureForStatus(code: Int, responseBody: String = ""): PosApiResult.Failure {
         val detail = extractApiDetail(responseBody)
         return when (code) {
-            401, 403 -> PosApiResult.Failure("Autentikasi Lithia POS ditolak. Periksa integration key.", code)
+            401, 403 -> PosApiResult.Failure("Autentikasi Lithia POS ditolak. Periksa kunci integrasi.", code)
             422 -> PosApiResult.Failure(
                 detail?.let { "Data ditolak Lithia POS: $it" }
                     ?: "Data ditolak Lithia POS karena ada isian yang tidak valid.",

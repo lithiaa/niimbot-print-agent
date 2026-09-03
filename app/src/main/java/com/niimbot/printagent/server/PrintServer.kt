@@ -232,7 +232,7 @@ class PrintServer(
                 // ─── Test print ───────────────────────────────────────────
                 post("/test-print") {
                     val testJob = PrintJob(
-                        nama = "TEST LABEL",
+                nama = "LABEL UJI",
                         hargaJual = 12345,
                         hargaBeli = 8000,
                         sku = "TEST001",
@@ -322,7 +322,7 @@ class PrintServer(
             if (!hasTemplate && !hasImage) return null
 
             PrintJob(
-                nama = request.nama ?: "Unknown",
+            nama = request.nama ?: "Tidak diketahui",
                 hargaJual = request.hargaJual ?: 0,
                 hargaBeli = request.hargaBeli ?: 0,
                 sku = request.sku ?: "000000",

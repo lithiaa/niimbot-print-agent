@@ -164,7 +164,7 @@ class MainActivity : AppCompatActivity() {
             R.id.action_test_print -> {
                 val intent = Intent(this, PrintForegroundService::class.java).apply {
                     action = PrintForegroundService.ACTION_TEST_PRINT
-                    putExtra(PrintForegroundService.EXTRA_TEST_DATA, "MANUAL TEST")
+                    putExtra(PrintForegroundService.EXTRA_TEST_DATA, "UJI MANUAL")
                 }
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     startForegroundService(intent)

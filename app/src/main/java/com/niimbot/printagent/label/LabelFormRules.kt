@@ -11,12 +11,10 @@ data class LabelFormInput(
     val jumlahBarangMasuk: String,
     val addToPos: Boolean,
     val labelSize: LabelSize = LabelSize.MM_50_X_30,
-    val labelLayout: LabelLayout = LabelLayout.STANDARD,
     val kodeHargaBeli: String = "",
     val itemQty: String = "1",
     val supplierCode: String = "",
-    val tanggalMasuk: String = LabelDate.todayIso(),
-    val labelTemplate: LabelTemplate = LabelTemplate.defaultFor(labelLayout)
+    val tanggalMasuk: String = LabelDate.todayIso()
 )
 
 data class LabelData(
@@ -27,12 +25,10 @@ data class LabelData(
     val qty: Int,
     val jumlahBarangMasuk: Int,
     val labelSize: LabelSize = LabelSize.MM_50_X_30,
-    val labelLayout: LabelLayout = LabelLayout.STANDARD,
     val kodeHargaBeli: String? = null,
     val itemQty: Int = 1,
     val supplierCode: String? = null,
-    val tanggalMasuk: String = LabelDate.todayIso(),
-    val labelTemplate: LabelTemplate = LabelTemplate.defaultFor(labelLayout)
+    val tanggalMasuk: String = LabelDate.todayIso()
 )
 
 enum class LabelField {
@@ -90,12 +86,10 @@ object LabelFormRules {
                 qty = qty!!,
                 jumlahBarangMasuk = jumlahBarangMasuk!!,
                 labelSize = input.labelSize,
-                labelLayout = input.labelLayout,
                 kodeHargaBeli = input.kodeHargaBeli.trim().ifEmpty { null },
                 itemQty = itemQty!!,
                 supplierCode = input.supplierCode.trim().ifEmpty { null },
-                tanggalMasuk = input.tanggalMasuk.trim(),
-                labelTemplate = input.labelTemplate.normalized()
+                tanggalMasuk = input.tanggalMasuk.trim()
             )
         } else {
             null

@@ -60,7 +60,7 @@
                     android:letterSpacing="0.08"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
-                    android:text="PRINT WORKSPACE"
+                    android:text="RUANG KERJA CETAK"
                     android:textColor="#FFFFFFFF"
                     android:textSize="10sp" />
 
@@ -70,7 +70,7 @@
                     android:layout_marginTop="13dp"
                     android:fontFamily="sans-serif"
                     android:lineSpacingExtra="1dp"
-                    android:text="Ready when your labels are."
+                    android:text="Siap saat label Anda siap."
                     android:textColor="#FFFFFFFF"
                     android:textSize="27sp"
                     android:textStyle="bold" />
@@ -79,7 +79,7 @@
                     android:layout_width="250dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
-                    android:text="Monitor your printer and every job from one place."
+                    android:text="Pantau printer dan setiap tugas dari satu tempat."
                     android:textColor="#D9FFFFFF"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -134,7 +134,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
                             android:letterSpacing="0.06"
-                            android:text="PRINTER STATUS"
+                                android:text="STATUS PRINTER"
                             android:textColor="#8C88A0"
                             android:textSize="10sp" />
 
@@ -159,7 +159,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif"
-                                android:text="Disconnected"
+                                android:text="Terputus"
                                 android:textColor="#211F2E"
                                 android:textSize="19sp"
                                 android:textStyle="bold" />
@@ -172,7 +172,7 @@
                             android:layout_marginTop="3dp"
                             android:ellipsize="end"
                             android:maxLines="1"
-                            android:text="No printer paired"
+                                android:text="Belum ada printer terpasang"
                             android:textColor="#8C88A0"
                             android:textSize="11sp" />
                     </LinearLayout>
@@ -186,7 +186,7 @@
                         android:gravity="center"
                         android:paddingStart="11dp"
                         android:paddingEnd="11dp"
-                        android:text="DEVICE"
+                                android:text="PERANGKAT"
                         android:textColor="#5547E8"
                         android:textSize="9sp" />
                 </LinearLayout>
@@ -204,7 +204,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif"
-                android:text="Quick actions"
+                                android:text="Tindakan cepat"
                 android:textColor="#211F2E"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -225,7 +225,7 @@
                     android:fontFamily="sans-serif-medium"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:text="Test Print"
+                                    android:text="Uji Cetak"
                     android:textAllCaps="false"
                     android:textColor="#FFFFFFFF"
                     android:textSize="13sp"
@@ -246,7 +246,7 @@
                     android:fontFamily="sans-serif-medium"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:text="Printer &amp; Queue"
+                                    android:text="Printer &amp; Antrean"
                     android:textAllCaps="false"
                     android:textColor="#5547E8"
                     android:textSize="13sp"
@@ -299,7 +299,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif"
-                        android:text="Workspace overview"
+                                android:text="Ringkasan ruang kerja"
                         android:textColor="#211F2E"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -308,7 +308,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Your latest print activity"
+                                android:text="Aktivitas cetak terbaru Anda"
                         android:textColor="#8C88A0"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -321,7 +321,7 @@
                     android:gravity="center"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
-                    android:text="LIVE"
+                                android:text="AKTIF"
                     android:textColor="#5547E8"
                     android:textSize="9sp" />
             </LinearLayout>
@@ -365,7 +365,7 @@
                                 <ImageView
                                     android:layout_width="match_parent"
                                     android:layout_height="match_parent"
-                                    android:contentDescription="Total jobs"
+                                    android:contentDescription="Jumlah seluruh tugas"
                                     android:padding="9dp"
                                     android:src="@drawable/ic_dashboard"
                                     app:tint="#5547E8" />
@@ -376,7 +376,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="9dp"
                                 android:layout_weight="1"
-                                android:text="Total jobs"
+                                    android:text="Total tugas"
                                 android:textColor="#696579"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -403,7 +403,7 @@
                             android:maxLines="1"
                             android:paddingStart="9dp"
                             android:paddingEnd="9dp"
-                            android:text="No jobs yet"
+                                    android:text="Belum ada tugas"
                             android:textColor="#5547E8"
                             android:textSize="9sp" />
                     </LinearLayout>
@@ -443,7 +443,7 @@
                                 <ImageView
                                     android:layout_width="match_parent"
                                     android:layout_height="match_parent"
-                                    android:contentDescription="Pending jobs"
+                                    android:contentDescription="Tugas menunggu"
                                     android:padding="9dp"
                                     android:src="@drawable/ic_queue"
                                     app:tint="#2586D9" />
@@ -454,7 +454,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="9dp"
                                 android:layout_weight="1"
-                                android:text="Pending"
+                                    android:text="Menunggu"
                                 android:textColor="#696579"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -481,7 +481,7 @@
                             android:maxLines="1"
                             android:paddingStart="9dp"
                             android:paddingEnd="9dp"
-                            android:text="0 printing"
+                                    android:text="0 sedang dicetak"
                             android:textColor="#2586D9"
                             android:textSize="9sp" />
                     </LinearLayout>
@@ -528,7 +528,7 @@
                                 <ImageView
                                     android:layout_width="match_parent"
                                     android:layout_height="match_parent"
-                                    android:contentDescription="Done jobs"
+                                    android:contentDescription="Tugas selesai"
                                     android:padding="9dp"
                                     android:src="@drawable/ic_printer"
                                     app:tint="#21A66C" />
@@ -539,7 +539,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="9dp"
                                 android:layout_weight="1"
-                                android:text="Done"
+                                    android:text="Selesai"
                                 android:textColor="#696579"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -566,7 +566,7 @@
                             android:maxLines="1"
                             android:paddingStart="9dp"
                             android:paddingEnd="9dp"
-                            android:text="0% of total"
+                                    android:text="0% dari total"
                             android:textColor="#178A58"
                             android:textSize="9sp" />
                     </LinearLayout>
@@ -606,7 +606,7 @@
                                 <ImageView
                                     android:layout_width="match_parent"
                                     android:layout_height="match_parent"
-                                    android:contentDescription="Failed jobs"
+                                    android:contentDescription="Tugas gagal"
                                     android:padding="9dp"
                                     android:src="@drawable/ic_logs"
                                     app:tint="#DF5670" />
@@ -617,7 +617,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="9dp"
                                 android:layout_weight="1"
-                                android:text="Failed"
+                                    android:text="Gagal"
                                 android:textColor="#696579"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -644,7 +644,7 @@
                             android:maxLines="1"
                             android:paddingStart="9dp"
                             android:paddingEnd="9dp"
-                            android:text="No failures"
+                                    android:text="Tidak ada kegagalan"
                             android:textColor="#CB405B"
                             android:textSize="9sp" />
                     </LinearLayout>
@@ -678,7 +678,7 @@
                         android:letterSpacing="0.05"
                         android:paddingStart="10dp"
                         android:paddingEnd="10dp"
-                        android:text="UPTIME"
+                                android:text="WAKTU AKTIF"
                         android:textColor="#5547E8"
                         android:textSize="9sp" />
 
@@ -702,7 +702,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Print agent runtime"
+                                android:text="Lama agen cetak berjalan"
                             android:textColor="#8C88A0"
                             android:textSize="10sp" />
                     </LinearLayout>
@@ -710,7 +710,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Active now"
+                                android:text="Aktif sekarang"
                         android:textColor="#21A66C"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -727,7 +727,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif"
-                    android:text="Print insights"
+                                android:text="Ringkasan cetak"
                     android:textColor="#211F2E"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -736,7 +736,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Performance at a glance"
+                                android:text="Ringkasan kinerja"
                     android:textColor="#8C88A0"
                     android:textSize="11sp" />
             </LinearLayout>
@@ -772,7 +772,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
-                                android:text="Jobs by status"
+                                    android:text="Tugas berdasarkan status"
                                 android:textColor="#211F2E"
                                 android:textSize="15sp" />
 
@@ -780,7 +780,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Queue distribution"
+                                    android:text="Sebaran antrean"
                                 android:textColor="#8C88A0"
                                 android:textSize="10sp" />
                         </LinearLayout>
@@ -794,7 +794,7 @@
                             android:gravity="center"
                             android:paddingStart="11dp"
                             android:paddingEnd="11dp"
-                            android:text="Printing: 0"
+                                    android:text="Sedang dicetak: 0"
                             android:textColor="#2586D9"
                             android:textSize="10sp" />
                     </LinearLayout>
@@ -804,7 +804,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="150dp"
                         android:layout_marginTop="10dp"
-                        android:contentDescription="Print jobs by status" />
+                                    android:contentDescription="Tugas cetak berdasarkan status" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -840,7 +840,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
-                                android:text="Printer readiness"
+                                    android:text="Kesiapan printer"
                                 android:textColor="#211F2E"
                                 android:textSize="15sp" />
 
@@ -848,7 +848,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Live connection state"
+                                    android:text="Status koneksi langsung"
                                 android:textColor="#8C88A0"
                                 android:textSize="10sp" />
                         </LinearLayout>
@@ -860,7 +860,7 @@
                             android:gravity="center"
                             android:paddingStart="11dp"
                             android:paddingEnd="11dp"
-                            android:text="REAL-TIME"
+                                    android:text="WAKTU NYATA"
                             android:textColor="#178A58"
                             android:textSize="9sp" />
                     </LinearLayout>
@@ -870,7 +870,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="146dp"
                         android:layout_marginTop="7dp"
-                        android:contentDescription="Printer connection readiness" />
+                                    android:contentDescription="Kesiapan koneksi printer" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -906,7 +906,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
-                                android:text="Recent trend"
+                                    android:text="Tren terbaru"
                                 android:textColor="#211F2E"
                                 android:textSize="15sp" />
 
@@ -914,7 +914,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Jobs created in the last 24 hours"
+                                    android:text="Tugas dibuat dalam 24 jam terakhir"
                                 android:textColor="#8C88A0"
                                 android:textSize="10sp" />
                         </LinearLayout>
@@ -926,7 +926,7 @@
                             android:gravity="center"
                             android:paddingStart="11dp"
                             android:paddingEnd="11dp"
-                            android:text="TOTAL / DONE"
+                                    android:text="TOTAL / SELESAI"
                             android:textColor="#5547E8"
                             android:textSize="9sp" />
                     </LinearLayout>
@@ -936,7 +936,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="150dp"
                         android:layout_marginTop="10dp"
-                        android:contentDescription="Recent print job trend" />
+                                    android:contentDescription="Tren tugas cetak terbaru" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -946,7 +946,7 @@
                 android:layout_marginTop="25dp"
                 android:layout_marginBottom="11dp"
                 android:fontFamily="sans-serif"
-                android:text="Server details"
+                                android:text="Detail server"
                 android:textColor="#211F2E"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -1008,7 +1008,7 @@
                             android:gravity="center"
                             android:paddingStart="12dp"
                             android:paddingEnd="12dp"
-                            android:text="Running"
+                                    android:text="Berjalan"
                             android:textColor="#178A58"
                             android:textSize="10sp" />
                     </LinearLayout>
@@ -1023,7 +1023,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="The local print server is available to devices on this network."
+                                android:text="Server cetak lokal tersedia untuk perangkat di jaringan ini."
                         android:textColor="#8C88A0"
                         android:textSize="11sp" />
                 </LinearLayout>

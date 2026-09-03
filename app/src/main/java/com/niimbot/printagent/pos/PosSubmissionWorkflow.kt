@@ -141,12 +141,10 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
         val labelData = if (useProductData) {
             PosProductRules.toLabelData(product, form.qty, form.jumlahBarangMasuk).copy(
                 labelSize = form.labelSize,
-                labelLayout = form.labelLayout,
                 kodeHargaBeli = form.kodeHargaBeli,
                 itemQty = form.itemQty,
                 supplierCode = form.supplierCode,
-                tanggalMasuk = form.tanggalMasuk,
-                labelTemplate = form.labelTemplate
+                tanggalMasuk = form.tanggalMasuk
             )
         } else {
             form

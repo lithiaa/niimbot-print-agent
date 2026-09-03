@@ -78,7 +78,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Print workspace"
+                    android:text="Ruang kerja cetak"
                             android:textColor="@color/white"
                             android:textSize="22sp" />
                     </LinearLayout>
@@ -89,7 +89,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
                     android:lineSpacingExtra="2dp"
-                    android:text="Connect, manage, and test your label printer from one place."
+                    android:text="Hubungkan, kelola, dan uji printer label dari satu tempat."
                     android:textColor="@color/white"
                     android:textSize="13sp"
                     android:alpha="0.86" />
@@ -112,7 +112,7 @@
                         android:paddingTop="8dp"
                         android:paddingEnd="14dp"
                         android:paddingBottom="8dp"
-                        android:text="Disconnected"
+                        android:text="Terputus"
                         android:textColor="@color/white"
                         android:textSize="12sp" />
                 </com.google.android.material.card.MaterialCardView>
@@ -185,7 +185,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="Primary output device"
+                            android:text="Perangkat keluaran utama"
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -207,7 +207,7 @@
                             android:paddingTop="6dp"
                             android:paddingEnd="11dp"
                             android:paddingBottom="6dp"
-                            android:text="DEFAULT"
+                            android:text="UTAMA"
                             android:textColor="@color/primary_dark"
                             android:textSize="10sp" />
                     </com.google.android.material.card.MaterialCardView>
@@ -277,7 +277,7 @@
                         android:fontFamily="monospace"
                         android:gravity="end"
                         android:maxLines="1"
-                        android:text="Not paired"
+                            android:text="Belum terpasang"
                         android:textColor="@color/text_primary"
                         android:textSize="13sp" />
                 </LinearLayout>
@@ -374,7 +374,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Printer power remaining"
+                            android:text="Sisa daya printer"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -422,7 +422,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
-                            android:text="Nearby devices"
+                            android:text="Perangkat sekitar"
                             android:textColor="@color/text_primary"
                             android:textSize="18sp" />
 
@@ -430,7 +430,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="Find a Niimbot printer via Bluetooth"
+                            android:text="Cari printer Niimbot melalui Bluetooth"
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -501,7 +501,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:gravity="center"
-            android:text="Connect a printer to enable test printing"
+                                android:text="Hubungkan printer untuk mengaktifkan uji cetak"
             android:textColor="@color/text_muted"
             android:textSize="11sp" />
 

@@ -55,7 +55,7 @@
                     android:ellipsize="end"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
-                    android:text="Product Name"
+        android:text="Nama Barang"
                     android:textColor="@color/list_text_primary"
                     android:textSize="16sp" />
 
@@ -82,7 +82,7 @@
                 android:fontFamily="sans-serif-medium"
                 android:paddingHorizontal="11dp"
                 android:paddingVertical="6dp"
-                android:text="Pending"
+        android:text="Menunggu"
                 android:textColor="@color/list_accent"
                 android:textSize="11sp" />
 
@@ -119,7 +119,7 @@
                 android:fontFamily="sans-serif-medium"
                 android:paddingHorizontal="9dp"
                 android:paddingVertical="4dp"
-                android:text="Qty: 1"
+        android:text="Jumlah: 1"
                 android:textColor="@color/list_accent_dark"
                 android:textSize="11sp" />
 
@@ -142,7 +142,7 @@
             android:background="@drawable/list_retry_panel"
             android:fontFamily="sans-serif-medium"
             android:padding="10dp"
-            android:text="Retry: 1/3 - Printer not connected"
+        android:text="Percobaan ulang: 1/3 - Printer tidak terhubung"
             android:textColor="@color/list_error"
             android:textSize="12sp"
             android:visibility="gone" />

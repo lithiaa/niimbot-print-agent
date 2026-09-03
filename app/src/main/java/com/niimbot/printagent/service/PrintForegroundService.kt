@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -22,9 +23,7 @@ import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintLog
 import com.niimbot.printagent.data.PrintStatus
 import com.niimbot.printagent.label.LabelGenerator
-import com.niimbot.printagent.label.LabelLayout
 import com.niimbot.printagent.label.LabelSize
-import com.niimbot.printagent.label.LabelTemplateCodec
 import com.niimbot.printagent.server.PrintServer
 import com.niimbot.printagent.ui.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -107,9 +106,9 @@ class PrintForegroundService : Service() {
     }
     private val printStatusObserver = androidx.lifecycle.Observer<Int> { status ->
         when (status) {
-            NiimbotBluetoothManager.STATUS_COVER_OPEN -> logBleError("Cover open")
-            NiimbotBluetoothManager.STATUS_LOW_BATTERY -> logBleError("Low battery")
-            NiimbotBluetoothManager.STATUS_ERROR       -> logBleError("Printer error")
+            NiimbotBluetoothManager.STATUS_COVER_OPEN -> logBleError("Penutup terbuka")
+            NiimbotBluetoothManager.STATUS_LOW_BATTERY -> logBleError("Baterai lemah")
+            NiimbotBluetoothManager.STATUS_ERROR       -> logBleError("Kesalahan printer")
         }
     }
     private val xPrinterConnectionObserver = androidx.lifecycle.Observer<Int> { state ->
@@ -177,7 +176,7 @@ class PrintForegroundService : Service() {
                 stopSelf()
             }
             ACTION_TEST_PRINT -> {
-                val testData = intent?.getStringExtra(EXTRA_TEST_DATA) ?: "TEST LABEL"
+                val testData = intent?.getStringExtra(EXTRA_TEST_DATA) ?: "LABEL UJI"
                 sendTestPrint(testData)
             }
             ACTION_ENQUEUE -> {
@@ -229,10 +228,10 @@ class PrintForegroundService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Niimbot Print Agent",
+                "Agen Cetak Niimbot",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Background print service for Niimbot B1 Pro"
+                description = "Layanan cetak latar belakang untuk Niimbot B1 Pro"
                 setShowBadge(false)
             }
             notificationManager.createNotificationChannel(channel)
@@ -253,10 +252,10 @@ class PrintForegroundService : Service() {
         } else {
             bleManager.connectionStateLive.value == NiimbotBluetoothManager.STATE_CONNECTED
         }
-        val statusText = if (connected) "Printer Connected ✅" else "Printer Disconnected 🔴"
+        val statusText = if (connected) "Printer terhubung ✅" else "Printer terputus 🔴"
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Niimbot Print Agent")
+            .setContentTitle("Agen Cetak Niimbot")
             .setContentText(statusText)
             .setSmallIcon(R.drawable.ic_printer)
             .setContentIntent(pendingIntent)
@@ -327,7 +326,7 @@ class PrintForegroundService : Service() {
 
                 // Check printer before claiming the Room job.
                 if (!isSelectedPrinterConnected()) {
-                    database.printJobDao().updateStatus(job.id, PrintStatus.PENDING, "Printer not connected")
+                    database.printJobDao().updateStatus(job.id, PrintStatus.PENDING, "Printer tidak terhubung")
                     serviceScope.launch {
                         delay(5000)
                         queueSignal.trySend(Unit)
@@ -347,14 +346,13 @@ class PrintForegroundService : Service() {
                     sku = job.sku,
                     satuan = job.satuan,
                     barcodeData = job.barcode,
-                labelSize = LabelSize.fromName(job.labelSize),
-                labelLayout = LabelLayout.fromName(job.labelLayout),
-                kodeHargaBeli = job.kodeHargaBeli,
-                itemQty = job.itemQty,
-                supplierCode = job.supplierCode,
-                tanggalMasuk = job.tanggalMasuk,
-                labelTemplate = LabelTemplateCodec.decode(job.labelTemplateJson)
-            )
+                    labelSize = LabelSize.fromName(job.labelSize),
+                    kodeHargaBeli = job.kodeHargaBeli,
+                    itemQty = job.itemQty,
+                    supplierCode = job.supplierCode,
+                    tanggalMasuk = job.tanggalMasuk,
+                    brandLogo = BitmapFactory.decodeResource(resources, R.drawable.lithia_project_logo)
+                )
 
                 val requestedCopies = job.qty.coerceAtLeast(1)
                 var printedCopies = if (selectedPrinterType() == TYPE_XPRINTER) {
@@ -375,7 +373,7 @@ class PrintForegroundService : Service() {
                     if (completed == 0 && isRfidWriteFailure(printError)) {
                         markPrintFailed(
                             job.id,
-                            "Printer menolak cetak karena RFID roll tidak terbaca; pasang chip RFID roll yang valid"
+                            "Printer menolak cetak karena rol RFID tidak terbaca; pasang chip rol RFID yang valid"
                         )
                     }
                     completed
@@ -390,7 +388,7 @@ class PrintForegroundService : Service() {
                 } else if (printedCopies > 0) {
                     markPrintFailed(
                         job.id,
-                        "Printed $printedCopies/$requestedCopies copies; automatic retry stopped to avoid duplicates"
+                        "Tercetak $printedCopies/$requestedCopies salinan; percobaan ulang otomatis dihentikan untuk menghindari duplikasi"
                     )
                 } else if (database.printJobDao().getByIdSync(job.id)?.status != PrintStatus.FAILED) {
                     handlePrintFailure(job)
@@ -403,7 +401,7 @@ class PrintForegroundService : Service() {
 
     private suspend fun recoverInterruptedJobs() {
         database.printJobDao().getByStatusSync(PrintStatus.PRINTING).forEach { job ->
-            markPrintFailed(job.id, "Print interrupted; completion unknown, so automatic retry was stopped")
+            markPrintFailed(job.id, "Pencetakan terputus; hasil akhirnya tidak diketahui sehingga percobaan ulang otomatis dihentikan")
         }
     }
 
@@ -422,12 +420,13 @@ class PrintForegroundService : Service() {
             resultChannel.receive()
         } ?: run {
             Log.e(TAG, "BLE print timeout for job #$jobId")
-            BlePrintResult(false, "BLE print timeout")
+            BlePrintResult(false, "Waktu tunggu cetak BLE habis")
         }
     }
 
     private fun isRfidWriteFailure(error: String?): Boolean =
-        error?.contains("RFID write failed", ignoreCase = true) == true
+        error?.contains("RFID write failed", ignoreCase = true) == true ||
+            error?.contains("penulisan RFID gagal", ignoreCase = true) == true
 
     private suspend fun printViaXPrinterBlocking(
         bitmap: android.graphics.Bitmap,
@@ -461,12 +460,12 @@ class PrintForegroundService : Service() {
         if (job.retryCount < 3) {
             val nextRetry = job.retryCount + 1
             database.printJobDao().incrementRetry(job.id)
-            database.printJobDao().updateStatus(job.id, PrintStatus.PENDING, "Retry $nextRetry/3")
+            database.printJobDao().updateStatus(job.id, PrintStatus.PENDING, "Percobaan ulang $nextRetry/3")
             delay(2000)
             queueSignal.trySend(Unit)
             Log.w(TAG, "Job #${job.id} failed — retry $nextRetry/3")
         } else {
-            markPrintFailed(job.id, "Max retries exceeded")
+            markPrintFailed(job.id, "Batas percobaan ulang terlampaui")
         }
     }
 

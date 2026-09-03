@@ -103,7 +103,7 @@ class DashboardFragment : Fragment() {
         view.findViewById<View>(R.id.btn_quick_test_print).setOnClickListener {
             val intent = Intent(requireContext(), PrintForegroundService::class.java).apply {
                 action = PrintForegroundService.ACTION_TEST_PRINT
-                putExtra(PrintForegroundService.EXTRA_TEST_DATA, "DASHBOARD TEST")
+                putExtra(PrintForegroundService.EXTRA_TEST_DATA, "UJI DASBOR")
             }
             ContextCompat.startForegroundService(requireContext(), intent)
         }
@@ -131,10 +131,10 @@ class DashboardFragment : Fragment() {
         bleManager.connectionStateLive.observe(viewLifecycleOwner) { state ->
             connectionState = state
             val statusText = when (state) {
-                NiimbotBluetoothManager.STATE_CONNECTED -> "Connected"
-                NiimbotBluetoothManager.STATE_CONNECTING -> "Connecting..."
-                NiimbotBluetoothManager.STATE_DISCONNECTED -> "Disconnected"
-                else -> "Unknown"
+                NiimbotBluetoothManager.STATE_CONNECTED -> "Terhubung"
+                NiimbotBluetoothManager.STATE_CONNECTING -> "Menghubungkan..."
+                NiimbotBluetoothManager.STATE_DISCONNECTED -> "Terputus"
+                else -> "Tidak diketahui"
             }
             val statusColor = when (state) {
                 NiimbotBluetoothManager.STATE_CONNECTED -> R.color.success
@@ -148,7 +148,7 @@ class DashboardFragment : Fragment() {
         }
 
         database.printerConfigDao().getConfig().observe(viewLifecycleOwner) { config ->
-            tvMac?.text = config?.macAddress ?: "No printer paired"
+            tvMac?.text = config?.macAddress ?: "Belum ada printer terpasang"
         }
 
         database.printJobDao().getByStatus(PrintStatus.PENDING).observe(viewLifecycleOwner) { jobs ->
@@ -159,7 +159,7 @@ class DashboardFragment : Fragment() {
 
         database.printJobDao().getByStatus(PrintStatus.PRINTING).observe(viewLifecycleOwner) { jobs ->
             printingJobs = jobs ?: emptyList()
-            tvPrintingCount?.text = "Printing: ${printingJobs.size}"
+            tvPrintingCount?.text = "Sedang dicetak: ${printingJobs.size}"
             updateDashboard()
         }
 
@@ -180,10 +180,10 @@ class DashboardFragment : Fragment() {
         val total = pendingJobs.size + printingJobs.size + doneJobs.size + failedJobs.size
         val donePercent = if (total == 0) 0 else (doneJobs.size * 100 / total)
         tvTotalCount?.text = total.toString()
-        tvTotalMeta?.text = if (total == 0) "No jobs yet" else "$donePercent% done"
-        tvPendingMeta?.text = "${printingJobs.size} printing"
-        tvDoneMeta?.text = "$donePercent% of total"
-        tvFailedMeta?.text = if (failedJobs.isEmpty()) "No failures" else "Needs attention"
+        tvTotalMeta?.text = if (total == 0) "Belum ada tugas" else "$donePercent% selesai"
+        tvPendingMeta?.text = "${printingJobs.size} sedang dicetak"
+        tvDoneMeta?.text = "$donePercent% dari total"
+        tvFailedMeta?.text = if (failedJobs.isEmpty()) "Tidak ada kegagalan" else "Perlu diperiksa"
 
         activityChart?.setCounts(
             pendingJobs.size,
@@ -200,7 +200,7 @@ class DashboardFragment : Fragment() {
         val port = prefs.getInt("server_port", 8080)
         val ip = getDeviceIpAddress()
         tvServerEndpoint?.text = "$ip:$port"
-        tvServerStatus?.text = "🟢 Running"
+        tvServerStatus?.text = "🟢 Berjalan"
     }
 
     private fun getDeviceIpAddress(): String {
@@ -282,7 +282,7 @@ class StatusBarChartView @JvmOverloads constructor(
     attrs: AttributeSet? = null
 ) : DashboardChartView(context, attrs) {
     private val counts = intArrayOf(0, 0, 0, 0)
-    private val names = arrayOf("Pending", "Printing", "Done", "Failed")
+    private val names = arrayOf("Menunggu", "Mencetak", "Selesai", "Gagal")
     private val colors: IntArray
         get() = intArrayOf(info, primaryLight, success, error)
     private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -299,7 +299,7 @@ class StatusBarChartView @JvmOverloads constructor(
         super.onDraw(canvas)
         val total = counts.sum()
         if (total == 0) {
-            emptyState(canvas, "No job activity yet")
+            emptyState(canvas, "Belum ada aktivitas tugas")
             return
         }
 
@@ -365,9 +365,9 @@ class ConnectionGaugeView @JvmOverloads constructor(
         }
 
         val status = when (connectionState) {
-            NiimbotBluetoothManager.STATE_CONNECTED -> "Ready"
-            NiimbotBluetoothManager.STATE_CONNECTING -> "Connecting"
-            else -> "Offline"
+            NiimbotBluetoothManager.STATE_CONNECTED -> "Siap"
+            NiimbotBluetoothManager.STATE_CONNECTING -> "Menghubungkan"
+            else -> "Luring"
         }
         labelPaint.color = ContextCompat.getColor(context, R.color.text_primary)
         labelPaint.textSize = 20f * resources.displayMetrics.scaledDensity
@@ -376,7 +376,7 @@ class ConnectionGaugeView @JvmOverloads constructor(
         labelPaint.color = secondary
         labelPaint.textSize = 12f * resources.displayMetrics.scaledDensity
         labelPaint.typeface = android.graphics.Typeface.DEFAULT
-        val detail = if (hasJobs) "Queue is active" else "No jobs in queue"
+        val detail = if (hasJobs) "Antrean aktif" else "Tidak ada tugas dalam antrean"
         canvas.drawText(detail, centerX - labelPaint.measureText(detail) / 2f, centerY + 14f * density, labelPaint)
     }
 }
@@ -401,7 +401,7 @@ class RecentTrendChartView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (jobs.isEmpty()) {
-            emptyState(canvas, "No recent jobs")
+            emptyState(canvas, "Belum ada tugas terbaru")
             return
         }
 
@@ -420,7 +420,7 @@ class RecentTrendChartView @JvmOverloads constructor(
         }
 
         if (totalBuckets.sum() == 0) {
-            emptyState(canvas, "No jobs in the last 24 hours")
+            emptyState(canvas, "Tidak ada tugas dalam 24 jam terakhir")
             return
         }
 
@@ -432,7 +432,7 @@ class RecentTrendChartView @JvmOverloads constructor(
         labelPaint.color = secondary
         labelPaint.textSize = 10f * resources.displayMetrics.scaledDensity
         for (index in totalBuckets.indices) {
-            val label = if (index == totalBuckets.lastIndex) "Now" else "-${(5 - index) * 4}h"
+            val label = if (index == totalBuckets.lastIndex) "Sekarang" else "-${(5 - index) * 4}j"
             val x = bounds.left + step * index
             canvas.drawText(label, x - labelPaint.measureText(label) / 2f, height - 8f * density, labelPaint)
         }

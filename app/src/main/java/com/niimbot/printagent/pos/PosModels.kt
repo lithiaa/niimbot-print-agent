@@ -52,7 +52,7 @@ data class PosSupplier(
 ) {
     val displayName: String
         get() = namaSupplier?.trim()?.takeIf { it.isNotEmpty() }
-            ?: nama.trim().ifEmpty { "Supplier #$id" }
+            ?: nama.trim().ifEmpty { "Pemasok #$id" }
 
     val codeForLabel: String
         get() = kodeSupplier?.trim()?.takeIf { it.isNotEmpty() }

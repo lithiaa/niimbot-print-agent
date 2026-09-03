@@ -43,21 +43,21 @@ class JobAdapter : RecyclerView.Adapter<JobAdapter.JobViewHolder>() {
             name.text = job.nama
             sku.text = "SKU: ${job.sku}"
             price.text = "Rp ${NumberFormat.getNumberInstance(Locale.GERMANY).format(job.hargaJual)}"
-            qty.text = "Qty: ${job.qty}"
+            qty.text = "Jumlah: ${job.qty}"
             when (job.status) {
-                PrintStatus.PENDING -> setStatus("Pending", "#F59E0B")
-                PrintStatus.PRINTING -> setStatus("Printing", "#3B82F6")
-                PrintStatus.DONE -> setStatus("Done", "#10B981")
-                PrintStatus.FAILED -> setStatus("Failed", "#EF4444")
-                PrintStatus.CANCELLED -> setStatus("Cancelled", "#6B7280")
+                PrintStatus.PENDING -> setStatus("Menunggu", "#F59E0B")
+                PrintStatus.PRINTING -> setStatus("Sedang dicetak", "#3B82F6")
+                PrintStatus.DONE -> setStatus("Selesai", "#10B981")
+                PrintStatus.FAILED -> setStatus("Gagal", "#EF4444")
+                PrintStatus.CANCELLED -> setStatus("Dibatalkan", "#6B7280")
             }
             time.text = SimpleDateFormat("HH:mm:ss dd/MM", Locale.getDefault()).format(job.createdAt)
             retry.visibility = if (job.retryCount > 0 || job.errorMessage != null) View.VISIBLE else View.GONE
             retry.text = buildString {
-                if (job.retryCount > 0) append("Retry: ${job.retryCount}/3")
+                if (job.retryCount > 0) append("Percobaan ulang: ${job.retryCount}/3")
                 job.errorMessage?.let {
                     if (isNotEmpty()) append(" - ")
-                    append(it)
+                    append(localizeLegacyPrintMessage(it))
                 }
             }
         }

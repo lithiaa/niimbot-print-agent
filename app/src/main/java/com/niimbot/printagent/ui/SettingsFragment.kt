@@ -88,7 +88,7 @@ class SettingsFragment : Fragment() {
         btnSavePort?.setOnClickListener {
             val port = etServerPort?.text?.toString()?.toIntOrNull()
             if (port == null || port !in 1..65535) {
-                etServerPort?.error = "Port must be between 1 and 65535"
+                etServerPort?.error = getString(R.string.port_invalid)
                 return@setOnClickListener
             }
             val prefs = requireContext().getSharedPreferences("niimbot_prefs", android.content.Context.MODE_PRIVATE)
@@ -97,7 +97,7 @@ class SettingsFragment : Fragment() {
             // Restart print server with new port
             restartPrintServer(port)
             
-            Toast.makeText(requireContext(), "Port saved: $port", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.port_saved, port), Toast.LENGTH_SHORT).show()
         }
         
     }

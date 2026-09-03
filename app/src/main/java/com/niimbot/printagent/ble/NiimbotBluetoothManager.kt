@@ -477,7 +477,7 @@ class NiimbotBluetoothManager(private val context: Context) {
                         if (!accepted) {
                             Log.e(
                                 "NiimbotBLE",
-                                "GATT rejected write after $MAX_WRITE_ATTEMPTS attempts"
+                    "GATT menolak penulisan setelah $MAX_WRITE_ATTEMPTS percobaan"
                             )
                         }
                     }
@@ -543,7 +543,7 @@ class NiimbotBluetoothManager(private val context: Context) {
         connectedMac = null
         writeJob?.cancel()
         connectionPacketSent = false
-        failPendingResponses("Printer disconnected")
+        failPendingResponses("Printer terputus")
         connectionState.postValue(STATE_DISCONNECTED)
         finishConnectionAttempt(false)
 
@@ -594,7 +594,7 @@ class NiimbotBluetoothManager(private val context: Context) {
         while (writeChannel.tryReceive().isSuccess) {
             // Discard packets queued for a GATT that is no longer current.
         }
-        failPendingResponses("Printer disconnected")
+        failPendingResponses("Printer terputus")
 
         try {
             currentGatt?.disconnect()
@@ -692,15 +692,15 @@ class NiimbotBluetoothManager(private val context: Context) {
             }
             val errorCode = frame.data.firstOrNull()?.toInt()?.and(0xFF)
             val message = buildString {
-                append("Printer rejected")
+                append("Printer menolak")
                 if (activeCommand != null) {
-                    append(" command 0x")
+                    append(" perintah 0x")
                     append(activeCommand.toString(16).padStart(2, '0'))
                 }
-                append(": response 0x")
+                append(": respons 0x")
                 append(frame.command.toString(16).padStart(2, '0'))
                 if (errorCode != null) {
-                    append(" error 0x")
+                    append(" kesalahan 0x")
                     append(errorCode.toString(16).padStart(2, '0'))
                     append(" (")
                     append(describePrinterError(errorCode))
@@ -736,21 +736,21 @@ class NiimbotBluetoothManager(private val context: Context) {
     }
 
     private fun describePrinterError(code: Int): String = when (code) {
-        0x01 -> "cover open"
-        0x02 -> "paper unavailable"
-        0x06 -> "invalid print data or command order"
-        0x10 -> "paper type mismatch"
-        0x11 -> "paper setup failed"
-        0x13 -> "density setup failed"
-        0x14 -> "RFID write failed"
-        else -> "printer error"
+        0x01 -> "penutup terbuka"
+        0x02 -> "kertas tidak tersedia"
+        0x06 -> "data cetak atau urutan perintah tidak valid"
+        0x10 -> "jenis kertas tidak sesuai"
+        0x11 -> "pengaturan kertas gagal"
+        0x13 -> "pengaturan kepekatan gagal"
+        0x14 -> "penulisan RFID gagal"
+        else -> "kesalahan printer"
     }
 
     // ===================== PRINT =====================
 
     fun readLabelRollIdentity(callback: (LabelRollIdentity?, String?) -> Unit) {
         if (connectionState.value != STATE_CONNECTED || writeCharacteristic == null) {
-            callback(null, "Printer not connected")
+            callback(null, "Printer tidak terhubung")
             return
         }
 
@@ -766,7 +766,7 @@ class NiimbotBluetoothManager(private val context: Context) {
                     callback(parseLabelRollIdentity(frame.data), null)
                 } catch (e: Exception) {
                     Log.w("NiimbotBLE", "Unable to read label roll identity", e)
-                    callback(null, e.message ?: "Unable to read label roll")
+                    callback(null, e.message ?: "Tidak dapat membaca rol label")
                 }
             }
         }
@@ -794,7 +794,7 @@ class NiimbotBluetoothManager(private val context: Context) {
 
     fun printBitmap(bitmap: Bitmap, callback: (Boolean, String?) -> Unit) {
         if (connectionState.value != STATE_CONNECTED || writeCharacteristic == null) {
-            callback(false, "Printer not connected")
+            callback(false, "Printer tidak terhubung")
             return
         }
 
@@ -853,14 +853,14 @@ class NiimbotBluetoothManager(private val context: Context) {
                     )
                     if (!pageConfirmed) {
                         throw IllegalStateException(
-                            "Print not confirmed after ${PRINT_TIMEOUT_MS / 1000}s; " +
-                                "PrintEnd was sent so the label was fed out"
+                            "Pencetakan tidak terkonfirmasi setelah ${PRINT_TIMEOUT_MS / 1000} detik; " +
+                                "perintah akhir cetak sudah dikirim sehingga label telah keluar"
                         )
                     }
                     callback(true, null)
                 } catch (e: Exception) {
                     Log.e("NiimbotBLE", "Print failed", e)
-                    callback(false, e.message ?: "Print failed")
+                    callback(false, e.message ?: "Pencetakan gagal")
                 } finally {
                     if (printableBitmap != null && printableBitmap !== bitmap) {
                         printableBitmap.recycle()
@@ -1031,8 +1031,8 @@ class NiimbotBluetoothManager(private val context: Context) {
                 }
             } catch (e: TimeoutCancellationException) {
                 throw IllegalStateException(
-                    "No response to command 0x${command.toString(16)} " +
-                        "(expected 0x${responseCommand.toString(16)}) after ${timeoutMs}ms",
+                    "Tidak ada respons untuk perintah 0x${command.toString(16)} " +
+                        "(mengharapkan 0x${responseCommand.toString(16)}) setelah ${timeoutMs} md",
                     e
                 )
             }

@@ -58,7 +58,7 @@
                     android:ellipsize="end"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
-                    android:text="PRINTING_STARTED"
+        android:text="PENCETAKAN_DIMULAI"
                     android:textColor="@color/list_text_primary"
                     android:textSize="13sp" />
 
@@ -81,7 +81,7 @@
                 android:layout_marginTop="5dp"
                 android:ellipsize="end"
                 android:maxLines="2"
-                android:text="Printing label for Product A"
+        android:text="Mencetak label untuk Produk A"
                 android:textColor="@color/list_text_secondary"
                 android:textSize="13sp" />
 
@@ -94,7 +94,7 @@
                 android:fontFamily="monospace"
                 android:paddingHorizontal="9dp"
                 android:paddingVertical="4dp"
-                android:text="Job #123"
+        android:text="Tugas #123"
                 android:textColor="@color/list_accent_dark"
                 android:textSize="11sp" />
 

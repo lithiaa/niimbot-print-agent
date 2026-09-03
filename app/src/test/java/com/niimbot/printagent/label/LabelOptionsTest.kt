@@ -19,6 +19,5 @@ class LabelOptionsTest {
     @Test
     fun `unknown persisted options safely use defaults`() {
         assertEquals(LabelSize.MM_50_X_30, LabelSize.fromName("unknown"))
-        assertEquals(LabelLayout.STANDARD, LabelLayout.fromName("unknown"))
     }
 }

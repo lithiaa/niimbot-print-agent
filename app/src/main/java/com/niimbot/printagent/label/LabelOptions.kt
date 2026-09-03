@@ -35,13 +35,3 @@ data class LabelSize(
     fun matches(width: Int, height: Int): Boolean =
         (widthMm == width && heightMm == height) || (widthMm == height && heightMm == width)
 }
-
-enum class LabelLayout(val displayName: String) {
-    STANDARD("Standar — barcode di atas"),
-    COMPACT("Ringkas — barcode di kanan"),
-    BARCODE_BOTTOM("Standar — barcode di bawah");
-
-    companion object {
-        fun fromName(value: String): LabelLayout = entries.firstOrNull { it.name == value } ?: STANDARD
-    }
-}

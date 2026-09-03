@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Niimbot Print Agent</string>
+    <string name="app_name">Agen Cetak Niimbot</string>
     
     <!-- Menu items -->
-    <string name="action_test_print">Test Print</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_refresh">Refresh</string>
+    <string name="action_test_print">Uji Cetak</string>
+    <string name="action_settings">Pengaturan</string>
+    <string name="action_refresh">Segarkan</string>
     
     <!-- Dashboard -->
-    <string name="dashboard_title">Dashboard</string>
-    <string name="printer_status">Printer Status</string>
-    <string name="pending_jobs">Pending</string>
-    <string name="printing_jobs">Printing</string>
-    <string name="done_jobs">Done</string>
-    <string name="failed_jobs">Failed</string>
-    <string name="uptime">Uptime</string>
+    <string name="dashboard_title">Dasbor</string>
+    <string name="printer_status">Status Printer</string>
+    <string name="pending_jobs">Menunggu</string>
+    <string name="printing_jobs">Sedang dicetak</string>
+    <string name="done_jobs">Selesai</string>
+    <string name="failed_jobs">Gagal</string>
+    <string name="uptime">Waktu aktif</string>
     
     <!-- Printer -->
     <string name="printer_title">Printer</string>
@@ -22,13 +22,13 @@
     <string name="printer_queue_subtitle">Pekerjaan terbaru ditampilkan paling atas.</string>
     <string name="product_info_nav">Info Barang</string>
     <string name="product_info_title">Info Barang Lithia POS</string>
-    <string name="product_info_subtitle">Lihat dan edit data barang langsung melalui API integrasi.</string>
+    <string name="product_info_subtitle">Lihat dan ubah data barang langsung melalui API integrasi.</string>
     <string name="product_search_hint">Cari nama atau SKU</string>
     <string name="product_info_empty">Belum ada barang yang dapat ditampilkan.</string>
-    <string name="product_info_key_required">Atur integration key Lithia POS di Settings untuk membuka Info Barang.</string>
+    <string name="product_info_key_required">Atur kunci integrasi Lithia POS di Pengaturan untuk membuka Info Barang.</string>
     <string name="product_info_count">Menampilkan %1$d dari %2$d barang</string>
     <string name="product_load_more">Muat barang lainnya</string>
-    <string name="product_edit">Edit</string>
+    <string name="product_edit">Ubah</string>
     <string name="product_detail_action">Lihat detail</string>
     <string name="product_detail_title">Detail Barang</string>
     <string name="product_detail_back">Kembali</string>
@@ -39,7 +39,7 @@
     <string name="product_status_unknown">Status stok belum tersedia</string>
     <string name="product_brand">Merek</string>
     <string name="product_category">Kategori</string>
-    <string name="product_supplier">Supplier</string>
+    <string name="product_supplier">Pemasok</string>
     <string name="product_prices">Harga</string>
     <string name="product_detail_price_value">Beli Rp %1$s · Jual Rp %2$s · Kode %3$s</string>
     <string name="product_min_stock">Stok minimum</string>
@@ -47,7 +47,7 @@
     <string name="product_description">Deskripsi</string>
     <string name="product_created_at">Tanggal masuk</string>
     <string name="product_updated_at">Terakhir diperbarui</string>
-    <string name="product_edit_information">Edit informasi barang</string>
+    <string name="product_edit_information">Ubah informasi barang</string>
     <string name="product_add_stock">Tambah stok</string>
     <string name="product_subtract_stock">Kurangi stok</string>
     <string name="product_none">Tidak ada</string>
@@ -56,22 +56,22 @@
     <string name="product_stock_unit_price">Harga satuan</string>
     <string name="product_stock_quantity_invalid">Jumlah stok harus lebih dari nol.</string>
     <string name="product_stock_updated">Stok barang berhasil ditambahkan.</string>
-    <string name="product_stock_out_api_missing">Pengurangan stok belum dapat dikirim dengan integration key. Backend perlu menyediakan POST /api/integration/barang/by-sku/{sku}/stok-keluar yang idempotent.</string>
-    <string name="product_edit_title">Edit Barang POS</string>
+    <string name="product_stock_out_api_missing">Pengurangan stok belum dapat dikirim dengan kunci integrasi. Layanan backend perlu menyediakan POST /api/integration/barang/by-sku/{sku}/stok-keluar yang idempoten.</string>
+    <string name="product_edit_title">Ubah Barang POS</string>
     <string name="product_save">Simpan Perubahan</string>
     <string name="product_name_required">Nama barang wajib diisi.</string>
     <string name="product_price_invalid">Harga harus berupa angka nol atau lebih.</string>
     <string name="product_update_success">Data barang Lithia POS berhasil diperbarui.</string>
     <string name="product_not_found">Barang tidak lagi ditemukan di Lithia POS.</string>
-    <string name="paired_printer">Paired Printer</string>
-    <string name="printer_name">Printer Name</string>
-    <string name="printer_mac">MAC Address</string>
+    <string name="paired_printer">Printer Terpasang</string>
+    <string name="printer_name">Nama Printer</string>
+    <string name="printer_mac">Alamat MAC</string>
     <string name="printer_model">Model</string>
-    <string name="connection_status">Connection</string>
-    <string name="battery_level">Battery</string>
-    <string name="scan_devices">Scan Devices</string>
-    <string name="test_print">Test Print</string>
-    <string name="discovered_devices">Discovered Devices</string>
+    <string name="connection_status">Koneksi</string>
+    <string name="battery_level">Baterai</string>
+    <string name="scan_devices">Pindai Perangkat</string>
+    <string name="test_print">Uji Cetak</string>
+    <string name="discovered_devices">Perangkat Ditemukan</string>
     <string name="printer_connection_type">Jenis koneksi printer</string>
     <string name="printer_connection_type_help">XPrinter memakai Bluetooth Classic, TSPL, serta pilihan 203 atau 300 DPI.</string>
     <string name="scan_printers">Cari printer Niimbot</string>
@@ -89,38 +89,38 @@
     <string name="unknown_device">Perangkat Bluetooth</string>
     
     <!-- Print Queue -->
-    <string name="queue_title">Print Queue</string>
-    <string name="no_jobs">No print jobs</string>
+    <string name="queue_title">Antrean Cetak</string>
+    <string name="no_jobs">Belum ada tugas cetak</string>
     <string name="job_nama">Nama</string>
     <string name="job_sku">SKU</string>
     <string name="job_harga">Harga</string>
-    <string name="job_qty">Qty</string>
+    <string name="job_qty">Jumlah</string>
     <string name="job_status">Status</string>
-    <string name="job_time">Time</string>
-    <string name="job_retry">Retry</string>
+    <string name="job_time">Waktu</string>
+    <string name="job_retry">Coba Lagi</string>
     
     <!-- Logs -->
-    <string name="logs_title">Logs</string>
-    <string name="no_logs">No logs</string>
-    <string name="log_action">Action</string>
-    <string name="log_job_id">Job ID</string>
-    <string name="log_message">Message</string>
-    <string name="log_time">Time</string>
+    <string name="logs_title">Riwayat</string>
+    <string name="no_logs">Belum ada riwayat</string>
+    <string name="log_action">Tindakan</string>
+    <string name="log_job_id">ID Tugas</string>
+    <string name="log_message">Pesan</string>
+    <string name="log_time">Waktu</string>
     
     <!-- Settings -->
-    <string name="settings_title">Settings</string>
-    <string name="server_config">Server Configuration</string>
-    <string name="server_port">Server Port</string>
-    <string name="save_port">Save Port</string>
-    <string name="tunnel_config">Tunnel Configuration</string>
-    <string name="tunnel_url">Tunnel URL</string>
-    <string name="tailscale_enabled">Use Tailscale</string>
-    <string name="lan_only">LAN Only</string>
-    <string name="save_tunnel">Save Tunnel</string>
-    <string name="label_preview">Label Preview</string>
-    <string name="generate_preview">Generate Preview</string>
-    <string name="printer_config">Printer Configuration</string>
-    <string name="forget_printer">Forget Printer</string>
+    <string name="settings_title">Pengaturan</string>
+    <string name="server_config">Konfigurasi Server</string>
+    <string name="server_port">Port Server</string>
+    <string name="save_port">Simpan Port</string>
+    <string name="tunnel_config">Konfigurasi Akses Jarak Jauh</string>
+    <string name="tunnel_url">URL Akses Jarak Jauh</string>
+    <string name="tailscale_enabled">Gunakan Tailscale</string>
+    <string name="lan_only">Hanya LAN</string>
+    <string name="save_tunnel">Simpan Akses</string>
+    <string name="label_preview">Pratinjau Label</string>
+    <string name="generate_preview">Buat Pratinjau</string>
+    <string name="printer_config">Konfigurasi Printer</string>
+    <string name="forget_printer">Lepaskan Printer</string>
 
     <!-- Buat Label -->
     <string name="create_label_nav">Label</string>
@@ -129,40 +129,13 @@
     <string name="label_sku">SKU</string>
     <string name="label_sku_description">Masukkan SKU manual</string>
     <string name="label_sku_auto_help">Opsional — jika kosong, SKU dibuat dari nama barang saat mencetak</string>
-    <string name="label_scan_sku">Scan barcode untuk SKU</string>
-    <string name="label_scan_failed">Pemindai barcode tidak dapat dibuka pada perangkat ini</string>
+    <string name="label_scan_sku">Pindai kode batang untuk SKU</string>
+    <string name="label_scan_failed">Pemindai kode batang tidak dapat dibuka pada perangkat ini</string>
     <string name="label_sku_required_for_lookup">Masukkan SKU barang yang akan diambil dari Lithia POS</string>
     <string name="label_nama">Nama barang</string>
     <string name="label_nama_description">Masukkan nama barang</string>
     <string name="label_size">Ukuran label</string>
     <string name="label_size_description">Pilih ukuran fisik media label</string>
-    <string name="label_layout">Layout label</string>
-    <string name="label_layout_description">Pilih susunan isi label</string>
-    <string name="label_element_editor_title">Atur posisi &amp; ukuran isi label</string>
-    <string name="label_element_editor_help">Pilih tulisan atau barcode, lalu atur posisinya. Kotak biru pada preview menunjukkan elemen aktif dan tidak ikut tercetak.</string>
-    <string name="edit_label_layout">Edit layout</string>
-    <string name="edit_label_layout_description">Buka halaman pengaturan posisi dan ukuran isi label</string>
-    <string name="edit_label_layout_title">Edit Layout Label</string>
-    <string name="back_to_label_form">Kembali</string>
-    <string name="final_layout_preview">Preview layout</string>
-    <string name="label_layout_saved_per_size_help">Perubahan hanya berlaku dan tersimpan untuk ukuran label ini. Kotak biru menandai elemen aktif dan tidak ikut tercetak.</string>
-    <string name="label_layout_size_summary">Ukuran %1$s • %2$s</string>
-    <string name="save_label_layout">Simpan layout</string>
-    <string name="save_label_layout_description">Simpan layout khusus untuk ukuran label ini</string>
-    <string name="label_layout_saved">Layout untuk ukuran label ini telah disimpan.</string>
-    <string name="label_element">Elemen label</string>
-    <string name="label_element_description">Pilih tulisan atau barcode yang akan diedit</string>
-    <string name="label_element_x">Posisi horizontal</string>
-    <string name="label_element_y">Posisi vertikal</string>
-    <string name="label_element_width">Lebar</string>
-    <string name="label_element_height">Tinggi / ukuran tulisan</string>
-    <string name="label_element_x_description">Geser posisi elemen label ke kiri atau kanan</string>
-    <string name="label_element_y_description">Geser posisi elemen label ke atas atau bawah</string>
-    <string name="label_element_width_description">Atur lebar elemen label</string>
-    <string name="label_element_height_description">Atur tinggi barcode atau ukuran tulisan</string>
-    <string name="label_element_percent">%1$d%%</string>
-    <string name="reset_label_element">Reset elemen</string>
-    <string name="reset_label_template">Reset semua</string>
     <string name="label_data_source">Sumber data barang</string>
     <string name="label_source_manual">Buat sendiri</string>
     <string name="label_source_pos">Ambil dari Lithia POS</string>
@@ -180,46 +153,46 @@
     <string name="label_qty">Jumlah Label</string>
     <string name="label_qty_description">Masukkan jumlah salinan label yang akan dicetak, minimal satu</string>
     <string name="label_qty_help">Menentukan jumlah salinan label cetak; tidak mengubah stok POS.</string>
-    <string name="label_item_qty">Qty Barang</string>
+    <string name="label_item_qty">Jumlah Barang</string>
     <string name="label_item_qty_description">Masukkan kuantitas barang yang dicetak di sebelah kiri SKU</string>
-    <string name="label_item_qty_help">Dicetak dengan format 1 QTY.</string>
-    <string name="label_supplier_code">Kode Supplier</string>
-    <string name="label_supplier_code_description">Pilih supplier dari Lithia POS untuk dicetak di sebelah kanan SKU</string>
-    <string name="label_supplier_loading">Memuat supplier dari Lithia POS...</string>
-    <string name="label_supplier_hint">Pilih supplier Lithia POS; kode digunakan bila tersedia, jika tidak nama supplier.</string>
-    <string name="label_supplier_key_required">Isi integration key di Pengaturan agar dropdown supplier aktif.</string>
-    <string name="label_supplier_load_failed">Supplier gagal dimuat: %1$s</string>
+    <string name="label_item_qty_help">Dicetak dengan format 1 JML.</string>
+    <string name="label_supplier_code">Kode Pemasok</string>
+    <string name="label_supplier_code_description">Pilih pemasok dari Lithia POS untuk dicetak di sebelah kanan SKU</string>
+    <string name="label_supplier_loading">Memuat pemasok dari Lithia POS...</string>
+    <string name="label_supplier_hint">Pilih pemasok Lithia POS; kode digunakan bila tersedia, jika tidak nama pemasok.</string>
+    <string name="label_supplier_key_required">Isi kunci integrasi di Pengaturan agar daftar pemasok aktif.</string>
+    <string name="label_supplier_load_failed">Pemasok gagal dimuat: %1$s</string>
     <string name="incoming_stock_qty">Jumlah Barang Masuk</string>
     <string name="label_entry_date">Tanggal masuk</string>
     <string name="incoming_stock_qty_description">Masukkan jumlah barang yang ditambahkan ke stok POS, minimal nol</string>
     <string name="incoming_stock_qty_help">Menambah stok Lithia POS; tidak mengubah jumlah label yang dicetak.</string>
     <string name="add_to_pos">Masukkan ke Lithia POS</string>
     <string name="add_to_pos_description">Aktifkan untuk menyinkronkan barang ke Lithia POS sebelum mencetak</string>
-    <string name="label_preview_live">Preview label</string>
+    <string name="label_preview_live">Pratinjau label</string>
     <string name="label_preview_name_placeholder">Nama barang</string>
     <string name="label_preview_description">Pratinjau label yang akan dicetak</string>
     <string name="create_and_print">Validasi &amp; Cetak</string>
     <string name="create_and_print_description">Validasi data lalu masukkan label ke antrean cetak</string>
     <string name="confirm_print_title">Konfirmasi cetak</string>
     <string name="confirm_print_message">Periksa desain final berikut sebelum mencetak.</string>
-    <string name="confirm_print_details">Ukuran: %1$s\nLayout: %2$s\nJumlah label: %3$d</string>
+    <string name="confirm_print_details">Ukuran: %1$s\nJumlah label: %2$d</string>
     <string name="confirm_and_print">Cetak sekarang</string>
-    <string name="reset_label_form">Hapus / Reset Form</string>
-    <string name="reset_label_form_description">Hapus seluruh isian dan draft form label</string>
-    <string name="reset_label_form_title">Reset form label?</string>
-    <string name="reset_label_form_message">Semua isian dan draft yang tersimpan akan dihapus.</string>
-    <string name="reset_label_form_done">Form label telah dikosongkan.</string>
+    <string name="reset_label_form">Hapus / Atur Ulang Formulir</string>
+    <string name="reset_label_form_description">Hapus seluruh isian dan draf formulir label</string>
+    <string name="reset_label_form_title">Atur ulang formulir label?</string>
+    <string name="reset_label_form_message">Semua isian dan draf yang tersimpan akan dihapus.</string>
+    <string name="reset_label_form_done">Formulir label telah dikosongkan.</string>
     <string name="label_size_detection_consent_title">Deteksi ukuran label otomatis?</string>
-    <string name="label_size_detection_consent_message">Aplikasi perlu mengirim barcode RFID roll ke layanan metadata NIIMBOT untuk memperoleh ukuran label. Tidak ada data barang atau harga yang dikirim.</string>
+    <string name="label_size_detection_consent_message">Aplikasi perlu mengirim kode batang RFID rol ke layanan metadata NIIMBOT untuk memperoleh ukuran label. Tidak ada data barang atau harga yang dikirim.</string>
     <string name="allow_detection">Izinkan Deteksi</string>
     <string name="not_now">Tidak Sekarang</string>
-    <string name="pos_key_required">Atur POS Base URL dan integration key di Pengaturan sebelum mencetak ke POS.</string>
+    <string name="pos_key_required">Atur URL dasar POS dan kunci integrasi di Pengaturan sebelum mencetak ke POS.</string>
     <string name="label_product_search_hint">Ketik minimal 2 karakter untuk mencari barang Lithia POS</string>
-    <string name="label_product_search_key_required">Isi integration key di Pengaturan agar pencarian barang Lithia POS aktif</string>
+    <string name="label_product_search_key_required">Isi kunci integrasi di Pengaturan agar pencarian barang Lithia POS aktif</string>
     <string name="label_product_search_failed">Pencarian barang Lithia POS gagal. Periksa koneksi dan konfigurasi.</string>
     <string name="pos_request_failed">Permintaan ke Lithia POS gagal. Label tidak dicetak.</string>
     <string name="pos_conflict_title">Data barang berbeda</string>
-    <string name="pos_conflict_comparison">Lithia POS:\nSKU: %1$s\nNama: %2$s\nHarga beli: Rp %3$s\nHarga jual: Rp %4$s\n\nForm:\nSKU: %5$s\nNama: %6$s\nHarga beli: Rp %7$s\nHarga jual: Rp %8$s</string>
+    <string name="pos_conflict_comparison">Lithia POS:\nSKU: %1$s\nNama: %2$s\nHarga beli: Rp %3$s\nHarga jual: Rp %4$s\n\nFormulir:\nSKU: %5$s\nNama: %6$s\nHarga beli: Rp %7$s\nHarga jual: Rp %8$s</string>
     <string name="use_pos_and_print">Pakai data POS &amp; cetak</string>
     <string name="update_pos_and_print">Perbarui POS &amp; cetak</string>
     <string name="cannot_print_title">Tidak dapat mencetak</string>
@@ -229,21 +202,25 @@
 
     <!-- Integrasi POS -->
     <string name="pos_config">Integrasi Lithia POS</string>
-    <string name="pos_base_url">POS Base URL</string>
+    <string name="pos_base_url">URL Dasar POS</string>
     <string name="pos_base_url_description">Masukkan alamat dasar API Lithia POS</string>
-    <string name="pos_integration_key">Integration key</string>
-    <string name="pos_integration_key_description">Masukkan integration key Lithia POS; nilai selalu disamarkan</string>
-    <string name="pos_supplier_token_description">Masukkan Bearer token Lithia POS untuk mengambil daftar supplier; nilai selalu disamarkan</string>
-    <string name="pos_supplier_token_help">Diperlukan oleh endpoint supplier; berbeda dari integration key barang.</string>
+    <string name="pos_integration_key">Kunci integrasi</string>
+    <string name="pos_integration_key_description">Masukkan kunci integrasi Lithia POS; nilai selalu disamarkan</string>
+    <string name="pos_supplier_token_description">Masukkan token Bearer Lithia POS untuk mengambil daftar pemasok; nilai selalu disamarkan</string>
+    <string name="pos_supplier_token_help">Diperlukan oleh layanan pemasok; berbeda dari kunci integrasi barang.</string>
     <string name="save_pos_config">Simpan konfigurasi POS</string>
     <string name="test_pos_connection">Tes koneksi</string>
     <string name="pos_config_saved">Konfigurasi POS tersimpan aman.</string>
-    <string name="pos_url_invalid">POS Base URL harus berupa URL HTTP atau HTTPS yang valid.</string>
+    <string name="pos_url_invalid">URL dasar POS harus berupa URL HTTP atau HTTPS yang valid.</string>
     <string name="pos_test_success">Koneksi dan autentikasi Lithia POS berhasil.</string>
-    <string name="pos_test_key_required">Isi integration key sebelum mengetes koneksi.</string>
+    <string name="pos_test_key_required">Isi kunci integrasi sebelum menguji koneksi.</string>
 
     <!-- Server Info -->
-    <string name="server_info">Server Info</string>
-    <string name="server_endpoint">Endpoint</string>
+    <string name="server_info">Informasi Server</string>
+    <string name="server_endpoint">Alamat Layanan</string>
     <string name="server_status_label">Status</string>
+    <string name="cancel">Batal</string>
+    <string name="ok">OK</string>
+    <string name="port_invalid">Port harus bernilai antara 1 dan 65535</string>
+    <string name="port_saved">Port tersimpan: %1$d</string>
 </resources>

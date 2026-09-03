@@ -194,7 +194,7 @@ class PrinterFragment : Fragment() {
         btnTestPrint?.setOnClickListener {
             val intent = android.content.Intent(requireContext(), PrintForegroundService::class.java).apply {
                 action = PrintForegroundService.ACTION_TEST_PRINT
-                putExtra(PrintForegroundService.EXTRA_TEST_DATA, "TEST FROM UI")
+                putExtra(PrintForegroundService.EXTRA_TEST_DATA, "UJI DARI APLIKASI")
             }
             androidx.core.content.ContextCompat.startForegroundService(requireContext(), intent)
         }

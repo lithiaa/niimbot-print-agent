@@ -197,7 +197,7 @@ class ProductDetailFragment : Fragment() {
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.product_edit_title)
             .setView(dialogView)
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.product_save, null)
             .create()
         dialog.setOnShowListener {
@@ -264,7 +264,7 @@ class ProductDetailFragment : Fragment() {
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.product_add_stock)
             .setView(view)
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.product_stock_apply, null)
             .create()
         dialog.setOnShowListener {
@@ -312,7 +312,7 @@ class ProductDetailFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.product_subtract_stock)
             .setMessage(R.string.product_stock_out_api_missing)
-            .setPositiveButton(android.R.string.ok, null)
+            .setPositiveButton(R.string.ok, null)
             .show()
     }
 
