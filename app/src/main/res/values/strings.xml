@@ -24,6 +24,14 @@
     <string name="product_info_title">Info Barang Lithia POS</string>
     <string name="product_info_subtitle">Lihat dan ubah data barang langsung melalui API integrasi.</string>
     <string name="product_search_hint">Cari nama atau SKU</string>
+    <string name="product_filter_hint">Filter barang</string>
+    <string name="product_filter_description">Pilih filter berdasarkan status stok</string>
+    <string name="product_filter_all">Semua barang</string>
+    <string name="product_filter_safe">Stok aman</string>
+    <string name="product_filter_low">Stok menipis</string>
+    <string name="product_filter_out">Stok habis</string>
+    <string name="product_info_filtered_count">Menampilkan %1$d dari %2$d barang yang dimuat (%3$d total)</string>
+    <string name="product_info_filter_empty">Tidak ada barang yang cocok dengan filter ini.</string>
     <string name="product_info_empty">Belum ada barang yang dapat ditampilkan.</string>
     <string name="product_info_key_required">Atur kunci integrasi Lithia POS di Pengaturan untuk membuka Info Barang.</string>
     <string name="product_info_count">Menampilkan %1$d dari %2$d barang</string>
@@ -155,9 +163,9 @@
     <string name="label_qty_help">Menentukan jumlah salinan label cetak; tidak mengubah stok POS.</string>
     <string name="label_item_qty">Jumlah Barang</string>
     <string name="label_item_qty_description">Masukkan kuantitas barang yang dicetak di sebelah kiri SKU</string>
-    <string name="label_item_qty_help">Dicetak dengan format 1 JML.</string>
-    <string name="label_supplier_code">Kode Pemasok</string>
-    <string name="label_supplier_code_description">Pilih pemasok dari Lithia POS untuk dicetak di sebelah kanan SKU</string>
+    <string name="label_item_qty_help">Dicetak dengan format 1 QTY.</string>
+    <string name="label_supplier_code">Kode Supplier</string>
+    <string name="label_supplier_code_description">Pilih supplier dari Lithia POS untuk dicetak di sebelah kanan SKU</string>
     <string name="label_supplier_loading">Memuat pemasok dari Lithia POS...</string>
     <string name="label_supplier_hint">Pilih pemasok Lithia POS; kode digunakan bila tersedia, jika tidak nama pemasok.</string>
     <string name="label_supplier_key_required">Isi kunci integrasi di Pengaturan agar daftar pemasok aktif.</string>

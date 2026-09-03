@@ -45,6 +45,28 @@
             android:minHeight="48dp" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.NiimbotPrintAgent.TextInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="@string/product_filter_hint"
+        app:endIconMode="dropdown_menu">
+
+        <AutoCompleteTextView
+            android:id="@+id/dropdown_product_filter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/product_filter_description"
+            android:inputType="none"
+            android:minHeight="48dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="8dp"
+            android:popupBackground="@color/surface"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipe_product_info"
         android:layout_width="match_parent"

@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
@@ -33,6 +35,7 @@ class ProductInfoFragment : Fragment() {
     @Inject lateinit var posApiClient: PosApiClient
 
     private lateinit var searchInput: EditText
+    private lateinit var filterDropdown: AutoCompleteTextView
     private lateinit var recyclerView: RecyclerView
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var emptyView: TextView
@@ -45,6 +48,7 @@ class ProductInfoFragment : Fragment() {
     private var currentPage = 1
     private var searchJob: Job? = null
     private var loadJob: Job? = null
+    private var selectedFilter = ProductStockFilter.ALL
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -55,6 +59,7 @@ class ProductInfoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         searchInput = view.findViewById(R.id.et_product_search)
+        filterDropdown = view.findViewById(R.id.dropdown_product_filter)
         recyclerView = view.findViewById(R.id.rv_product_info)
         swipeRefresh = view.findViewById(R.id.swipe_product_info)
         emptyView = view.findViewById(R.id.tv_product_info_empty)
@@ -66,6 +71,8 @@ class ProductInfoFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
 
+        setupFilterDropdown()
+
         swipeRefresh.setOnRefreshListener { loadProducts(reset = true) }
         loadMoreButton.setOnClickListener { loadProducts(reset = false) }
         searchInput.doAfterTextChanged {
@@ -76,6 +83,27 @@ class ProductInfoFragment : Fragment() {
             }
         }
         loadProducts(reset = true)
+    }
+
+    private fun setupFilterDropdown() {
+        val options = listOf(
+            ProductStockFilter.ALL to getString(R.string.product_filter_all),
+            ProductStockFilter.SAFE to getString(R.string.product_filter_safe),
+            ProductStockFilter.LOW to getString(R.string.product_filter_low),
+            ProductStockFilter.OUT_OF_STOCK to getString(R.string.product_filter_out)
+        )
+        filterDropdown.setAdapter(
+            ArrayAdapter(
+                requireContext(),
+                R.layout.item_label_dropdown,
+                options.map { it.second }
+            )
+        )
+        filterDropdown.setText(options.first().second, false)
+        filterDropdown.setOnItemClickListener { _, _, position, _ ->
+            selectedFilter = options[position].first
+            applyCurrentFilter()
+        }
     }
 
     private fun openDetail(product: PosProduct) {
@@ -116,10 +144,7 @@ class ProductInfoFragment : Fragment() {
                     val page = result.value
                     totalProducts = page.total
                     products = if (reset) page.data else (products + page.data).distinctBy { it.id ?: it.sku }
-                    adapter.submitList(products)
-                    summaryView.text = getString(R.string.product_info_count, products.size, totalProducts)
-                    emptyView.visibility = if (products.isEmpty()) View.VISIBLE else View.GONE
-                    emptyView.text = getString(R.string.product_info_empty)
+                    applyCurrentFilter()
                     loadMoreButton.visibility = if (products.size < totalProducts) View.VISIBLE else View.GONE
                 }
                 PosApiResult.NotFound -> showEmpty(getString(R.string.product_info_empty))
@@ -130,6 +155,25 @@ class ProductInfoFragment : Fragment() {
             }
             setLoading(false, reset)
         }
+    }
+
+    private fun applyCurrentFilter() {
+        val filteredProducts = ProductInfoFilter.apply(products, selectedFilter)
+        adapter.submitList(filteredProducts)
+        summaryView.text = if (selectedFilter == ProductStockFilter.ALL) {
+            getString(R.string.product_info_count, products.size, totalProducts)
+        } else {
+            getString(
+                R.string.product_info_filtered_count,
+                filteredProducts.size,
+                products.size,
+                totalProducts
+            )
+        }
+        emptyView.text = getString(
+            if (products.isEmpty()) R.string.product_info_empty else R.string.product_info_filter_empty
+        )
+        emptyView.visibility = if (filteredProducts.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun showEmpty(message: String) {

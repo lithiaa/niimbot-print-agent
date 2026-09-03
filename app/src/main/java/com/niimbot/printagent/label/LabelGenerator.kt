@@ -67,7 +67,7 @@ object LabelGenerator {
             canvas = canvas,
             paint = paint,
             bounds = metrics.metadata.toPixels(width, height),
-            quantity = "${itemQty.coerceAtLeast(1)} JML",
+            quantity = "${itemQty.coerceAtLeast(1)} QTY",
             date = entryDateText(tanggalMasuk).ifEmpty { sku },
             supplier = supplierCode.orEmpty()
         )
