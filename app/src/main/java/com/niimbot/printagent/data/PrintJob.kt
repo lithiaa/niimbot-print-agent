@@ -34,6 +34,7 @@ data class PrintJob(
     val itemQty: Int = 1,
     val supplierCode: String? = null,
     val tanggalMasuk: String? = null,
+    val labelTemplateJson: String? = null,
     
     // Queue status
     val status: PrintStatus = PrintStatus.PENDING,

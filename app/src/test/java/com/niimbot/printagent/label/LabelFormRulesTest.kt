@@ -156,4 +156,20 @@ class LabelFormRulesTest {
         assertTrue(result.errors.isEmpty())
         assertEquals("2026-08-31", result.data?.tanggalMasuk)
     }
+
+    @Test
+    fun `element positions and sizes are preserved in validated label data`() {
+        val template = LabelTemplate.defaultFor(LabelLayout.STANDARD).update(
+            LabelElementFrame(LabelElement.SALE_PRICE, .60f, .70f, .50f, .18f)
+        )
+        val result = LabelFormRules.validate(
+            LabelFormInput(
+                "SKU-1", "Barang", "10", "12", "1", "0", false,
+                labelTemplate = template
+            )
+        )
+
+        assertTrue(result.errors.isEmpty())
+        assertEquals(template, result.data?.labelTemplate)
+    }
 }

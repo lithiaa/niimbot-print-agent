@@ -15,7 +15,8 @@ data class LabelFormInput(
     val kodeHargaBeli: String = "",
     val itemQty: String = "1",
     val supplierCode: String = "",
-    val tanggalMasuk: String = LabelDate.todayIso()
+    val tanggalMasuk: String = LabelDate.todayIso(),
+    val labelTemplate: LabelTemplate = LabelTemplate.defaultFor(labelLayout)
 )
 
 data class LabelData(
@@ -30,7 +31,8 @@ data class LabelData(
     val kodeHargaBeli: String? = null,
     val itemQty: Int = 1,
     val supplierCode: String? = null,
-    val tanggalMasuk: String = LabelDate.todayIso()
+    val tanggalMasuk: String = LabelDate.todayIso(),
+    val labelTemplate: LabelTemplate = LabelTemplate.defaultFor(labelLayout)
 )
 
 enum class LabelField {
@@ -81,18 +83,19 @@ object LabelFormRules {
 
         val data = if (errors.isEmpty()) {
             LabelData(
-                sku,
-                nama,
-                hargaBeli!!,
-                hargaJual!!,
-                qty!!,
-                jumlahBarangMasuk!!,
-                input.labelSize,
-                input.labelLayout,
-                input.kodeHargaBeli.trim().ifEmpty { null },
-                itemQty!!,
-                input.supplierCode.trim().ifEmpty { null },
-                input.tanggalMasuk.trim()
+                sku = sku,
+                nama = nama,
+                hargaBeli = hargaBeli!!,
+                hargaJual = hargaJual!!,
+                qty = qty!!,
+                jumlahBarangMasuk = jumlahBarangMasuk!!,
+                labelSize = input.labelSize,
+                labelLayout = input.labelLayout,
+                kodeHargaBeli = input.kodeHargaBeli.trim().ifEmpty { null },
+                itemQty = itemQty!!,
+                supplierCode = input.supplierCode.trim().ifEmpty { null },
+                tanggalMasuk = input.tanggalMasuk.trim(),
+                labelTemplate = input.labelTemplate.normalized()
             )
         } else {
             null

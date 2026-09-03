@@ -41,6 +41,9 @@ import com.niimbot.printagent.label.LabelGenerator
 import com.niimbot.printagent.label.LabelLayout
 import com.niimbot.printagent.label.LabelSkuGenerator
 import com.niimbot.printagent.label.LabelSize
+import com.niimbot.printagent.label.LabelTemplate
+import com.niimbot.printagent.label.LabelTemplateCodec
+import com.niimbot.printagent.label.LabelTemplatePreferences
 import com.niimbot.printagent.pos.IntegrationConfigStore
 import com.niimbot.printagent.pos.PosApiClient
 import com.niimbot.printagent.pos.PosApiResult
@@ -94,7 +97,7 @@ class LabelFragment : Fragment() {
     private lateinit var switchPos: SwitchMaterial
     private lateinit var dropdownLabelSize: AutoCompleteTextView
     private lateinit var dropdownLabelLayout: AutoCompleteTextView
-    private lateinit var btnPreview: View
+    private lateinit var btnEditLayout: View
     private lateinit var btnPrint: View
     private lateinit var btnScanSku: View
     private lateinit var btnResetForm: View
@@ -111,6 +114,7 @@ class LabelFragment : Fragment() {
     private val availableLabelSizes = LabelSize.entries.toMutableList()
     private var metadataConsentPromptShown = false
     private var isTabletLayout = false
+    private var currentLabelTemplate = LabelTemplate.defaultFor(LabelLayout.STANDARD)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -121,6 +125,7 @@ class LabelFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
+        moveLabelOptionsToPreview()
         configureResponsiveLayout()
         setupLabelOptions()
         setupSupplierDropdown()
@@ -142,10 +147,13 @@ class LabelFragment : Fragment() {
             saveDraft()
         }
         dropdownLabelSize.setOnItemClickListener { _, _, _, _ ->
+            applyTemplateForSize(selectedLabelSize())
             saveDraft()
             updatePreview(showErrors = false)
         }
         dropdownLabelLayout.setOnItemClickListener { _, _, _, _ ->
+            currentLabelTemplate = LabelTemplate.defaultFor(selectedLabelLayout())
+            saveTemplateForCurrentSize()
             saveDraft()
             updatePreview(showErrors = false)
         }
@@ -165,8 +173,8 @@ class LabelFragment : Fragment() {
         etTanggalMasuk.setOnClickListener { showEntryDatePicker() }
         tilTanggalMasuk.setEndIconOnClickListener { showEntryDatePicker() }
         btnResetForm.setOnClickListener { confirmResetForm() }
-        btnPreview.setOnClickListener { updatePreview(showErrors = true) }
-        btnPrint.setOnClickListener { submit() }
+        btnEditLayout.setOnClickListener { openLayoutEditor() }
+        btnPrint.setOnClickListener { confirmPrint() }
         observePrinterConnection()
         updatePreview(showErrors = false)
     }
@@ -197,7 +205,7 @@ class LabelFragment : Fragment() {
         switchPos = view.findViewById(R.id.switch_add_to_pos)
         dropdownLabelSize = view.findViewById(R.id.dropdown_label_size)
         dropdownLabelLayout = view.findViewById(R.id.dropdown_label_layout)
-        btnPreview = view.findViewById(R.id.btn_update_label_preview)
+        btnEditLayout = view.findViewById(R.id.btn_edit_label_layout)
         btnPrint = view.findViewById(R.id.btn_create_and_print)
         btnScanSku = view.findViewById(R.id.btn_scan_label_sku)
         btnResetForm = view.findViewById(R.id.btn_reset_label_form)
@@ -206,6 +214,17 @@ class LabelFragment : Fragment() {
         previewCard = view.findViewById(R.id.card_label_preview)
         labelOptionsRow = view.findViewById(R.id.row_label_options)
         qtySupplierRow = view.findViewById(R.id.row_label_qty_supplier)
+    }
+
+    private fun moveLabelOptionsToPreview() {
+        val currentParent = labelOptionsRow.parent as? ViewGroup ?: return
+        val previewContent = previewCard.getChildAt(0) as? LinearLayout ?: return
+        currentParent.removeView(labelOptionsRow)
+        previewContent.addView(labelOptionsRow, 1)
+        labelOptionsRow.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(12) }
     }
 
     private fun observePrinterConnection() {
@@ -257,6 +276,7 @@ class LabelFragment : Fragment() {
             if (size !in availableLabelSizes) availableLabelSizes += size
             updateLabelSizeAdapter()
             dropdownLabelSize.setText(size.displayName, false)
+            applyTemplateForSize(size)
             saveDraft()
             updatePreview(showErrors = false)
         }
@@ -289,7 +309,7 @@ class LabelFragment : Fragment() {
         etJumlahBarangMasuk.setText("0")
         switchPos.isChecked = false
         dropdownLabelSize.setText(LabelSize.MM_50_X_30.displayName, false)
-        dropdownLabelLayout.setText(LabelLayout.STANDARD.displayName, false)
+        applyTemplateForSize(LabelSize.MM_50_X_30)
         showValidationErrors(emptyMap())
         saveDraft()
         updatePreview(showErrors = false)
@@ -328,7 +348,6 @@ class LabelFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            btnPreview.visibility = View.GONE
             previewContainer.layoutParams = previewContainer.layoutParams.apply {
                 height = dp(150)
             }
@@ -552,7 +571,8 @@ class LabelFragment : Fragment() {
         kodeHargaBeli = etKodeHargaBeli.text.toString(),
         itemQty = etItemQty.text.toString(),
         supplierCode = selectedSupplierCode.orEmpty(),
-        tanggalMasuk = etTanggalMasuk.text.toString()
+        tanggalMasuk = etTanggalMasuk.text.toString(),
+        labelTemplate = currentLabelTemplate
     )
 
     private fun updatePreview(showErrors: Boolean): LabelData? {
@@ -580,19 +600,53 @@ class LabelFragment : Fragment() {
                 kodeHargaBeli = etKodeHargaBeli.text.toString(),
                 itemQty = etItemQty.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 1,
                 supplierCode = selectedSupplierCode,
-                tanggalMasuk = etTanggalMasuk.text.toString()
+                tanggalMasuk = etTanggalMasuk.text.toString(),
+                labelTemplate = currentLabelTemplate,
+                highlightedElement = null
             )
         ivPreview.setImageBitmap(bitmap)
         updatePreviewDimensions(selectedLabelSize())
         return data
     }
 
-    private fun submit() {
+    private fun confirmPrint() {
         ensureSku()
         val validation = LabelFormRules.validate(currentInput())
         showValidationErrors(validation.errors)
         val form = validation.data ?: return
         updatePreview(showErrors = false)
+        val confirmationView = layoutInflater.inflate(R.layout.dialog_print_confirmation, null)
+        confirmationView.findViewById<ImageView>(R.id.iv_confirm_print_preview).setImageBitmap(
+            LabelGenerator.generateLabel(
+                nama = form.nama,
+                hargaJual = form.hargaJual,
+                hargaBeli = form.hargaBeli,
+                sku = form.sku,
+                labelSize = form.labelSize,
+                labelLayout = form.labelLayout,
+                kodeHargaBeli = form.kodeHargaBeli,
+                itemQty = form.itemQty,
+                supplierCode = form.supplierCode,
+                tanggalMasuk = form.tanggalMasuk,
+                labelTemplate = form.labelTemplate,
+                highlightedElement = null
+            )
+        )
+        confirmationView.findViewById<android.widget.TextView>(R.id.tv_confirm_print_details).text = getString(
+            R.string.confirm_print_details,
+            form.labelSize.displayName,
+            form.labelLayout.displayName,
+            form.qty
+        )
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.confirm_print_title)
+            .setView(confirmationView)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.confirm_and_print) { _, _ -> submitConfirmed(form) }
+            .show()
+    }
+
+    private fun submitConfirmed(form: LabelData) {
         val operationId = UUID.randomUUID().toString()
 
         if (!switchPos.isChecked) {
@@ -695,7 +749,8 @@ class LabelFragment : Fragment() {
                 labelLayout = data.labelLayout.name,
                 itemQty = data.itemQty,
                 supplierCode = data.supplierCode,
-                tanggalMasuk = data.tanggalMasuk
+                tanggalMasuk = data.tanggalMasuk,
+                labelTemplateJson = LabelTemplateCodec.encode(data.labelTemplate)
             )
             val jobId = database.printJobDao().insert(job)
             if (jobId <= 0) {
@@ -763,6 +818,49 @@ class LabelFragment : Fragment() {
         dropdownLabelLayout.setText(LabelLayout.STANDARD.displayName, false)
     }
 
+    private fun applyTemplateForSize(size: LabelSize) {
+        val saved = LabelTemplatePreferences.load(requireContext(), size)
+        val layout = saved?.layout ?: LabelLayout.STANDARD
+        dropdownLabelLayout.setText(layout.displayName, false)
+        currentLabelTemplate = saved?.template ?: LabelTemplate.defaultFor(layout)
+    }
+
+    private fun saveTemplateForCurrentSize() {
+        if (!this::dropdownLabelSize.isInitialized) return
+        LabelTemplatePreferences.save(
+            requireContext(),
+            selectedLabelSize(),
+            selectedLabelLayout(),
+            currentLabelTemplate
+        )
+    }
+
+    private fun openLayoutEditor() {
+        saveDraft()
+        val previewName = etNama.text.toString().trim()
+            .ifEmpty { getString(R.string.label_preview_name_placeholder) }
+        val previewSku = PosProductRules.normalizeSku(etSku.text.toString()).ifEmpty { "000000" }
+        parentFragmentManager.beginTransaction()
+            .replace(
+                R.id.fragment_container,
+                LabelLayoutEditorFragment.newInstance(
+                    size = selectedLabelSize(),
+                    layout = selectedLabelLayout(),
+                    template = currentLabelTemplate,
+                    name = previewName,
+                    purchaseCode = etKodeHargaBeli.text.toString(),
+                    purchasePrice = etHargaBeli.text.toString().toLongOrNull()?.coerceAtLeast(0) ?: 0L,
+                    salePrice = etHargaJual.text.toString().toLongOrNull()?.coerceAtLeast(0) ?: 0L,
+                    sku = previewSku,
+                    itemQty = etItemQty.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 1,
+                    supplier = selectedSupplierCode,
+                    entryDate = etTanggalMasuk.text.toString()
+                )
+            )
+            .addToBackStack("label_layout_editor")
+            .commit()
+    }
+
     private fun updateLabelSizeAdapter() {
         dropdownLabelSize.setAdapter(
             ArrayAdapter(
@@ -800,10 +898,16 @@ class LabelFragment : Fragment() {
             availableLabelSizes += size
             updateLabelSizeAdapter()
         }
-        val layout = LabelLayout.entries.firstOrNull { it.name == draft.getString(DRAFT_LABEL_LAYOUT, null) }
+        val draftLayout = LabelLayout.entries.firstOrNull { it.name == draft.getString(DRAFT_LABEL_LAYOUT, null) }
             ?: LabelLayout.STANDARD
         dropdownLabelSize.setText(size.displayName, false)
+        val saved = LabelTemplatePreferences.load(requireContext(), size)
+        val layout = saved?.layout ?: draftLayout
         dropdownLabelLayout.setText(layout.displayName, false)
+        currentLabelTemplate = saved?.template
+            ?: LabelTemplateCodec.decode(draft.getString(DRAFT_LABEL_TEMPLATE, null))
+            ?: LabelTemplate.defaultFor(layout)
+        saveTemplateForCurrentSize()
     }
 
     private fun saveDraft() {
@@ -823,7 +927,9 @@ class LabelFragment : Fragment() {
             .putBoolean(DRAFT_ADD_TO_POS, switchPos.isChecked)
             .putString(DRAFT_LABEL_SIZE, selectedLabelSize().name)
             .putString(DRAFT_LABEL_LAYOUT, selectedLabelLayout().name)
+            .putString(DRAFT_LABEL_TEMPLATE, LabelTemplateCodec.encode(currentLabelTemplate))
             .apply()
+        saveTemplateForCurrentSize()
     }
 
     private fun selectedLabelSize(): LabelSize = availableLabelSizes.firstOrNull {
@@ -860,7 +966,7 @@ class LabelFragment : Fragment() {
 
     private fun setBusy(busy: Boolean) {
         btnPrint.isEnabled = !busy
-        btnPreview.isEnabled = !busy
+        btnEditLayout.isEnabled = !busy
         btnScanSku.isEnabled = !busy
         btnResetForm.isEnabled = !busy
         switchPos.isEnabled = !busy
@@ -897,6 +1003,7 @@ class LabelFragment : Fragment() {
         const val DRAFT_ADD_TO_POS = "add_to_pos"
         const val DRAFT_LABEL_SIZE = "label_size"
         const val DRAFT_LABEL_LAYOUT = "label_layout"
+        const val DRAFT_LABEL_TEMPLATE = "label_template"
         const val NIIMBOT_METADATA_CONSENT = "niimbot_metadata_consent"
     }
 }

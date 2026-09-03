@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Typeface
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
@@ -50,7 +51,9 @@ object LabelGenerator {
         kodeHargaBeli: String? = null,
         itemQty: Int = 1,
         supplierCode: String? = null,
-        tanggalMasuk: String? = null
+        tanggalMasuk: String? = null,
+        labelTemplate: LabelTemplate? = null,
+        highlightedElement: LabelElement? = null
     ): Bitmap {
         val width = labelSize.widthPx
         val height = labelSize.heightPx
@@ -70,14 +73,117 @@ object LabelGenerator {
         val hargaJualText = "Rp ${formatRupiah(hargaJual)}"
         val hargaBeliEncoded = kodeHargaBeli?.trim()?.takeIf { it.isNotEmpty() } ?: encodePurchasePrice(hargaBeli)
 
-        when (labelLayout) {
-            LabelLayout.COMPACT -> drawCompact(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, barcodeContent, sku, itemQty, supplierCode)
-            LabelLayout.BARCODE_BOTTOM -> drawBarcodeBottom(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, barcodeContent, sku, itemQty, supplierCode)
-            LabelLayout.STANDARD -> drawStandard(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, barcodeContent, sku, itemQty, supplierCode)
+        if (labelTemplate != null) {
+            drawEditableTemplate(
+                canvas = canvas,
+                paint = paint,
+                width = width,
+                height = height,
+                template = labelTemplate,
+                nama = nama,
+                hargaJual = hargaJualText,
+                hargaBeli = hargaBeliEncoded,
+                barcodeContent = barcodeContent,
+                sku = sku,
+                itemQty = itemQty,
+                supplierCode = supplierCode,
+                tanggalMasuk = tanggalMasuk,
+                highlightedElement = highlightedElement
+            )
+        } else {
+            when (labelLayout) {
+                LabelLayout.COMPACT -> drawCompact(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, barcodeContent, sku, itemQty, supplierCode)
+                LabelLayout.BARCODE_BOTTOM -> drawBarcodeBottom(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, barcodeContent, sku, itemQty, supplierCode)
+                LabelLayout.STANDARD -> drawStandard(canvas, paint, width, height, nama, hargaJualText, hargaBeliEncoded, barcodeContent, sku, itemQty, supplierCode)
+            }
+            drawEntryDate(canvas, paint, width, height, tanggalMasuk)
         }
-        drawEntryDate(canvas, paint, width, height, tanggalMasuk)
         
         return bitmap
+    }
+
+    private fun drawEditableTemplate(
+        canvas: Canvas,
+        paint: Paint,
+        width: Int,
+        height: Int,
+        template: LabelTemplate,
+        nama: String,
+        hargaJual: String,
+        hargaBeli: String,
+        barcodeContent: String,
+        sku: String,
+        itemQty: Int,
+        supplierCode: String?,
+        tanggalMasuk: String?,
+        highlightedElement: LabelElement?
+    ) {
+        val safeTemplate = template.normalized()
+        val values = mapOf(
+            LabelElement.PRODUCT_NAME to nama,
+            LabelElement.PURCHASE_CODE to hargaBeli,
+            LabelElement.SALE_PRICE to hargaJual,
+            LabelElement.SKU to sku,
+            LabelElement.ITEM_QTY to "${itemQty.coerceAtLeast(1)} QTY",
+            LabelElement.SUPPLIER to supplierCode.orEmpty(),
+            LabelElement.ENTRY_DATE to entryDateText(tanggalMasuk)
+        )
+
+        LabelElement.entries.forEach { element ->
+            val bounds = frameBounds(safeTemplate.frame(element), width, height)
+            if (element == LabelElement.BARCODE) {
+                val barcode = generateCode128(
+                    barcodeContent,
+                    bounds.width().toInt().coerceAtLeast(1),
+                    bounds.height().toInt().coerceAtLeast(1)
+                )
+                canvas.drawBitmap(barcode, bounds.left, bounds.top, null)
+            } else {
+                val text = values[element].orEmpty()
+                if (text.isNotEmpty()) {
+                    drawTextInFrame(
+                        canvas,
+                        paint,
+                        text,
+                        bounds,
+                        bold = element in setOf(
+                            LabelElement.PRODUCT_NAME,
+                            LabelElement.PURCHASE_CODE,
+                            LabelElement.SALE_PRICE
+                        )
+                    )
+                }
+            }
+        }
+
+        highlightedElement?.let { element ->
+            val bounds = frameBounds(safeTemplate.frame(element), width, height)
+            paint.style = Paint.Style.STROKE
+            paint.color = Color.rgb(25, 118, 210)
+            paint.strokeWidth = (width / 180f).coerceAtLeast(2f)
+            canvas.drawRect(bounds, paint)
+            paint.style = Paint.Style.FILL
+            paint.color = Color.BLACK
+        }
+    }
+
+    private fun frameBounds(frame: LabelElementFrame, width: Int, height: Int): RectF = RectF(
+        (frame.centerX - frame.width / 2f) * width,
+        (frame.centerY - frame.height / 2f) * height,
+        (frame.centerX + frame.width / 2f) * width,
+        (frame.centerY + frame.height / 2f) * height
+    )
+
+    private fun drawTextInFrame(
+        canvas: Canvas,
+        paint: Paint,
+        text: String,
+        bounds: RectF,
+        bold: Boolean
+    ) {
+        fitPaint(paint, text, bounds.width(), bounds.height(), bold)
+        val baseline = bounds.centerY() - (paint.ascent() + paint.descent()) / 2f
+        canvas.drawText(text, bounds.centerX() - paint.measureText(text) / 2f, baseline, paint)
     }
     
     /**
@@ -202,18 +308,21 @@ object LabelGenerator {
         height: Int,
         tanggalMasuk: String?
     ) {
-        val displayDate = LabelDate.display(tanggalMasuk) ?: return
+        val displayDate = entryDateText(tanggalMasuk).ifEmpty { return }
         val size = if (isShortLabel(height)) 13f else 14f * height / LABEL_HEIGHT
         drawCenteredFittedText(
             canvas,
             paint,
-            "Masuk $displayDate",
+            displayDate,
             width,
             height * .985f,
             size.coerceAtLeast(13f),
             false
         )
     }
+
+    internal fun entryDateText(tanggalMasuk: String?): String =
+        LabelDate.display(tanggalMasuk).orEmpty()
 
     private fun drawMetadataRow(
         canvas: Canvas,

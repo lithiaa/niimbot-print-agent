@@ -24,6 +24,7 @@ import com.niimbot.printagent.data.PrintStatus
 import com.niimbot.printagent.label.LabelGenerator
 import com.niimbot.printagent.label.LabelLayout
 import com.niimbot.printagent.label.LabelSize
+import com.niimbot.printagent.label.LabelTemplateCodec
 import com.niimbot.printagent.server.PrintServer
 import com.niimbot.printagent.ui.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -351,7 +352,8 @@ class PrintForegroundService : Service() {
                 kodeHargaBeli = job.kodeHargaBeli,
                 itemQty = job.itemQty,
                 supplierCode = job.supplierCode,
-                tanggalMasuk = job.tanggalMasuk
+                tanggalMasuk = job.tanggalMasuk,
+                labelTemplate = LabelTemplateCodec.decode(job.labelTemplateJson)
             )
 
                 val requestedCopies = job.qty.coerceAtLeast(1)
