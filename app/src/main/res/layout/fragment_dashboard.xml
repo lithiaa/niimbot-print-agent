@@ -75,13 +75,6 @@
                     android:textSize="27sp"
                     android:textStyle="bold" />
 
-                <TextView
-                    android:layout_width="250dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
-                    android:text="Pantau printer dan setiap tugas dari satu tempat."
-                    android:textColor="#D9FFFFFF"
-                    android:textSize="12sp" />
             </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
@@ -304,13 +297,6 @@
                         android:textSize="18sp"
                         android:textStyle="bold" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                                android:text="Aktivitas cetak terbaru Anda"
-                        android:textColor="#8C88A0"
-                        android:textSize="11sp" />
                 </LinearLayout>
 
                 <TextView
@@ -732,13 +718,6 @@
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                                android:text="Ringkasan kinerja"
-                    android:textColor="#8C88A0"
-                    android:textSize="11sp" />
             </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
@@ -776,13 +755,6 @@
                                 android:textColor="#211F2E"
                                 android:textSize="15sp" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                    android:text="Sebaran antrean"
-                                android:textColor="#8C88A0"
-                                android:textSize="10sp" />
                         </LinearLayout>
 
                         <TextView
@@ -844,13 +816,6 @@
                                 android:textColor="#211F2E"
                                 android:textSize="15sp" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                    android:text="Status koneksi langsung"
-                                android:textColor="#8C88A0"
-                                android:textSize="10sp" />
                         </LinearLayout>
 
                         <TextView

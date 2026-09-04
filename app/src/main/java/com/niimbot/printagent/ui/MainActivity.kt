@@ -32,6 +32,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var toolbar: MaterialToolbar
     private lateinit var appBar: AppBarLayout
     private lateinit var fragmentContainer: View
+    private lateinit var labelNavButton: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +42,8 @@ class MainActivity : AppCompatActivity() {
         appBar = findViewById(R.id.app_bar)
         fragmentContainer = findViewById(R.id.fragment_container)
         bottomNav = findViewById(R.id.bottom_navigation)
+        labelNavButton = findViewById(R.id.btn_nav_label)
+        labelNavButton.bringToFront()
         setSupportActionBar(toolbar)
 
         setupBottomNavigation(savedInstanceState)
@@ -94,6 +97,13 @@ class MainActivity : AppCompatActivity() {
             showDestination(item.itemId)
         }
         bottomNav.setOnItemReselectedListener { item -> showDestination(item.itemId) }
+        labelNavButton.setOnClickListener {
+            if (bottomNav.selectedItemId == R.id.nav_label) {
+                showDestination(R.id.nav_label)
+            } else {
+                bottomNav.selectedItemId = R.id.nav_label
+            }
+        }
 
         // Default to dashboard on first launch
         if (savedInstanceState == null) {
@@ -114,6 +124,7 @@ class MainActivity : AppCompatActivity() {
             R.id.nav_settings  -> SettingsFragment().also { toolbar.title = getString(R.string.settings_title) }
             else -> return false
         }
+        labelNavButton.isSelected = itemId == R.id.nav_label
         supportFragmentManager.popBackStack(
             null,
             androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE

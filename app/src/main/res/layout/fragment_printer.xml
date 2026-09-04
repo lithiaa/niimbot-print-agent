@@ -84,15 +84,6 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:lineSpacingExtra="2dp"
-                    android:text="Hubungkan, kelola, dan uji printer label dari satu tempat."
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
-                    android:alpha="0.86" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="wrap_content"
@@ -181,13 +172,6 @@
                             android:textColor="@color/text_primary"
                             android:textSize="18sp" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp"
-                            android:text="Perangkat keluaran utama"
-                            android:textColor="@color/text_muted"
-                            android:textSize="12sp" />
                     </LinearLayout>
 
                     <com.google.android.material.card.MaterialCardView
@@ -370,13 +354,6 @@
                         android:textColor="@color/primary_dark"
                         android:textSize="14sp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                            android:text="Sisa daya printer"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp" />
                 </LinearLayout>
 
                 <TextView
@@ -513,15 +490,6 @@
             android:text="@string/printer_queue_title"
             android:textColor="@color/text_primary"
             android:textSize="20sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="10dp"
-            android:text="@string/printer_queue_subtitle"
-            android:textColor="@color/text_muted"
-            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/tv_printer_queue_empty"

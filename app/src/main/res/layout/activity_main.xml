@@ -34,24 +34,56 @@
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingBottom="92dp"
+        android:paddingBottom="100dp"
         android:clipToPadding="false" />
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_navigation"
+    <FrameLayout
+        android:id="@+id/footer_navigation"
         android:layout_width="match_parent"
-        android:layout_height="68dp"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="12dp"
+        android:layout_height="96dp"
         android:layout_gravity="bottom"
-        android:background="@drawable/bg_floating_nav"
-        android:elevation="12dp"
-        app:elevation="12dp"
-        app:itemHorizontalTranslationEnabled="false"
-        app:itemIconSize="21dp"
-        app:itemPaddingBottom="6dp"
-        app:itemPaddingTop="7dp"
-        app:labelVisibilityMode="labeled"
-        app:menu="@menu/menu_bottom_nav" />
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottom_navigation"
+            android:layout_width="match_parent"
+            android:layout_height="76dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/bg_footer_nav"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
+            app:elevation="0dp"
+            app:itemHorizontalTranslationEnabled="false"
+            app:itemIconSize="24dp"
+            app:itemPaddingBottom="7dp"
+            app:itemPaddingTop="11dp"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/menu_bottom_nav" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btn_nav_label"
+            android:layout_width="66dp"
+            android:layout_height="66dp"
+            android:layout_gravity="top|center_horizontal"
+            android:clickable="true"
+            android:contentDescription="@string/create_label_nav"
+            android:elevation="0dp"
+            android:focusable="true"
+            android:stateListAnimator="@null"
+            app:cardBackgroundColor="@color/nav_label_button_color"
+            app:cardCornerRadius="19dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/white"
+            app:strokeWidth="4dp">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:padding="17dp"
+                app:srcCompat="@drawable/ic_label_action" />
+        </com.google.android.material.card.MaterialCardView>
+    </FrameLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

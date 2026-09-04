@@ -27,6 +27,7 @@ class LabelFormRulesTest {
                 LabelField.HARGA_BELI,
                 LabelField.HARGA_JUAL,
                 LabelField.QTY,
+                LabelField.SUPPLIER_CODE,
                 LabelField.JUMLAH_BARANG_MASUK
             ),
             result.errors.keys
@@ -48,13 +49,17 @@ class LabelFormRulesTest {
                 hargaJual = "18000",
                 qty = "2",
                 jumlahBarangMasuk = "7",
-                addToPos = true
+                addToPos = true,
+                supplierCode = "SUP-A"
             )
         )
 
         assertTrue(result.errors.isEmpty())
         assertEquals(
-            LabelData("AB-12", "Kopi Susu", 12000L, 18000L, 2, 7),
+            LabelData(
+                "AB-12", "Kopi Susu", 12000L, 18000L, 2, 7,
+                supplierCode = "SUP-A"
+            ),
             result.data
         )
     }
@@ -62,7 +67,10 @@ class LabelFormRulesTest {
     @Test
     fun `negative prices are rejected`() {
         val result = LabelFormRules.validate(
-            LabelFormInput("SKU-1", "Barang", "-1", "-2", "1", "0", true)
+            LabelFormInput(
+                "SKU-1", "Barang", "-1", "-2", "1", "0", true,
+                supplierCode = "SUP-A"
+            )
         )
 
         assertEquals(setOf(LabelField.HARGA_BELI, LabelField.HARGA_JUAL), result.errors.keys)
@@ -71,7 +79,10 @@ class LabelFormRulesTest {
     @Test
     fun `incoming stock is distinct from label copies and zero is valid when POS is on`() {
         val result = LabelFormRules.validate(
-            LabelFormInput("SKU-1", "Barang", "10", "12", "4", "0", true)
+            LabelFormInput(
+                "SKU-1", "Barang", "10", "12", "4", "0", true,
+                supplierCode = "SUP-A"
+            )
         )
 
         assertTrue(result.errors.isEmpty())
@@ -83,7 +94,10 @@ class LabelFormRulesTest {
     fun `incoming stock must be a non-negative integer only when POS is on`() {
         listOf("", "-1", "1.5", "abc").forEach { incoming ->
             val result = LabelFormRules.validate(
-                LabelFormInput("SKU-1", "Barang", "10", "12", "1", incoming, true)
+                LabelFormInput(
+                    "SKU-1", "Barang", "10", "12", "1", incoming, true,
+                    supplierCode = "SUP-A"
+                )
             )
 
             assertEquals(
@@ -96,7 +110,10 @@ class LabelFormRulesTest {
     @Test
     fun `POS off ignores malformed incoming stock and normalizes it to zero`() {
         val result = LabelFormRules.validate(
-            LabelFormInput("SKU-1", "Barang", "10", "12", "3", "not-a-number", false)
+            LabelFormInput(
+                "SKU-1", "Barang", "10", "12", "3", "not-a-number", false,
+                supplierCode = "SUP-A"
+            )
         )
 
         assertTrue(result.errors.isEmpty())
@@ -125,7 +142,8 @@ class LabelFormRulesTest {
         val result = LabelFormRules.validate(
             LabelFormInput(
                 "SKU-1", "Barang", "10", "12", "1", "0", false,
-                itemQty = "0"
+                itemQty = "0",
+                supplierCode = "SUP-A"
             )
         )
 
@@ -137,6 +155,7 @@ class LabelFormRulesTest {
         val result = LabelFormRules.validate(
             LabelFormInput(
                 "SKU-1", "Barang", "10", "12", "1", "0", false,
+                supplierCode = "SUP-A",
                 tanggalMasuk = "2026-02-30"
             )
         )
@@ -149,12 +168,26 @@ class LabelFormRulesTest {
         val result = LabelFormRules.validate(
             LabelFormInput(
                 "SKU-1", "Barang", "10", "12", "1", "0", false,
+                supplierCode = "SUP-A",
                 tanggalMasuk = "2026-08-31"
             )
         )
 
         assertTrue(result.errors.isEmpty())
         assertEquals("2026-08-31", result.data?.tanggalMasuk)
+    }
+
+    @Test
+    fun `supplier code is required`() {
+        val result = LabelFormRules.validate(
+            LabelFormInput(
+                "SKU-1", "Barang", "10", "12", "1", "0", false,
+                supplierCode = "  "
+            )
+        )
+
+        assertEquals(setOf(LabelField.SUPPLIER_CODE), result.errors.keys)
+        assertEquals("Kode supplier wajib diisi", result.errors[LabelField.SUPPLIER_CODE])
     }
 
 }

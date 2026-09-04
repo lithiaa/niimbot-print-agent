@@ -82,15 +82,6 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:lineSpacingExtra="2dp"
-                    android:text="Atur cara perangkat ini menerima tugas dan menyiapkan label."
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
-                    android:alpha="0.86" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -222,13 +213,6 @@
                             android:textColor="@color/text_primary"
                             android:textSize="17sp" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Sinkronisasi produk aman"
-                            android:textColor="@color/text_muted"
-                            android:textSize="12sp" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -368,13 +352,6 @@
                             android:textColor="@color/text_primary"
                             android:textSize="17sp" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Alamat layanan cetak lokal"
-                            android:textColor="@color/text_muted"
-                            android:textSize="12sp" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -482,13 +459,6 @@
                             android:textColor="@color/text_primary"
                             android:textSize="17sp" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Atur akses jarak jauh dan lokal"
-                            android:textColor="@color/text_muted"
-                            android:textSize="12sp" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -691,13 +661,6 @@
                             android:textColor="@color/text_primary"
                             android:textSize="17sp" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                                android:text="Periksa hasil label sebelum mencetak"
-                            android:textColor="@color/text_muted"
-                            android:textSize="12sp" />
                     </LinearLayout>
                 </LinearLayout>
 

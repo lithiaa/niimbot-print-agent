@@ -78,35 +78,53 @@
 
                 </LinearLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/til_label_sku"
-                    style="@style/Widget.NiimbotPrintAgent.TextInput"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="@string/label_sku"
-                    app:helperText="@string/label_sku_auto_help">
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/et_label_sku"
-                        style="@style/Widget.NiimbotPrintAgent.FormEditText"
-                        android:layout_width="match_parent"
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_label_sku"
+                        style="@style/Widget.NiimbotPrintAgent.TextInput"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:contentDescription="@string/label_sku_description"
-                        android:imeOptions="actionNext"
-                        android:inputType="textCapCharacters"
-                        android:minHeight="48dp"
-                        android:maxLines="1" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:hint="@string/label_sku"
+                        app:helperText="@string/label_sku_auto_help">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_scan_label_sku"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:minHeight="48dp"
-                    android:text="@string/label_scan_sku" />
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_label_sku"
+                            style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:contentDescription="@string/label_sku_description"
+                            android:imeOptions="actionNext"
+                            android:inputType="textCapCharacters"
+                            android:maxLines="1"
+                            android:minHeight="48dp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_scan_label_sku"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:layout_gravity="top"
+                        android:layout_marginStart="8dp"
+                        android:contentDescription="@string/label_scan_sku"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="0dp"
+                        android:padding="0dp"
+                        app:cornerRadius="16dp"
+                        app:icon="@drawable/ic_label_action"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="24dp"
+                        app:iconTint="@color/primary" />
+                </LinearLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/til_label_nama"
@@ -146,8 +164,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="6dp"
                         android:layout_weight="0.36"
-                        android:hint="@string/label_item_qty"
-                        app:helperText="@string/label_item_qty_help">
+                        android:hint="@string/label_item_qty">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_label_item_qty"
@@ -178,7 +195,7 @@
                             android:contentDescription="@string/label_supplier_code_description"
                             android:inputType="none"
                             android:maxLines="1"
-                            android:minHeight="48dp"
+                            android:minHeight="60dp"
                             android:paddingStart="16dp"
                             android:paddingEnd="8dp"
                             android:popupBackground="@color/surface"
@@ -379,27 +396,43 @@
                         android:scaleType="fitCenter" />
                 </FrameLayout>
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_reset_label_form"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:contentDescription="@string/reset_label_form_description"
+                        android:minHeight="48dp"
+                        android:text="@string/reset_label_form"
+                        android:textColor="@color/error"
+                        app:cornerRadius="4dp"
+                        app:icon="@drawable/ic_delete"
+                        app:iconTint="@color/error"
+                        app:strokeColor="@color/error" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_create_and_print"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:contentDescription="@string/create_and_print_description"
+                        android:minHeight="48dp"
+                        android:text="@string/create_and_print"
+                        app:cornerRadius="4dp"
+                        app:icon="@drawable/ic_printer" />
+                </LinearLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_reset_label_form"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:backgroundTint="@color/error"
-            android:contentDescription="@string/reset_label_form_description"
-            android:minHeight="48dp"
-            android:text="@string/reset_label_form"
-            android:textColor="@color/white" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_create_and_print"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:contentDescription="@string/create_and_print_description"
-            android:minHeight="52dp"
-            android:text="@string/create_and_print" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

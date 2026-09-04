@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Agen Cetak Niimbot</string>
+    <string name="app_name">Lithia Label Printer</string>
     
     <!-- Menu items -->
     <string name="action_test_print">Uji Cetak</string>
@@ -19,10 +19,10 @@
     <!-- Printer -->
     <string name="printer_title">Printer</string>
     <string name="printer_queue_title">Antrean Cetak</string>
-    <string name="printer_queue_subtitle">Pekerjaan terbaru ditampilkan paling atas.</string>
+    <string name="printer_queue_subtitle">Terbaru di atas</string>
     <string name="product_info_nav">Info Barang</string>
     <string name="product_info_title">Info Barang</string>
-    <string name="product_info_subtitle">Lihat dan ubah data barang langsung melalui API integrasi.</string>
+    <string name="product_info_subtitle">Kelola data barang Sistem</string>
     <string name="product_search_hint">Cari nama atau SKU</string>
     <string name="product_filter_hint">Filter barang</string>
     <string name="product_filter_description">Pilih filter berdasarkan status stok</string>
@@ -136,8 +136,8 @@
     <string name="dashboard_create_label_description">Buka formulir buat label</string>
     <string name="label_sku">SKU</string>
     <string name="label_sku_description">Masukkan SKU manual</string>
-    <string name="label_sku_auto_help">Opsional — jika kosong, SKU dibuat dari nama barang saat mencetak</string>
-    <string name="label_scan_sku">Pindai kode batang untuk SKU</string>
+    <string name="label_sku_auto_help">Kosong = SKU otomatis</string>
+    <string name="label_scan_sku">Pindai SKU</string>
     <string name="label_scan_failed">Pemindai kode batang tidak dapat dibuka pada perangkat ini</string>
     <string name="label_sku_required_for_lookup">Masukkan SKU barang yang akan diambil dari Sistem</string>
     <string name="label_nama">Nama barang</string>
@@ -155,37 +155,33 @@
     <string name="label_harga_beli_description">Masukkan harga beli berupa angka</string>
     <string name="label_kode_harga_beli">Kode harga beli</string>
     <string name="label_kode_harga_beli_description">Masukkan kode harga beli yang dicetak pada label</string>
-    <string name="label_kode_harga_beli_help">Kosongkan untuk membuat kode otomatis dari harga beli</string>
+    <string name="label_kode_harga_beli_help">Kosong = kode otomatis</string>
     <string name="label_harga_jual">Harga jual</string>
     <string name="label_harga_jual_description">Masukkan harga jual berupa angka</string>
     <string name="label_qty">Jumlah Label</string>
     <string name="label_qty_description">Masukkan jumlah salinan label yang akan dicetak, minimal satu</string>
-    <string name="label_qty_help">Menentukan jumlah salinan label cetak; tidak mengubah stok Sistem.</string>
+    <string name="label_qty_help">Jumlah salinan, bukan stok</string>
     <string name="label_item_qty">Jumlah Barang</string>
     <string name="label_item_qty_description">Masukkan kuantitas barang yang dicetak di sebelah kiri SKU</string>
     <string name="label_item_qty_help">Dicetak dengan format 1 QTY.</string>
-    <string name="label_supplier_code">Kode Supplier</string>
+    <string name="label_supplier_code">Kode Supplier *</string>
     <string name="label_supplier_code_description">Pilih supplier dari Sistem untuk dicetak di sebelah kanan SKU</string>
-    <string name="label_supplier_loading">Memuat pemasok dari Sistem...</string>
-    <string name="label_supplier_hint">Pilih pemasok Sistem; kode digunakan bila tersedia, jika tidak nama pemasok.</string>
-    <string name="label_supplier_key_required">Isi kunci integrasi di Pengaturan agar daftar pemasok aktif.</string>
-    <string name="label_supplier_load_failed">Pemasok gagal dimuat: %1$s</string>
     <string name="incoming_stock_qty">Jumlah Barang Masuk</string>
     <string name="label_entry_date">Tanggal masuk</string>
     <string name="incoming_stock_qty_description">Masukkan jumlah barang yang ditambahkan ke stok Sistem, minimal nol</string>
-    <string name="incoming_stock_qty_help">Menambah stok Sistem; tidak mengubah jumlah label yang dicetak.</string>
-    <string name="add_to_pos">Masukkan ke Sistem</string>
+    <string name="incoming_stock_qty_help">Penambahan stok Sistem</string>
+    <string name="add_to_pos">Sinkronkan ke Sistem</string>
     <string name="add_to_pos_description">Aktifkan untuk menyinkronkan barang ke Sistem sebelum mencetak</string>
     <string name="label_preview_live">Pratinjau label</string>
     <string name="label_preview_name_placeholder">Nama barang</string>
     <string name="label_preview_description">Pratinjau label yang akan dicetak</string>
-    <string name="create_and_print">Validasi &amp; Cetak</string>
+    <string name="create_and_print">Cetak</string>
     <string name="create_and_print_description">Validasi data lalu masukkan label ke antrean cetak</string>
     <string name="confirm_print_title">Konfirmasi cetak</string>
     <string name="confirm_print_message">Periksa desain final berikut sebelum mencetak.</string>
     <string name="confirm_print_details">Ukuran: %1$s\nJumlah label: %2$d</string>
     <string name="confirm_and_print">Cetak sekarang</string>
-    <string name="reset_label_form">Hapus / Atur Ulang Formulir</string>
+    <string name="reset_label_form">Hapus</string>
     <string name="reset_label_form_description">Hapus seluruh isian dan draf formulir label</string>
     <string name="reset_label_form_title">Atur ulang formulir label?</string>
     <string name="reset_label_form_message">Semua isian dan draf yang tersimpan akan dihapus.</string>
@@ -195,7 +191,7 @@
     <string name="allow_detection">Izinkan Deteksi</string>
     <string name="not_now">Tidak Sekarang</string>
     <string name="pos_key_required">Atur URL dasar Sistem dan kunci integrasi di Pengaturan sebelum mencetak ke Sistem.</string>
-    <string name="label_product_search_hint">Ketik minimal 2 karakter untuk mencari barang Sistem</string>
+    <string name="label_product_search_hint">Cari barang Sistem</string>
     <string name="label_product_search_key_required">Isi kunci integrasi di Pengaturan agar pencarian barang Sistem aktif</string>
     <string name="label_product_search_failed">Pencarian barang Sistem gagal. Periksa koneksi dan konfigurasi.</string>
     <string name="pos_request_failed">Permintaan ke Sistem gagal. Label tidak dicetak.</string>

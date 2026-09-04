@@ -151,6 +151,7 @@ class LabelFragment : Fragment() {
             selectedSupplierCode = supplierSuggestions
                 .firstOrNull { supplierSuggestionLabel(it) == selectedLabel }
                 ?.codeForLabel
+            tilSupplier.error = null
             saveDraft()
             updatePreview(showErrors = false)
         }
@@ -403,10 +404,10 @@ class LabelFragment : Fragment() {
     private fun loadSuppliers() {
         val integrationKey = configStore.getIntegrationKey()
         if (integrationKey.isNullOrBlank()) {
-            tilSupplier.helperText = getString(R.string.label_supplier_key_required)
+            tilSupplier.helperText = null
             return
         }
-        tilSupplier.helperText = getString(R.string.label_supplier_loading)
+        tilSupplier.helperText = null
         viewLifecycleOwner.lifecycleScope.launch {
             when (val result = posApiClient.listSuppliers(configStore.getBaseUrl(), integrationKey)) {
                 is PosApiResult.Success -> {
@@ -421,15 +422,12 @@ class LabelFragment : Fragment() {
                     val selectedText = dropdownSupplier.text.toString()
                     supplierSuggestions.firstOrNull { supplierSuggestionLabel(it) == selectedText }
                         ?.let { selectedSupplierCode = it.codeForLabel }
-                    tilSupplier.helperText = getString(R.string.label_supplier_hint)
                 }
                 PosApiResult.NotFound -> {
                     supplierSuggestions = emptyList()
-                    tilSupplier.helperText = getString(R.string.label_supplier_hint)
                 }
                 is PosApiResult.Failure -> {
                     supplierSuggestions = emptyList()
-                    tilSupplier.helperText = getString(R.string.label_supplier_load_failed, result.message)
                 }
             }
         }
@@ -763,6 +761,7 @@ class LabelFragment : Fragment() {
         tilHargaJual.error = errors[LabelField.HARGA_JUAL]
         tilQty.error = errors[LabelField.QTY]
         tilItemQty.error = errors[LabelField.ITEM_QTY]
+        tilSupplier.error = errors[LabelField.SUPPLIER_CODE]
         tilJumlahBarangMasuk.error = errors[LabelField.JUMLAH_BARANG_MASUK]
         tilTanggalMasuk.error = errors[LabelField.TANGGAL_MASUK]
     }
@@ -774,6 +773,7 @@ class LabelFragment : Fragment() {
         if (LabelField.HARGA_JUAL !in errors) tilHargaJual.error = null
         if (LabelField.QTY !in errors) tilQty.error = null
         if (LabelField.ITEM_QTY !in errors) tilItemQty.error = null
+        if (LabelField.SUPPLIER_CODE !in errors) tilSupplier.error = null
         if (LabelField.JUMLAH_BARANG_MASUK !in errors) tilJumlahBarangMasuk.error = null
         if (LabelField.TANGGAL_MASUK !in errors) tilTanggalMasuk.error = null
     }

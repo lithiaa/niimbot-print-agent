@@ -61,7 +61,7 @@
     <style name="Widget.NiimbotPrintAgent.BottomNavigation" parent="Widget.MaterialComponents.BottomNavigationView">
         <item name="itemIconTint">@color/nav_item_color</item>
         <item name="itemTextColor">@color/nav_item_color</item>
-        <item name="itemRippleColor">@color/purple_accent</item>
+        <item name="itemRippleColor">@android:color/transparent</item>
         <item name="itemTextAppearanceActive">@style/TextAppearance.Niimbot.Nav.Active</item>
         <item name="itemTextAppearanceInactive">@style/TextAppearance.Niimbot.Nav.Inactive</item>
         <item name="elevation">0dp</item>
@@ -69,7 +69,7 @@
 
     <style name="TextAppearance.Niimbot.Nav.Active" parent="TextAppearance.MaterialComponents.Caption">
         <item name="android:textSize">10sp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">sans-serif</item>
     </style>
 
     <style name="TextAppearance.Niimbot.Nav.Inactive" parent="TextAppearance.MaterialComponents.Caption">

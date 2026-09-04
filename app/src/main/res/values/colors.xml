@@ -18,6 +18,7 @@
     <color name="success_light">#22C55E</color>
     <color name="warning">#F59E0B</color>
     <color name="error">#DC2626</color>
+    <color name="footer_divider">#E7E7EC</color>
     <color name="info">#6366F1</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>

@@ -32,7 +32,8 @@ data class LabelData(
 )
 
 enum class LabelField {
-    SKU, NAMA, HARGA_BELI, HARGA_JUAL, QTY, ITEM_QTY, JUMLAH_BARANG_MASUK, TANGGAL_MASUK
+    SKU, NAMA, HARGA_BELI, HARGA_JUAL, QTY, ITEM_QTY, SUPPLIER_CODE,
+    JUMLAH_BARANG_MASUK, TANGGAL_MASUK
 }
 
 data class LabelValidationResult(
@@ -49,6 +50,7 @@ object LabelFormRules {
         val hargaJual = input.hargaJual.trim().toLongOrNull()
         val qty = input.qty.trim().toIntOrNull()
         val itemQty = input.itemQty.trim().toIntOrNull()
+        val supplierCode = input.supplierCode.trim()
         val jumlahBarangMasuk = if (input.addToPos) {
             input.jumlahBarangMasuk.trim().toIntOrNull()
         } else {
@@ -69,6 +71,9 @@ object LabelFormRules {
         if (itemQty == null || itemQty <= 0) {
             errors[LabelField.ITEM_QTY] = "Kuantitas barang pada label minimal 1"
         }
+        if (supplierCode.isEmpty()) {
+            errors[LabelField.SUPPLIER_CODE] = "Kode supplier wajib diisi"
+        }
         if (input.addToPos && (jumlahBarangMasuk == null || jumlahBarangMasuk < 0)) {
             errors[LabelField.JUMLAH_BARANG_MASUK] =
                 "Jumlah barang masuk untuk stok Sistem harus berupa bilangan bulat nol atau lebih"
@@ -88,7 +93,7 @@ object LabelFormRules {
                 labelSize = input.labelSize,
                 kodeHargaBeli = input.kodeHargaBeli.trim().ifEmpty { null },
                 itemQty = itemQty!!,
-                supplierCode = input.supplierCode.trim().ifEmpty { null },
+                supplierCode = supplierCode,
                 tanggalMasuk = input.tanggalMasuk.trim()
             )
         } else {
