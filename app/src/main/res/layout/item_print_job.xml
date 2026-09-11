@@ -10,7 +10,7 @@
     android:focusable="false"
     app:cardBackgroundColor="@color/list_surface"
     app:cardCornerRadius="20dp"
-    app:cardElevation="1dp"
+    app:cardElevation="0dp"
     app:strokeColor="@color/list_border"
     app:strokeWidth="1dp">
 

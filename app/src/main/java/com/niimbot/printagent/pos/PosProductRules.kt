@@ -27,6 +27,8 @@ object PosProductRules {
         hargaBeli = product.hargaBeli,
         hargaJual = product.hargaJual,
         qty = qty,
-        jumlahBarangMasuk = jumlahBarangMasuk
+        jumlahBarangMasuk = jumlahBarangMasuk,
+        supplierCode = product.supplier?.codeForLabel,
+        supplierId = product.supplier?.id
     )
 }

@@ -29,7 +29,7 @@
             android:layout_gravity="center"
             android:background="@color/white"
             android:contentDescription="@string/label_preview_description"
-            android:elevation="4dp"
+            android:elevation="0dp"
             android:scaleType="fitCenter" />
     </FrameLayout>
 

@@ -13,7 +13,7 @@ import android.widget.TextView
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.niimbot.printagent.R
@@ -67,8 +67,9 @@ class ProductInfoFragment : Fragment() {
         progressBar = view.findViewById(R.id.progress_product_info)
         loadMoreButton = view.findViewById(R.id.btn_load_more_products)
 
-        adapter = ProductInfoAdapter(::openDetail)
-        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        adapter = ProductInfoAdapter(::openDetail, ::openLabel)
+        val spanCount = if (resources.configuration.smallestScreenWidthDp >= 600) 2 else 1
+        recyclerView.layoutManager = GridLayoutManager(requireContext(), spanCount)
         recyclerView.adapter = adapter
 
         setupFilterDropdown()
@@ -112,6 +113,14 @@ class ProductInfoFragment : Fragment() {
             .replace(R.id.fragment_container, ProductDetailFragment.newInstance(productId))
             .addToBackStack("product_detail_$productId")
             .commit()
+    }
+
+    private fun openLabel(product: PosProduct) {
+        parentFragmentManager.setFragmentResult(
+            LabelPrefillContract.REQUEST_KEY,
+            LabelPrefillContract.toBundle(product)
+        )
+        (activity as? MainActivity)?.selectLabelTab()
     }
 
     private fun loadProducts(reset: Boolean) {
@@ -195,7 +204,8 @@ class ProductInfoFragment : Fragment() {
 }
 
 private class ProductInfoAdapter(
-    private val onDetail: (PosProduct) -> Unit
+    private val onDetail: (PosProduct) -> Unit,
+    private val onPrint: (PosProduct) -> Unit
 ) : RecyclerView.Adapter<ProductInfoAdapter.ProductViewHolder>() {
     private var products: List<PosProduct> = emptyList()
     private val currency = NumberFormat.getNumberInstance(Locale("id", "ID"))
@@ -220,6 +230,7 @@ private class ProductInfoAdapter(
         private val price: TextView = view.findViewById(R.id.tv_product_price)
         private val stock: TextView = view.findViewById(R.id.tv_product_stock)
         private val detail: View = view.findViewById(R.id.btn_edit_product)
+        private val print: View = view.findViewById(R.id.btn_print_product)
 
         fun bind(product: PosProduct) {
             name.text = product.nama
@@ -232,6 +243,7 @@ private class ProductInfoAdapter(
             stock.text = itemView.context.getString(R.string.product_stock_value, product.stok, product.satuan)
             itemView.setOnClickListener { onDetail(product) }
             detail.setOnClickListener { onDetail(product) }
+            print.setOnClickListener { onPrint(product) }
         }
     }
 }

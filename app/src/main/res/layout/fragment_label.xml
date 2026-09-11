@@ -24,7 +24,7 @@
             android:textSize="24sp"
             android:textStyle="bold" />
 
-        <LinearLayout
+        <com.niimbot.printagent.ui.PreviewForegroundLinearLayout
             android:id="@+id/label_content_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -392,7 +392,7 @@
                         android:layout_gravity="center"
                         android:background="@color/white"
                         android:contentDescription="@string/label_preview_description"
-                        android:elevation="4dp"
+                        android:elevation="0dp"
                         android:scaleType="fitCenter" />
                 </FrameLayout>
 
@@ -433,6 +433,6 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
+        </com.niimbot.printagent.ui.PreviewForegroundLinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

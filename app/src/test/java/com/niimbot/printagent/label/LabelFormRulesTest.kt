@@ -50,7 +50,8 @@ class LabelFormRulesTest {
                 qty = "2",
                 jumlahBarangMasuk = "7",
                 addToPos = true,
-                supplierCode = "SUP-A"
+                supplierCode = "SUP-A",
+                supplierId = 7
             )
         )
 
@@ -58,7 +59,8 @@ class LabelFormRulesTest {
         assertEquals(
             LabelData(
                 "AB-12", "Kopi Susu", 12000L, 18000L, 2, 7,
-                supplierCode = "SUP-A"
+                supplierCode = "SUP-A",
+                supplierId = 7
             ),
             result.data
         )
@@ -69,7 +71,8 @@ class LabelFormRulesTest {
         val result = LabelFormRules.validate(
             LabelFormInput(
                 "SKU-1", "Barang", "-1", "-2", "1", "0", true,
-                supplierCode = "SUP-A"
+                supplierCode = "SUP-A",
+                supplierId = 7
             )
         )
 
@@ -77,17 +80,18 @@ class LabelFormRulesTest {
     }
 
     @Test
-    fun `incoming stock is distinct from label copies and zero is valid when POS is on`() {
+    fun `incoming stock stays distinct from label copies when POS is on`() {
         val result = LabelFormRules.validate(
             LabelFormInput(
-                "SKU-1", "Barang", "10", "12", "4", "0", true,
-                supplierCode = "SUP-A"
+                "SKU-1", "Barang", "10", "12", "4", "9", true,
+                supplierCode = "SUP-A",
+                supplierId = 7
             )
         )
 
         assertTrue(result.errors.isEmpty())
         assertEquals(4, result.data?.qty)
-        assertEquals(0, result.data?.jumlahBarangMasuk)
+        assertEquals(9, result.data?.jumlahBarangMasuk)
     }
 
     @Test
@@ -96,7 +100,8 @@ class LabelFormRulesTest {
             val result = LabelFormRules.validate(
                 LabelFormInput(
                     "SKU-1", "Barang", "10", "12", "1", incoming, true,
-                    supplierCode = "SUP-A"
+                    supplierCode = "SUP-A",
+                    supplierId = 7
                 )
             )
 
@@ -188,6 +193,20 @@ class LabelFormRulesTest {
 
         assertEquals(setOf(LabelField.SUPPLIER_CODE), result.errors.keys)
         assertEquals("Kode supplier wajib diisi", result.errors[LabelField.SUPPLIER_CODE])
+    }
+
+    @Test
+    fun `POS sync requires supplier id from selected suggestion`() {
+        val result = LabelFormRules.validate(
+            LabelFormInput(
+                "SKU-1", "Barang", "10", "12", "1", "1", true,
+                supplierCode = "SUP-A",
+                supplierId = null
+            )
+        )
+
+        assertEquals(setOf(LabelField.SUPPLIER_CODE), result.errors.keys)
+        assertEquals("Pilih supplier yang valid dari Sistem", result.errors[LabelField.SUPPLIER_CODE])
     }
 
 }

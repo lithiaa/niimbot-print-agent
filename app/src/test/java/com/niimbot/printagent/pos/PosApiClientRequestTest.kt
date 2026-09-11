@@ -19,22 +19,48 @@ class PosApiClientRequestTest {
         """{"sku":"SKU-1","nama":"Barang","harga_beli":100,"harga_jual":150,"stok":9}"""
 
     @Test
-    fun `create posts atomic payload to integration barang endpoint`() = runBlocking {
-        val recorder = RecordingResponder(responseJson)
+    fun `create posts current barang payload with supplier id`() = runBlocking {
+        val recorder = RecordingResponder(
+            """{"sku":"SKU-1","nama":"Barang","harga_modal":100,"harga_jual":150,"stok_awal":4}"""
+        )
         val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
-        val form = LabelData("SKU-1", "Barang", 100L, 150L, 2, 4)
+        val form = LabelData(
+            "SKU-1", "Barang", 100L, 150L, 2, 4,
+            supplierCode = "SA",
+            supplierId = 7
+        )
 
         val result = api.create("https://pos.example/base/", "secret", form, operationId)
 
         assertTrue(result is PosApiResult.Success)
         assertEquals("POST", recorder.request.method)
-        assertEquals("/base/api/integration/barang", recorder.request.url.encodedPath)
+        assertEquals("/base/api/barang", recorder.request.url.encodedPath)
+        assertEquals("secret", recorder.request.header("X-Integration-Key"))
         assertEquals(
-            "{\"sku\":\"SKU-1\",\"nama\":\"Barang\",\"harga_beli\":100," +
-                "\"harga_beli_kode\":\"SP\",\"harga_jual\":150,\"jumlah_barang_masuk\":4," +
-                "\"operation_id\":\"$operationId\",\"satuan\":\"pcs\"}",
+            "{\"sku\":\"SKU-1\",\"nama\":\"Barang\",\"merek\":\"\",\"supplier_id\":7," +
+                "\"harga_modal\":100,\"harga_beli_kode\":\"SP\",\"harga_jual_kode\":\"SUP\"," +
+                "\"harga_jual\":150,\"stok_minimum\":5,\"satuan\":\"pcs\",\"deskripsi\":\"\"," +
+                "\"foto\":\"\",\"stok_awal\":4}",
             recorder.request.bodyText()
         )
+        result as PosApiResult.Success
+        assertEquals(100L, result.value.hargaBeli)
+        assertEquals(4, result.value.stok)
+    }
+
+    @Test
+    fun `create fails locally when supplier id is missing`() = runBlocking {
+        val recorder = RecordingResponder(responseJson)
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.create(
+            "https://pos.example/base/",
+            "secret",
+            LabelData("SKU-1", "Barang", 100L, 150L, 2, 4, supplierCode = "SA"),
+            operationId
+        )
+
+        assertEquals(PosApiResult.Failure("Supplier Sistem belum dipilih."), result)
     }
 
     @Test

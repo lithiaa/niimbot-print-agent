@@ -1,16 +1,19 @@
 package com.niimbot.printagent.pos
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNames
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class PosProduct(
     val sku: String,
     val nama: String,
-    @SerialName("harga_beli") val hargaBeli: Long,
+    @SerialName("harga_beli") @JsonNames("harga_modal") val hargaBeli: Long,
     @SerialName("harga_jual") val hargaJual: Long,
     @SerialName("harga_beli_kode") val hargaBeliKode: String? = null,
-    val stok: Int = 0,
+    @JsonNames("stok_awal") val stok: Int = 0,
     val satuan: String = "pcs",
     val id: Long? = null,
     val merek: String? = null,
@@ -78,15 +81,20 @@ data class PosProductMeta(
 )
 
 @Serializable
-internal data class PosProductWriteRequest(
+internal data class PosProductCreateRequest(
     val sku: String,
     val nama: String,
-    @SerialName("harga_beli") val hargaBeli: Long,
+    val merek: String,
+    @SerialName("supplier_id") val supplierId: Long,
+    @SerialName("harga_modal") val hargaModal: Long,
     @SerialName("harga_beli_kode") val hargaBeliKode: String,
+    @SerialName("harga_jual_kode") val hargaJualKode: String,
     @SerialName("harga_jual") val hargaJual: Long,
-    @SerialName("jumlah_barang_masuk") val jumlahBarangMasuk: Int,
-    @SerialName("operation_id") val operationId: String,
-    val satuan: String
+    @SerialName("stok_minimum") val stokMinimum: Int,
+    val satuan: String,
+    val deskripsi: String,
+    val foto: String,
+    @SerialName("stok_awal") val stokAwal: Int
 )
 
 @Serializable

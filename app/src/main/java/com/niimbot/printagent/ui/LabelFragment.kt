@@ -106,6 +106,7 @@ class LabelFragment : Fragment() {
     private var productSuggestions: List<PosProduct> = emptyList()
     private var supplierSuggestions: List<PosSupplier> = emptyList()
     private var selectedSupplierCode: String? = null
+    private var selectedSupplierId: Long? = null
     private var applyingProductSuggestion = false
     private val availableLabelSizes = LabelSize.entries.toMutableList()
     private var metadataConsentPromptShown = false
@@ -127,6 +128,7 @@ class LabelFragment : Fragment() {
         setupSupplierDropdown()
         restoreDraft()
         setupProductAutocomplete()
+        observeProductPrefill()
         updateIncomingStockState()
 
         listOf(etSku, etNama, etKodeHargaBeli, etHargaBeli, etHargaJual, etQty, etItemQty, etTanggalMasuk).forEach { editText ->
@@ -148,15 +150,16 @@ class LabelFragment : Fragment() {
         }
         dropdownSupplier.setOnItemClickListener { parent, _, position, _ ->
             val selectedLabel = parent.getItemAtPosition(position)?.toString()
-            selectedSupplierCode = supplierSuggestions
+            val selectedSupplier = supplierSuggestions
                 .firstOrNull { supplierSuggestionLabel(it) == selectedLabel }
-                ?.codeForLabel
+            selectedSupplierCode = selectedSupplier?.codeForLabel
+            selectedSupplierId = selectedSupplier?.id
             tilSupplier.error = null
             saveDraft()
             updatePreview(showErrors = false)
         }
-        switchPos.setOnCheckedChangeListener { _, _ ->
-            updateIncomingStockState()
+        switchPos.setOnCheckedChangeListener { _, isChecked ->
+            updateIncomingStockState(syncFromLabelQty = isChecked)
             saveDraft()
         }
         btnScanSku.setOnClickListener { scanSku() }
@@ -205,6 +208,7 @@ class LabelFragment : Fragment() {
     }
 
     private fun moveLabelOptionsToPreview() {
+        if (resources.configuration.smallestScreenWidthDp < 600) return
         val currentParent = labelOptionsRow.parent as? ViewGroup ?: return
         val previewContent = previewCard.getChildAt(0) as? LinearLayout ?: return
         currentParent.removeView(labelOptionsRow)
@@ -293,6 +297,7 @@ class LabelFragment : Fragment() {
         etTanggalMasuk.setText(LabelDate.todayIso())
         dropdownSupplier.setText("", false)
         selectedSupplierCode = null
+        selectedSupplierId = null
         etJumlahBarangMasuk.setText("0")
         switchPos.isChecked = false
         dropdownLabelSize.setText(LabelSize.MM_50_X_30.displayName, false)
@@ -335,9 +340,9 @@ class LabelFragment : Fragment() {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
             previewContainer.layoutParams = previewContainer.layoutParams.apply {
-                height = dp(150)
+                height = dp(112)
             }
-            previewCard.elevation = dp(10).toFloat()
+            previewCard.elevation = 0f
             labelScrollView.setOnScrollChangeListener(
                 NestedScrollView.OnScrollChangeListener { _, _, scrollY, _, _ ->
                     val stickyStart = contentContainer.top + previewCard.top
@@ -421,7 +426,10 @@ class LabelFragment : Fragment() {
                     )
                     val selectedText = dropdownSupplier.text.toString()
                     supplierSuggestions.firstOrNull { supplierSuggestionLabel(it) == selectedText }
-                        ?.let { selectedSupplierCode = it.codeForLabel }
+                        ?.let {
+                            selectedSupplierCode = it.codeForLabel
+                            selectedSupplierId = it.id
+                        }
                 }
                 PosApiResult.NotFound -> {
                     supplierSuggestions = emptyList()
@@ -492,16 +500,44 @@ class LabelFragment : Fragment() {
     }
 
     private fun applyProductSuggestion(product: PosProduct) {
+        applyProductPrefill(LabelPrefillContract.fromProduct(product), resetPrintOptions = false)
+    }
+
+    private fun observeProductPrefill() {
+        parentFragmentManager.setFragmentResultListener(
+            LabelPrefillContract.REQUEST_KEY,
+            viewLifecycleOwner
+        ) { _, bundle ->
+            applyProductPrefill(LabelPrefillContract.fromBundle(bundle), resetPrintOptions = true)
+            parentFragmentManager.clearFragmentResult(LabelPrefillContract.REQUEST_KEY)
+        }
+    }
+
+    private fun applyProductPrefill(prefill: LabelPrefill, resetPrintOptions: Boolean) {
         applyingProductSuggestion = true
-        etSku.setText(PosProductRules.normalizeSku(product.sku))
-        etNama.setText(product.nama, false)
-        etHargaBeli.setText(product.hargaBeli.toString())
-        etHargaJual.setText(product.hargaJual.toString())
-        etKodeHargaBeli.setText(product.hargaBeliKode.orEmpty())
-        etTanggalMasuk.setText(LabelDate.fromTimestamp(product.createdAt) ?: LabelDate.todayIso())
+        etSku.setText(prefill.sku)
+        etNama.setText(prefill.name, false)
+        etHargaBeli.setText(prefill.purchasePrice.toString())
+        etHargaJual.setText(prefill.salePrice.toString())
+        etKodeHargaBeli.setText(prefill.purchasePriceCode)
+        etTanggalMasuk.setText(LabelDate.fromTimestamp(prefill.createdAt) ?: LabelDate.todayIso())
+        dropdownSupplier.setText(prefill.supplierDisplay, false)
+        selectedSupplierCode = prefill.supplierCode.ifBlank { null }
+        selectedSupplierId = prefill.supplierId
+        if (resetPrintOptions) {
+            etQty.setText("1")
+            etItemQty.setText("1")
+            switchPos.isChecked = false
+            updateIncomingStockState()
+        }
         applyingProductSuggestion = false
-        clearResolvedValidationErrors(emptyMap())
+        showValidationErrors(emptyMap())
+        saveDraft()
         updatePreview(showErrors = false)
+        if (resetPrintOptions) {
+            labelScrollView.post { labelScrollView.smoothScrollTo(0, 0) }
+            Toast.makeText(requireContext(), R.string.label_product_ready_to_print, Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onPause() {
@@ -553,7 +589,8 @@ class LabelFragment : Fragment() {
         kodeHargaBeli = etKodeHargaBeli.text.toString(),
         itemQty = etItemQty.text.toString(),
         supplierCode = selectedSupplierCode.orEmpty(),
-        tanggalMasuk = etTanggalMasuk.text.toString()
+        tanggalMasuk = etTanggalMasuk.text.toString(),
+        supplierId = selectedSupplierId
     )
 
     private fun updatePreview(showErrors: Boolean): LabelData? {
@@ -778,14 +815,20 @@ class LabelFragment : Fragment() {
         if (LabelField.TANGGAL_MASUK !in errors) tilTanggalMasuk.error = null
     }
 
-    private fun updateIncomingStockState() {
+    private fun updateIncomingStockState(syncFromLabelQty: Boolean = false) {
         tilJumlahBarangMasuk.visibility = View.VISIBLE
-        tilJumlahBarangMasuk.isEnabled = switchPos.isChecked
-        etJumlahBarangMasuk.isEnabled = switchPos.isChecked
-        if (!switchPos.isChecked && etJumlahBarangMasuk.text.toString() != "0") {
-            etJumlahBarangMasuk.setText("0")
+        val enabled = switchPos.isChecked
+        tilJumlahBarangMasuk.isEnabled = enabled
+        etJumlahBarangMasuk.isEnabled = enabled
+        val nextValue = when {
+            !enabled -> "0"
+            syncFromLabelQty -> etQty.text.toString().trim()
+            else -> null
         }
-        if (!switchPos.isChecked) tilJumlahBarangMasuk.error = null
+        if (nextValue != null && etJumlahBarangMasuk.text.toString() != nextValue) {
+            etJumlahBarangMasuk.setText(nextValue)
+        }
+        if (!enabled) tilJumlahBarangMasuk.error = null
     }
 
     private fun setupLabelOptions() {
@@ -820,6 +863,8 @@ class LabelFragment : Fragment() {
         )
         dropdownSupplier.setText(draft.getString(DRAFT_SUPPLIER_DISPLAY, "").orEmpty(), false)
         selectedSupplierCode = draft.getString(DRAFT_SUPPLIER_CODE, null)
+        selectedSupplierId = draft.getLong(DRAFT_SUPPLIER_ID, NO_SUPPLIER_ID)
+            .takeUnless { it == NO_SUPPLIER_ID }
         etJumlahBarangMasuk.setText(
             draft.getString(DRAFT_JUMLAH_BARANG_MASUK, "0").orEmpty().ifBlank { "0" }
         )
@@ -846,6 +891,7 @@ class LabelFragment : Fragment() {
             .putString(DRAFT_TANGGAL_MASUK, etTanggalMasuk.text.toString())
             .putString(DRAFT_SUPPLIER_DISPLAY, dropdownSupplier.text.toString())
             .putString(DRAFT_SUPPLIER_CODE, selectedSupplierCode)
+            .putLong(DRAFT_SUPPLIER_ID, selectedSupplierId ?: NO_SUPPLIER_ID)
             .putString(DRAFT_JUMLAH_BARANG_MASUK, etJumlahBarangMasuk.text.toString())
             .putBoolean(DRAFT_ADD_TO_POS, switchPos.isChecked)
             .putString(DRAFT_LABEL_SIZE, selectedLabelSize().name)
@@ -862,8 +908,8 @@ class LabelFragment : Fragment() {
 
     private fun applyPreviewDimensions(size: LabelSize) {
         val density = resources.displayMetrics.density
-        val maxWidthDp = if (isTabletLayout) 520 else 300
-        val maxHeightDp = if (isTabletLayout) 240 else 118
+        val maxWidthDp = if (isTabletLayout) 520 else 240
+        val maxHeightDp = if (isTabletLayout) 240 else 80
         val containerWidth = (previewContainer.width - previewContainer.paddingLeft -
             previewContainer.paddingRight).coerceAtLeast(1)
         val maxWidth = (maxWidthDp * density).toInt()
@@ -914,9 +960,11 @@ class LabelFragment : Fragment() {
         const val DRAFT_TANGGAL_MASUK = "tanggal_masuk"
         const val DRAFT_SUPPLIER_DISPLAY = "supplier_display"
         const val DRAFT_SUPPLIER_CODE = "supplier_code"
+        const val DRAFT_SUPPLIER_ID = "supplier_id"
         const val DRAFT_JUMLAH_BARANG_MASUK = "jumlah_barang_masuk"
         const val DRAFT_ADD_TO_POS = "add_to_pos"
         const val DRAFT_LABEL_SIZE = "label_size"
+        const val NO_SUPPLIER_ID = -1L
         const val NIIMBOT_METADATA_CONSENT = "niimbot_metadata_consent"
     }
 }

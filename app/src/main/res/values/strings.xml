@@ -38,6 +38,7 @@
     <string name="product_load_more">Muat barang lainnya</string>
     <string name="product_edit">Ubah</string>
     <string name="product_detail_action">Lihat detail</string>
+    <string name="product_print_label">Cetak Label</string>
     <string name="product_detail_title">Detail Barang</string>
     <string name="product_detail_back">Kembali</string>
     <string name="product_detail_information">Informasi barang</string>
@@ -83,8 +84,8 @@
     <string name="printer_connection_type">Jenis koneksi printer</string>
     <string name="printer_connection_type_help">XPrinter memakai Bluetooth Classic, TSPL, serta pilihan 203 atau 300 DPI.</string>
     <string name="scan_printers">Cari printer Niimbot</string>
-    <string name="load_paired_xprinters">Muat XPrinter terpasang</string>
-    <string name="xprinter_pair_in_android_settings">Pasangkan XPrinter terlebih dahulu melalui Pengaturan Bluetooth Android, lalu muat ulang daftar ini.</string>
+    <string name="load_paired_xprinters">Muat Printer</string>
+    <string name="xprinter_pair_in_android_settings">Pasangkan Printer terlebih dahulu melalui Pengaturan Bluetooth Android, lalu muat ulang daftar ini.</string>
     <string name="printer_not_paired">Belum ada printer terpasang</string>
     <string name="printer_connected">Terhubung</string>
     <string name="printer_connecting">Menghubungkan…</string>
@@ -151,12 +152,12 @@
     <string name="label_pos_product_loaded">Data barang dari Sistem berhasil dimuat</string>
     <string name="label_pos_product_not_found">Barang dengan SKU tersebut tidak ditemukan di Sistem</string>
     <string name="label_sku_generated">SKU otomatis dibuat: %1$s</string>
-    <string name="label_harga_beli">Harga beli</string>
+    <string name="label_harga_beli">Modal</string>
     <string name="label_harga_beli_description">Masukkan harga beli berupa angka</string>
-    <string name="label_kode_harga_beli">Kode harga beli</string>
+    <string name="label_kode_harga_beli">Kode Harga</string>
     <string name="label_kode_harga_beli_description">Masukkan kode harga beli yang dicetak pada label</string>
     <string name="label_kode_harga_beli_help">Kosong = kode otomatis</string>
-    <string name="label_harga_jual">Harga jual</string>
+    <string name="label_harga_jual">Harga Jual</string>
     <string name="label_harga_jual_description">Masukkan harga jual berupa angka</string>
     <string name="label_qty">Jumlah Label</string>
     <string name="label_qty_description">Masukkan jumlah salinan label yang akan dicetak, minimal satu</string>
@@ -168,8 +169,8 @@
     <string name="label_supplier_code_description">Pilih supplier dari Sistem untuk dicetak di sebelah kanan SKU</string>
     <string name="incoming_stock_qty">Jumlah Barang Masuk</string>
     <string name="label_entry_date">Tanggal masuk</string>
-    <string name="incoming_stock_qty_description">Masukkan jumlah barang yang ditambahkan ke stok Sistem, minimal nol</string>
-    <string name="incoming_stock_qty_help">Penambahan stok Sistem</string>
+    <string name="incoming_stock_qty_description">Masukkan jumlah barang yang akan ditambahkan ke stok Sistem</string>
+    <string name="incoming_stock_qty_help">Diisi dari Jumlah Label dan tetap dapat diubah</string>
     <string name="add_to_pos">Sinkronkan ke Sistem</string>
     <string name="add_to_pos_description">Aktifkan untuk menyinkronkan barang ke Sistem sebelum mencetak</string>
     <string name="label_preview_live">Pratinjau label</string>
@@ -194,6 +195,7 @@
     <string name="label_product_search_hint">Cari barang Sistem</string>
     <string name="label_product_search_key_required">Isi kunci integrasi di Pengaturan agar pencarian barang Sistem aktif</string>
     <string name="label_product_search_failed">Pencarian barang Sistem gagal. Periksa koneksi dan konfigurasi.</string>
+    <string name="label_product_ready_to_print">Data barang siap dicetak</string>
     <string name="pos_request_failed">Permintaan ke Sistem gagal. Label tidak dicetak.</string>
     <string name="pos_conflict_title">Data barang berbeda</string>
     <string name="pos_conflict_comparison">Sistem:\nSKU: %1$s\nNama: %2$s\nHarga beli: Rp %3$s\nHarga jual: Rp %4$s\n\nFormulir:\nSKU: %5$s\nNama: %6$s\nHarga beli: Rp %7$s\nHarga jual: Rp %8$s</string>

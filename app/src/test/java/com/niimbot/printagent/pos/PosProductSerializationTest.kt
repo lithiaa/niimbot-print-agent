@@ -7,25 +7,29 @@ import org.junit.Test
 
 class PosProductSerializationTest {
 
-    private val operationId = "11111111-1111-4111-8111-111111111111"
-
     @Test
-    fun `create request serializes exact atomic create and incoming stock contract`() {
-        val request = PosProductWriteRequest(
+    fun `create request serializes exact barang contract with supplier id`() {
+        val request = PosProductCreateRequest(
             sku = "GULA-1",
             nama = "Gula",
-            hargaBeli = 10_000L,
+            merek = "",
+            supplierId = 7,
+            hargaModal = 10_000L,
             hargaBeliKode = "AUP",
+            hargaJualKode = "ABP",
             hargaJual = 12_000L,
-            jumlahBarangMasuk = 6,
-            operationId = operationId,
-            satuan = "pcs"
+            stokMinimum = 5,
+            satuan = "pcs",
+            deskripsi = "",
+            foto = "",
+            stokAwal = 6
         )
 
         assertEquals(
-            "{\"sku\":\"GULA-1\",\"nama\":\"Gula\",\"harga_beli\":10000," +
-                "\"harga_beli_kode\":\"AUP\",\"harga_jual\":12000,\"jumlah_barang_masuk\":6," +
-                "\"operation_id\":\"$operationId\",\"satuan\":\"pcs\"}",
+            "{\"sku\":\"GULA-1\",\"nama\":\"Gula\",\"merek\":\"\",\"supplier_id\":7," +
+                "\"harga_modal\":10000,\"harga_beli_kode\":\"AUP\",\"harga_jual_kode\":\"ABP\"," +
+                "\"harga_jual\":12000,\"stok_minimum\":5,\"satuan\":\"pcs\",\"deskripsi\":\"\"," +
+                "\"foto\":\"\",\"stok_awal\":6}",
             Json.encodeToString(request)
         )
     }
@@ -35,12 +39,12 @@ class PosProductSerializationTest {
         val request = PosStockInRequest(
             jumlahBarangMasuk = 4,
             hargaSatuan = 10_000L,
-            operationId = operationId
+            operationId = "11111111-1111-4111-8111-111111111111"
         )
 
         assertEquals(
             "{\"jumlah_barang_masuk\":4,\"harga_satuan\":10000," +
-                "\"operation_id\":\"$operationId\"}",
+                "\"operation_id\":\"11111111-1111-4111-8111-111111111111\"}",
             Json.encodeToString(request)
         )
     }

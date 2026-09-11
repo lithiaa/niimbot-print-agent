@@ -14,7 +14,8 @@ data class LabelFormInput(
     val kodeHargaBeli: String = "",
     val itemQty: String = "1",
     val supplierCode: String = "",
-    val tanggalMasuk: String = LabelDate.todayIso()
+    val tanggalMasuk: String = LabelDate.todayIso(),
+    val supplierId: Long? = null
 )
 
 data class LabelData(
@@ -28,7 +29,8 @@ data class LabelData(
     val kodeHargaBeli: String? = null,
     val itemQty: Int = 1,
     val supplierCode: String? = null,
-    val tanggalMasuk: String = LabelDate.todayIso()
+    val tanggalMasuk: String = LabelDate.todayIso(),
+    val supplierId: Long? = null
 )
 
 enum class LabelField {
@@ -73,6 +75,8 @@ object LabelFormRules {
         }
         if (supplierCode.isEmpty()) {
             errors[LabelField.SUPPLIER_CODE] = "Kode supplier wajib diisi"
+        } else if (input.addToPos && (input.supplierId == null || input.supplierId <= 0)) {
+            errors[LabelField.SUPPLIER_CODE] = "Pilih supplier yang valid dari Sistem"
         }
         if (input.addToPos && (jumlahBarangMasuk == null || jumlahBarangMasuk < 0)) {
             errors[LabelField.JUMLAH_BARANG_MASUK] =
@@ -94,7 +98,8 @@ object LabelFormRules {
                 kodeHargaBeli = input.kodeHargaBeli.trim().ifEmpty { null },
                 itemQty = itemQty!!,
                 supplierCode = supplierCode,
-                tanggalMasuk = input.tanggalMasuk.trim()
+                tanggalMasuk = input.tanggalMasuk.trim(),
+                supplierId = input.supplierId
             )
         } else {
             null

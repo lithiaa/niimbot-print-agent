@@ -236,24 +236,37 @@ class PosApiClient(
         )
     }
 
+    @Suppress("UNUSED_PARAMETER")
     override suspend fun create(
         baseUrl: String,
         integrationKey: String,
         form: com.niimbot.printagent.label.LabelData,
         operationId: String
     ): PosApiResult<PosProduct> {
-        val product = PosProductWriteRequest(
+        val supplierId = form.supplierId
+            ?: return PosApiResult.Failure("Supplier Sistem belum dipilih.")
+        val product = PosProductCreateRequest(
             sku = form.sku,
             nama = form.nama,
-            hargaBeli = form.hargaBeli,
+            merek = "",
+            supplierId = supplierId,
+            hargaModal = form.hargaBeli,
             hargaBeliKode = form.kodeHargaBeli ?: LabelGenerator.encodePurchasePrice(form.hargaBeli),
+            hargaJualKode = LabelGenerator.encodePurchasePrice(form.hargaJual),
             hargaJual = form.hargaJual,
-            jumlahBarangMasuk = form.jumlahBarangMasuk,
-            operationId = operationId,
-            satuan = "pcs"
+            stokMinimum = 5,
+            satuan = "pcs",
+            deskripsi = "",
+            foto = "",
+            stokAwal = form.jumlahBarangMasuk
         )
+        val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
+            ?: return PosApiResult.Failure("URL Sistem tidak valid")
         return executeProductRequest(
-            requestBuilder(baseUrl, integrationKey)
+            Request.Builder()
+                .url(parsedBase.newBuilder().addPathSegments("api/barang").build())
+                .header("X-Integration-Key", integrationKey)
+                .header("Accept", "application/json")
                 .post(json.encodeToString(product).toRequestBody(JSON_MEDIA_TYPE))
                 .build()
         )
