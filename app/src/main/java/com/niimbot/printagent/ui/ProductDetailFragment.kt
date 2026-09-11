@@ -103,32 +103,34 @@ class ProductDetailFragment : Fragment() {
     }
 
     private fun loadProduct() {
-        val key = configStore.getIntegrationKey()
-        if (key.isNullOrBlank()) {
-            showError(getString(R.string.product_info_key_required))
+        val accessToken = configStore.getAccessToken()
+        if (accessToken.isNullOrBlank()) {
+            showError(getString(R.string.pos_login_required))
             return
         }
         progress.visibility = View.VISIBLE
         content.visibility = View.GONE
         error.visibility = View.GONE
         viewLifecycleOwner.lifecycleScope.launch {
-            when (val result = posApiClient.getProductById(configStore.getBaseUrl(), key, productId)) {
+            when (val result = posApiClient.getProductById(configStore.getBaseUrl(), accessToken, productId)) {
                 is PosApiResult.Success -> {
                     product = result.value
                     render(result.value)
                     progress.visibility = View.GONE
                     content.visibility = View.VISIBLE
-                    loadMetadata(key)
+                    loadMetadata(accessToken)
                 }
                 PosApiResult.NotFound -> showError(getString(R.string.product_not_found))
+                PosApiResult.SessionExpired -> expireSession()
                 is PosApiResult.Failure -> showError(result.message)
             }
         }
     }
 
-    private suspend fun loadMetadata(key: String) {
-        when (val result = posApiClient.getProductMeta(configStore.getBaseUrl(), key)) {
+    private suspend fun loadMetadata(accessToken: String) {
+        when (val result = posApiClient.getProductMeta(configStore.getBaseUrl(), accessToken)) {
             is PosApiResult.Success -> metadata = result.value
+            PosApiResult.SessionExpired -> expireSession()
             else -> Unit
         }
     }
@@ -238,10 +240,10 @@ class ProductDetailFragment : Fragment() {
     }
 
     private fun updateProduct(input: PosProductEditInput, dialog: androidx.appcompat.app.AlertDialog) {
-        val key = configStore.getIntegrationKey() ?: return
+        val accessToken = configStore.getAccessToken() ?: return
         dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).isEnabled = false
         viewLifecycleOwner.lifecycleScope.launch {
-            when (val result = posApiClient.updateProductById(configStore.getBaseUrl(), key, productId, input)) {
+            when (val result = posApiClient.updateProductById(configStore.getBaseUrl(), accessToken, productId, input)) {
                 is PosApiResult.Success -> {
                     product = result.value
                     render(result.value)
@@ -249,6 +251,10 @@ class ProductDetailFragment : Fragment() {
                     Toast.makeText(requireContext(), R.string.product_update_success, Toast.LENGTH_SHORT).show()
                 }
                 PosApiResult.NotFound -> showToast(getString(R.string.product_not_found), dialog)
+                PosApiResult.SessionExpired -> {
+                    dialog.dismiss()
+                    expireSession()
+                }
                 is PosApiResult.Failure -> showToast(result.message, dialog)
             }
         }
@@ -283,13 +289,13 @@ class ProductDetailFragment : Fragment() {
     }
 
     private fun addStock(item: PosProduct, quantity: Int, price: Long, dialog: androidx.appcompat.app.AlertDialog) {
-        val key = configStore.getIntegrationKey() ?: return
+        val accessToken = configStore.getAccessToken() ?: return
         dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).isEnabled = false
         viewLifecycleOwner.lifecycleScope.launch {
             when (
                 val result = posApiClient.addStock(
                     configStore.getBaseUrl(),
-                    key,
+                    accessToken,
                     item.sku,
                     quantity,
                     price,
@@ -303,9 +309,18 @@ class ProductDetailFragment : Fragment() {
                     Toast.makeText(requireContext(), R.string.product_stock_updated, Toast.LENGTH_SHORT).show()
                 }
                 PosApiResult.NotFound -> showToast(getString(R.string.product_not_found), dialog)
+                PosApiResult.SessionExpired -> {
+                    dialog.dismiss()
+                    expireSession()
+                }
                 is PosApiResult.Failure -> showToast(result.message, dialog)
             }
         }
+    }
+
+    private fun expireSession() {
+        configStore.clearSession()
+        showError(getString(R.string.pos_session_expired))
     }
 
     private fun showMissingStockOutApi() {

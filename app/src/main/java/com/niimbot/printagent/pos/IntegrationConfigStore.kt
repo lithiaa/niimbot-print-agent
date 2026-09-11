@@ -13,22 +13,24 @@ import javax.crypto.spec.GCMParameterSpec
 class IntegrationConfigStore(context: Context) {
     companion object {
         const val DEFAULT_BASE_URL = "https://api.ijm.lithiaproject.site"
-        const val MASKED_KEY = "••••••••"
 
         private const val PREFS_NAME = "niimbot_pos_integration"
         private const val PREF_BASE_URL = "base_url"
-        private const val PREF_KEY_CIPHERTEXT = "key_ciphertext"
-        private const val PREF_KEY_IV = "key_iv"
-        private const val KEY_ALIAS = "niimbot_pos_integration_key"
+        private const val PREF_TOKEN_CIPHERTEXT = "access_token_ciphertext"
+        private const val PREF_TOKEN_IV = "access_token_iv"
+        private const val PREF_USERNAME = "username"
+        private const val PREF_ROLE = "role"
+        private const val KEY_ALIAS = "niimbot_pos_access_token"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     init {
-        // Supplier endpoints now use the same integration key. Remove obsolete
-        // separately encrypted credentials left by older app versions.
+        // Remove obsolete credentials left by integration-key versions.
         prefs.edit()
+            .remove("key_ciphertext")
+            .remove("key_iv")
             .remove("supplier_token_ciphertext")
             .remove("supplier_token_iv")
             .apply()
@@ -42,37 +44,26 @@ class IntegrationConfigStore(context: Context) {
         prefs.edit().putString(PREF_BASE_URL, PosProductRules.normalizeBaseUrl(value)).apply()
     }
 
-    fun hasIntegrationKey(): Boolean = prefs.contains(PREF_KEY_CIPHERTEXT) && getIntegrationKey() != null
+    fun hasAccessToken(): Boolean = prefs.contains(PREF_TOKEN_CIPHERTEXT) && getAccessToken() != null
 
-    fun setIntegrationKey(value: String) {
-        if (value.isBlank()) {
-            clearIntegrationKey()
-            return
-        }
-        setEncryptedValue(value, PREF_KEY_CIPHERTEXT, PREF_KEY_IV)
-    }
-
-    fun getIntegrationKey(): String? = getEncryptedValue(PREF_KEY_CIPHERTEXT, PREF_KEY_IV)
-
-    fun clearIntegrationKey() {
-        prefs.edit().remove(PREF_KEY_CIPHERTEXT).remove(PREF_KEY_IV).apply()
-    }
-
-    private fun setEncryptedValue(value: String, ciphertextPreference: String, ivPreference: String) {
-        val cleanValue = value.trim()
+    fun setAuthenticatedSession(accessToken: String, identity: PosIdentity) {
+        val cleanToken = accessToken.trim()
+        require(cleanToken.isNotEmpty()) { "Access token must not be blank" }
         val cipher = Cipher.getInstance(TRANSFORMATION).apply {
             init(Cipher.ENCRYPT_MODE, getOrCreateSecretKey())
         }
-        val encrypted = cipher.doFinal(cleanValue.toByteArray(Charsets.UTF_8))
+        val encrypted = cipher.doFinal(cleanToken.toByteArray(Charsets.UTF_8))
         prefs.edit()
-            .putString(ciphertextPreference, Base64.encodeToString(encrypted, Base64.NO_WRAP))
-            .putString(ivPreference, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
+            .putString(PREF_TOKEN_CIPHERTEXT, Base64.encodeToString(encrypted, Base64.NO_WRAP))
+            .putString(PREF_TOKEN_IV, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
+            .putString(PREF_USERNAME, identity.username)
+            .putString(PREF_ROLE, identity.role)
             .apply()
     }
 
-    private fun getEncryptedValue(ciphertextPreference: String, ivPreference: String): String? {
-        val ciphertext = prefs.getString(ciphertextPreference, null) ?: return null
-        val iv = prefs.getString(ivPreference, null) ?: return null
+    fun getAccessToken(): String? {
+        val ciphertext = prefs.getString(PREF_TOKEN_CIPHERTEXT, null) ?: return null
+        val iv = prefs.getString(PREF_TOKEN_IV, null) ?: return null
         return runCatching {
             val cipher = Cipher.getInstance(TRANSFORMATION).apply {
                 init(
@@ -83,6 +74,22 @@ class IntegrationConfigStore(context: Context) {
             }
             cipher.doFinal(Base64.decode(ciphertext, Base64.NO_WRAP)).toString(Charsets.UTF_8)
         }.getOrNull()
+    }
+
+    fun getIdentity(): PosIdentity? {
+        if (!hasAccessToken()) return null
+        val username = prefs.getString(PREF_USERNAME, null) ?: return null
+        val role = prefs.getString(PREF_ROLE, null) ?: return null
+        return PosIdentity(username, role)
+    }
+
+    fun clearSession() {
+        prefs.edit()
+            .remove(PREF_TOKEN_CIPHERTEXT)
+            .remove(PREF_TOKEN_IV)
+            .remove(PREF_USERNAME)
+            .remove(PREF_ROLE)
+            .apply()
     }
 
     private fun getOrCreateSecretKey(): SecretKey {

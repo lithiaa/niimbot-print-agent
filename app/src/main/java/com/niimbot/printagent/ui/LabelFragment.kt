@@ -407,14 +407,14 @@ class LabelFragment : Fragment() {
     }
 
     private fun loadSuppliers() {
-        val integrationKey = configStore.getIntegrationKey()
-        if (integrationKey.isNullOrBlank()) {
+        val accessToken = configStore.getAccessToken()
+        if (accessToken.isNullOrBlank()) {
             tilSupplier.helperText = null
             return
         }
         tilSupplier.helperText = null
         viewLifecycleOwner.lifecycleScope.launch {
-            when (val result = posApiClient.listSuppliers(configStore.getBaseUrl(), integrationKey)) {
+            when (val result = posApiClient.listSuppliers(configStore.getBaseUrl(), accessToken)) {
                 is PosApiResult.Success -> {
                     supplierSuggestions = result.value.sortedBy { it.displayName.lowercase(Locale("id", "ID")) }
                     dropdownSupplier.setAdapter(
@@ -433,6 +433,11 @@ class LabelFragment : Fragment() {
                 }
                 PosApiResult.NotFound -> {
                     supplierSuggestions = emptyList()
+                }
+                PosApiResult.SessionExpired -> {
+                    configStore.clearSession()
+                    supplierSuggestions = emptyList()
+                    tilSupplier.helperText = getString(R.string.pos_session_expired)
                 }
                 is PosApiResult.Failure -> {
                     supplierSuggestions = emptyList()
@@ -454,9 +459,9 @@ class LabelFragment : Fragment() {
             updateProductSuggestions(emptyList())
             return
         }
-        val key = configStore.getIntegrationKey()
+        val key = configStore.getAccessToken()
         if (key.isNullOrBlank()) {
-            Log.w(TAG, "Product search skipped: integration key is not configured")
+            Log.w(TAG, "Product search skipped: POS session is not available")
             updateProductSearchHelper()
             updateProductSuggestions(emptyList())
             return
@@ -470,6 +475,11 @@ class LabelFragment : Fragment() {
                     updateProductSuggestions(result.value)
                 }
                 PosApiResult.NotFound -> updateProductSuggestions(emptyList())
+                PosApiResult.SessionExpired -> {
+                    configStore.clearSession()
+                    tilNama.helperText = getString(R.string.pos_session_expired)
+                    updateProductSuggestions(emptyList())
+                }
                 is PosApiResult.Failure -> {
                     Log.w(TAG, "Product search failed: ${result.message}")
                     tilNama.helperText = getString(R.string.label_product_search_failed)
@@ -491,7 +501,7 @@ class LabelFragment : Fragment() {
 
     private fun updateProductSearchHelper() {
         tilNama.helperText = getString(
-            if (configStore.getIntegrationKey().isNullOrBlank()) {
+            if (configStore.getAccessToken().isNullOrBlank()) {
                 R.string.label_product_search_key_required
             } else {
                 R.string.label_product_search_hint
@@ -667,16 +677,16 @@ class LabelFragment : Fragment() {
             return
         }
 
-        val key = configStore.getIntegrationKey()
-        if (key.isNullOrBlank()) {
-            showError(getString(R.string.pos_key_required))
+        val accessToken = configStore.getAccessToken()
+        if (accessToken.isNullOrBlank()) {
+            showError(getString(R.string.pos_login_required))
             return
         }
         setBusy(true)
         viewLifecycleOwner.lifecycleScope.launch {
             val result = PosSubmissionWorkflow(posApiClient).submit(
                 configStore.getBaseUrl(),
-                key,
+                accessToken,
                 form,
                 operationId
             )
@@ -694,6 +704,11 @@ class LabelFragment : Fragment() {
             is PosSubmissionOutcome.Conflict -> {
                 setBusy(false)
                 showConflictDialog(result)
+            }
+            PosSubmissionOutcome.SessionExpired -> {
+                configStore.clearSession()
+                setBusy(false)
+                showError(getString(R.string.pos_session_expired))
             }
             is PosSubmissionOutcome.Failure -> {
                 setBusy(false)

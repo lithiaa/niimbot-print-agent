@@ -124,9 +124,9 @@ class ProductInfoFragment : Fragment() {
     }
 
     private fun loadProducts(reset: Boolean) {
-        val key = configStore.getIntegrationKey()
-        if (key.isNullOrBlank()) {
-            showEmpty(getString(R.string.product_info_key_required))
+        val accessToken = configStore.getAccessToken()
+        if (accessToken.isNullOrBlank()) {
+            showEmpty(getString(R.string.pos_login_required))
             return
         }
         if (reset) {
@@ -143,7 +143,7 @@ class ProductInfoFragment : Fragment() {
             when (
                 val result = posApiClient.listProducts(
                     configStore.getBaseUrl(),
-                    key,
+                    accessToken,
                     query = searchInput.text.toString(),
                     page = requestedPage,
                     limit = PAGE_SIZE
@@ -157,6 +157,10 @@ class ProductInfoFragment : Fragment() {
                     loadMoreButton.visibility = if (products.size < totalProducts) View.VISIBLE else View.GONE
                 }
                 PosApiResult.NotFound -> showEmpty(getString(R.string.product_info_empty))
+                PosApiResult.SessionExpired -> {
+                    configStore.clearSession()
+                    showEmpty(getString(R.string.pos_session_expired))
+                }
                 is PosApiResult.Failure -> {
                     if (!reset) currentPage = (requestedPage - 1).coerceAtLeast(1)
                     showEmpty(result.message)

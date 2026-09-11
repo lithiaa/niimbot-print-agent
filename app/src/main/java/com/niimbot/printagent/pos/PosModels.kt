@@ -5,6 +5,15 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonNames
 
+@Serializable
+data class PosLogin(@SerialName("access_token") val accessToken: String)
+
+@Serializable
+data class PosIdentity(val username: String, val role: String)
+
+@Serializable
+internal data class PosLoginRequest(val username: String, val password: String)
+
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class PosProduct(

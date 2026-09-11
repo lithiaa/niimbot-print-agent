@@ -40,6 +40,13 @@
 # 5. Tap Test Print to verify
 # 6. Note the server port (default 8080)
 
+
+## Lithia POS login
+
+POS-backed product operations require login in **Settings > Lithia POS** with POS username and password. App sends credentials only to `POST /api/auth/login`, stores returned access token encrypted with Android Keystore AES-GCM, and never stores password. Session identity comes from `GET /api/auth/me`; logout or HTTP 401 clears local session.
+
+Local `POST /print` and BLE background printing remain available without Lithia POS login.
+
 ## CLOUD POS INTEGRATION:
 # The app exposes REST API:
 #   POST http://<tablet-ip>:8080/print

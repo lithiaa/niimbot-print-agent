@@ -18,32 +18,33 @@ sealed interface PosSubmissionOutcome {
 
     data class Conflict(
         val baseUrl: String,
-        val integrationKey: String,
+        val accessToken: String,
         val form: LabelData,
         val product: PosProduct,
         val operationId: String
     ) : PosSubmissionOutcome
 
     data class Failure(val message: String) : PosSubmissionOutcome
+    data object SessionExpired : PosSubmissionOutcome
     data object Cancelled : PosSubmissionOutcome
 }
 
 class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
     suspend fun submit(
         baseUrl: String,
-        integrationKey: String,
+        accessToken: String,
         form: LabelData,
         operationId: String
     ): PosSubmissionOutcome {
         return when (val lookup = safeRequest {
-            gateway.lookup(baseUrl, integrationKey, form.sku)
+            gateway.lookup(baseUrl, accessToken, form.sku)
         }) {
-            PosApiResult.NotFound -> create(baseUrl, integrationKey, form, operationId)
+            PosApiResult.NotFound -> create(baseUrl, accessToken, form, operationId)
             is PosApiResult.Success -> {
                 if (PosProductRules.decideExisting(form, lookup.value) == PosLookupDecision.SHOW_CONFLICT) {
                     PosSubmissionOutcome.Conflict(
                         baseUrl,
-                        integrationKey,
+                        accessToken,
                         form,
                         lookup.value,
                         operationId
@@ -51,7 +52,7 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
                 } else {
                     addStock(
                         baseUrl,
-                        integrationKey,
+                        accessToken,
                         form,
                         lookup.value.hargaBeli,
                         operationId,
@@ -59,6 +60,7 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
                     )
                 }
             }
+            PosApiResult.SessionExpired -> PosSubmissionOutcome.SessionExpired
             is PosApiResult.Failure -> PosSubmissionOutcome.Failure(lookup.message)
         }
     }
@@ -70,7 +72,7 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
         PosConflictChoice.CANCEL -> PosSubmissionOutcome.Cancelled
         PosConflictChoice.USE_POS -> addStock(
             conflict.baseUrl,
-            conflict.integrationKey,
+            conflict.accessToken,
             conflict.form,
             conflict.product.hargaBeli,
             conflict.operationId,
@@ -82,13 +84,14 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
 
     private suspend fun create(
         baseUrl: String,
-        integrationKey: String,
+        accessToken: String,
         form: LabelData,
         operationId: String
     ): PosSubmissionOutcome = when (val result = safeRequest {
-        gateway.create(baseUrl, integrationKey, form, operationId)
+        gateway.create(baseUrl, accessToken, form, operationId)
     }) {
         is PosApiResult.Success -> ready(form, result.value, useProductData = false)
+        PosApiResult.SessionExpired -> PosSubmissionOutcome.SessionExpired
         is PosApiResult.Failure -> PosSubmissionOutcome.Failure(result.message)
         PosApiResult.NotFound -> genericFailure()
     }
@@ -96,23 +99,24 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
     private suspend fun updateThenAddStock(
         conflict: PosSubmissionOutcome.Conflict
     ): PosSubmissionOutcome = when (val result = safeRequest {
-        gateway.update(conflict.baseUrl, conflict.integrationKey, conflict.form)
+        gateway.update(conflict.baseUrl, conflict.accessToken, conflict.form)
     }) {
         is PosApiResult.Success -> addStock(
             conflict.baseUrl,
-            conflict.integrationKey,
+            conflict.accessToken,
             conflict.form,
             conflict.form.hargaBeli,
             conflict.operationId,
             useProductData = false
         )
+        PosApiResult.SessionExpired -> PosSubmissionOutcome.SessionExpired
         is PosApiResult.Failure -> PosSubmissionOutcome.Failure(result.message)
         PosApiResult.NotFound -> genericFailure()
     }
 
     private suspend fun addStock(
         baseUrl: String,
-        integrationKey: String,
+        accessToken: String,
         form: LabelData,
         hargaSatuan: Long,
         operationId: String,
@@ -121,7 +125,7 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
     ): PosSubmissionOutcome = when (val result = safeRequest {
         gateway.addStock(
             baseUrl,
-            integrationKey,
+            accessToken,
             stockSku,
             form.jumlahBarangMasuk,
             hargaSatuan,
@@ -129,6 +133,7 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
         )
     }) {
         is PosApiResult.Success -> ready(form, result.value, useProductData)
+        PosApiResult.SessionExpired -> PosSubmissionOutcome.SessionExpired
         is PosApiResult.Failure -> PosSubmissionOutcome.Failure(result.message)
         PosApiResult.NotFound -> genericFailure()
     }

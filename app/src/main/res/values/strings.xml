@@ -191,9 +191,9 @@
     <string name="label_size_detection_consent_message">Aplikasi perlu mengirim kode batang RFID rol ke layanan metadata NIIMBOT untuk memperoleh ukuran label. Tidak ada data barang atau harga yang dikirim.</string>
     <string name="allow_detection">Izinkan Deteksi</string>
     <string name="not_now">Tidak Sekarang</string>
-    <string name="pos_key_required">Atur URL dasar Sistem dan kunci integrasi di Pengaturan sebelum mencetak ke Sistem.</string>
+    <string name="pos_login_required">Login ke Lithia POS terlebih dahulu.</string>
     <string name="label_product_search_hint">Cari barang Sistem</string>
-    <string name="label_product_search_key_required">Isi kunci integrasi di Pengaturan agar pencarian barang Sistem aktif</string>
+    <string name="label_product_search_key_required">Login ke Lithia POS di Pengaturan agar pencarian barang Sistem aktif</string>
     <string name="label_product_search_failed">Pencarian barang Sistem gagal. Periksa koneksi dan konfigurasi.</string>
     <string name="label_product_ready_to_print">Data barang siap dicetak</string>
     <string name="pos_request_failed">Permintaan ke Sistem gagal. Label tidak dicetak.</string>
@@ -206,20 +206,26 @@
     <string name="label_queued">%1$d label masuk antrean cetak.</string>
     <string name="label_queued_with_stock">%1$d label masuk antrean. Stok ditambah %2$d; stok saat ini %3$d.</string>
 
-    <!-- Integrasi Sistem -->
-    <string name="pos_config">Integrasi Sistem</string>
-    <string name="pos_base_url">URL Dasar Sistem</string>
-    <string name="pos_base_url_description">Masukkan alamat dasar API Sistem</string>
-    <string name="pos_integration_key">Kunci integrasi</string>
-    <string name="pos_integration_key_description">Masukkan kunci integrasi Sistem; nilai selalu disamarkan</string>
-    <string name="pos_supplier_token_description">Masukkan token Bearer Sistem untuk mengambil daftar pemasok; nilai selalu disamarkan</string>
-    <string name="pos_supplier_token_help">Diperlukan oleh layanan pemasok; berbeda dari kunci integrasi barang.</string>
-    <string name="save_pos_config">Simpan konfigurasi Sistem</string>
-    <string name="test_pos_connection">Tes koneksi</string>
-    <string name="pos_config_saved">Konfigurasi Sistem tersimpan aman.</string>
-    <string name="pos_url_invalid">URL dasar Sistem harus berupa URL HTTP atau HTTPS yang valid.</string>
-    <string name="pos_test_success">Koneksi dan autentikasi Sistem berhasil.</string>
-    <string name="pos_test_key_required">Isi kunci integrasi sebelum menguji koneksi.</string>
+    <!-- Integrasi POS -->
+    <string name="pos_config">Integrasi Lithia POS</string>
+    <string name="pos_base_url">URL Dasar POS</string>
+    <string name="pos_base_url_description">Masukkan alamat dasar API Lithia POS</string>
+    <string name="pos_username">Username</string>
+    <string name="pos_username_description">Masukkan username Lithia POS</string>
+    <string name="pos_password">Password</string>
+    <string name="pos_password_description">Masukkan password Lithia POS; password tidak disimpan</string>
+    <string name="pos_login">Login Lithia POS</string>
+    <string name="pos_logout">Logout Lithia POS</string>
+    <string name="test_pos_connection">Tes sesi</string>
+    <string name="pos_url_invalid">URL dasar POS harus berupa URL HTTP atau HTTPS yang valid.</string>
+    <string name="pos_username_required">Username wajib diisi.</string>
+    <string name="pos_password_required">Password wajib diisi.</string>
+    <string name="pos_login_success">Login Lithia POS berhasil.</string>
+    <string name="pos_logout_success">Sesi Lithia POS dihapus.</string>
+    <string name="pos_test_success">Sesi Lithia POS aktif.</string>
+    <string name="pos_session_expired">Sesi Lithia POS berakhir. Login kembali.</string>
+    <string name="pos_authenticated_identity">Login sebagai %1$s (%2$s)</string>
+    <string name="pos_not_authenticated">Belum login ke Lithia POS</string>
 
     <!-- Server Info -->
     <string name="server_info">Informasi Server</string>

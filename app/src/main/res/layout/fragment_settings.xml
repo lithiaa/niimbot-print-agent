@@ -248,7 +248,33 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:hint="@string/pos_integration_key"
+                    android:hint="@string/pos_username"
+                    app:boxBackgroundColor="@color/surface_variant"
+                    app:boxCornerRadiusBottomEnd="16dp"
+                    app:boxCornerRadiusBottomStart="16dp"
+                    app:boxCornerRadiusTopEnd="16dp"
+                    app:boxCornerRadiusTopStart="16dp"
+                    app:boxStrokeColor="@color/primary"
+                    app:hintTextColor="@color/text_secondary">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_pos_username"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/pos_username_description"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:minHeight="48dp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:hint="@string/pos_password"
                     app:boxBackgroundColor="@color/surface_variant"
                     app:boxCornerRadiusBottomEnd="16dp"
                     app:boxCornerRadiusBottomStart="16dp"
@@ -259,25 +285,36 @@
                     app:hintTextColor="@color/text_secondary">
 
                     <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/et_pos_integration_key"
+                        android:id="@+id/et_pos_password"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:contentDescription="@string/pos_integration_key_description"
+                        android:contentDescription="@string/pos_password_description"
                         android:inputType="textPassword"
                         android:maxLines="1"
+                        android:saveEnabled="false"
                         android:minHeight="48dp"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <TextView
+                    android:id="@+id/tv_pos_identity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:accessibilityLiveRegion="polite"
+                    android:text="@string/pos_not_authenticated"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
+
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_save_pos_config"
+                    android:id="@+id/btn_pos_login"
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
                     android:layout_marginTop="16dp"
                     android:backgroundTint="@color/primary"
-                    android:contentDescription="@string/save_pos_config"
-                    android:text="@string/save_pos_config"
+                    android:contentDescription="@string/pos_login"
+                    android:text="@string/pos_login"
                     android:textColor="@color/white"
                     android:textStyle="bold"
                     app:cornerRadius="25dp" />
@@ -290,6 +327,18 @@
                     android:layout_marginTop="8dp"
                     android:contentDescription="@string/test_pos_connection"
                     android:text="@string/test_pos_connection"
+                    android:textColor="@color/primary"
+                    app:cornerRadius="25dp"
+                    app:strokeColor="@color/primary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_pos_logout"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="8dp"
+                    android:contentDescription="@string/pos_logout"
+                    android:text="@string/pos_logout"
                     android:textColor="@color/primary"
                     app:cornerRadius="25dp"
                     app:strokeColor="@color/primary" />

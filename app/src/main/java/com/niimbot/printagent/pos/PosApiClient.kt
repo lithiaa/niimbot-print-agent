@@ -1,5 +1,6 @@
 package com.niimbot.printagent.pos
 
+import com.niimbot.printagent.label.LabelData
 import com.niimbot.printagent.label.LabelGenerator
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
@@ -19,32 +20,33 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 sealed interface PosApiResult<out T> {
     data class Success<T>(val value: T) : PosApiResult<T>
     data object NotFound : PosApiResult<Nothing>
+    data object SessionExpired : PosApiResult<Nothing>
     data class Failure(val message: String, val statusCode: Int? = null) : PosApiResult<Nothing>
 }
 
 interface PosProductGateway {
     suspend fun lookup(
         baseUrl: String,
-        integrationKey: String,
+        accessToken: String,
         normalizedSku: String
     ): PosApiResult<PosProduct>
 
     suspend fun create(
         baseUrl: String,
-        integrationKey: String,
-        form: com.niimbot.printagent.label.LabelData,
+        accessToken: String,
+        form: LabelData,
         operationId: String
     ): PosApiResult<PosProduct>
 
     suspend fun update(
         baseUrl: String,
-        integrationKey: String,
-        form: com.niimbot.printagent.label.LabelData
+        accessToken: String,
+        form: LabelData
     ): PosApiResult<PosProduct>
 
     suspend fun addStock(
         baseUrl: String,
-        integrationKey: String,
+        accessToken: String,
         sku: String,
         jumlahBarangMasuk: Int,
         hargaSatuan: Long,
@@ -58,18 +60,58 @@ class PosApiClient(
 ) : PosProductGateway {
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
-        private const val CONNECTION_TEST_SKU = "__NIIMBOT_CONNECTION_TEST__"
     }
 
-    override suspend fun lookup(baseUrl: String, integrationKey: String, normalizedSku: String): PosApiResult<PosProduct> =
+    suspend fun login(baseUrl: String, username: String, password: String): PosApiResult<PosLogin> =
+        withContext(Dispatchers.IO) {
+            val request = Request.Builder()
+                .url(apiUrl(baseUrl, "api/auth/login"))
+                .header("Accept", "application/json")
+                .post(json.encodeToString(PosLoginRequest(username, password)).toRequestBody(JSON_MEDIA_TYPE))
+                .build()
+            try {
+                client.newCall(request).execute().use { response ->
+                    val body = response.body?.string().orEmpty()
+                    if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
+                    runCatching { json.decodeFromString<PosLogin>(body) }
+                        .fold(
+                            onSuccess = { PosApiResult.Success(it) },
+                            onFailure = { PosApiResult.Failure("Respons login Lithia POS tidak valid.", response.code) }
+                        )
+                }
+            } catch (_: IOException) {
+                PosApiResult.Failure("Tidak dapat terhubung ke Lithia POS. Periksa URL dan jaringan.")
+            }
+        }
+
+    suspend fun me(baseUrl: String, accessToken: String): PosApiResult<PosIdentity> =
+        withContext(Dispatchers.IO) {
+            val request = authenticatedRequest(baseUrl, accessToken, "api/auth/me").get().build()
+            try {
+                client.newCall(request).execute().use { response ->
+                    if (response.code == 401) return@withContext PosApiResult.SessionExpired
+                    val body = response.body?.string().orEmpty()
+                    if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
+                    runCatching { json.decodeFromString<PosIdentity>(body) }
+                        .fold(
+                            onSuccess = { PosApiResult.Success(it) },
+                            onFailure = { PosApiResult.Failure("Respons identitas Lithia POS tidak valid.", response.code) }
+                        )
+                }
+            } catch (_: IOException) {
+                PosApiResult.Failure("Tidak dapat terhubung ke Lithia POS. Periksa URL dan jaringan.")
+            }
+        }
+
+    override suspend fun lookup(baseUrl: String, accessToken: String, normalizedSku: String): PosApiResult<PosProduct> =
         executeProductRequest(
-            request = requestBuilder(baseUrl, integrationKey, normalizedSku).get().build(),
+            request = requestBuilder(baseUrl, accessToken, normalizedSku).get().build(),
             allowNotFound = true
         )
 
     suspend fun searchProducts(
         baseUrl: String,
-        integrationKey: String,
+        accessToken: String,
         query: String,
         limit: Int = 10
     ): PosApiResult<List<PosProduct>> = withContext(Dispatchers.IO) {
@@ -82,12 +124,13 @@ class PosApiClient(
             .build()
         val request = Request.Builder()
             .url(url)
-            .header("X-Integration-Key", integrationKey)
+            .header("Authorization", "Bearer $accessToken")
             .header("Accept", "application/json")
             .get()
             .build()
         try {
             client.newCall(request).execute().use { response ->
+                if (response.code == 401) return@withContext PosApiResult.SessionExpired
                 val body = response.body?.string().orEmpty()
                 if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
                 runCatching { json.decodeFromString<PosProductSearchResponse>(body).data }
@@ -103,7 +146,7 @@ class PosApiClient(
 
     suspend fun listProducts(
         baseUrl: String,
-        integrationKey: String,
+        accessToken: String,
         query: String = "",
         page: Int = 1,
         limit: Int = 50
@@ -120,12 +163,13 @@ class PosApiClient(
             .build()
         val request = Request.Builder()
             .url(url)
-            .header("X-Integration-Key", integrationKey)
+            .header("Authorization", "Bearer $accessToken")
             .header("Accept", "application/json")
             .get()
             .build()
         try {
             client.newCall(request).execute().use { response ->
+                if (response.code == 401) return@withContext PosApiResult.SessionExpired
                 val body = response.body?.string().orEmpty()
                 if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
                 runCatching { json.decodeFromString<PosProductListResponse>(body) }
@@ -141,18 +185,19 @@ class PosApiClient(
 
     suspend fun listSuppliers(
         baseUrl: String,
-        integrationKey: String
+        accessToken: String
     ): PosApiResult<List<PosSupplier>> = withContext(Dispatchers.IO) {
         val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
             ?: return@withContext PosApiResult.Failure("URL Sistem tidak valid")
         val request = Request.Builder()
             .url(parsedBase.newBuilder().addPathSegments("api/integration/suppliers").build())
-            .header("X-Integration-Key", integrationKey.trim())
+            .header("Authorization", "Bearer ${accessToken.trim()}")
             .header("Accept", "application/json")
             .get()
             .build()
         try {
             client.newCall(request).execute().use { response ->
+                if (response.code == 401) return@withContext PosApiResult.SessionExpired
                 val body = response.body?.string().orEmpty()
                 if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
                 val suppliers = runCatching { json.decodeFromString<List<PosSupplier>>(body) }.getOrNull()
@@ -167,12 +212,12 @@ class PosApiClient(
 
     suspend fun getProductById(
         baseUrl: String,
-        integrationKey: String,
+        accessToken: String,
         productId: Long
     ): PosApiResult<PosProduct> = executeProductRequest(
         Request.Builder()
             .url(productByIdUrl(baseUrl, productId))
-            .header("X-Integration-Key", integrationKey)
+            .header("Authorization", "Bearer $accessToken")
             .header("Accept", "application/json")
             .get()
             .build(),
@@ -181,18 +226,19 @@ class PosApiClient(
 
     suspend fun getProductMeta(
         baseUrl: String,
-        integrationKey: String
+        accessToken: String
     ): PosApiResult<PosProductMeta> = withContext(Dispatchers.IO) {
         val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
             ?: return@withContext PosApiResult.Failure("URL Sistem tidak valid")
         val request = Request.Builder()
             .url(parsedBase.newBuilder().addPathSegments("api/integration/barang/meta").build())
-            .header("X-Integration-Key", integrationKey)
+            .header("Authorization", "Bearer $accessToken")
             .header("Accept", "application/json")
             .get()
             .build()
         try {
             client.newCall(request).execute().use { response ->
+                if (response.code == 401) return@withContext PosApiResult.SessionExpired
                 val body = response.body?.string().orEmpty()
                 if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
                 runCatching { json.decodeFromString<PosProductMeta>(body) }
@@ -208,7 +254,7 @@ class PosApiClient(
 
     suspend fun updateProductById(
         baseUrl: String,
-        integrationKey: String,
+        accessToken: String,
         productId: Long,
         input: PosProductEditInput
     ): PosApiResult<PosProduct> {
@@ -228,7 +274,7 @@ class PosApiClient(
         return executeProductRequest(
             Request.Builder()
                 .url(productByIdUrl(baseUrl, productId))
-                .header("X-Integration-Key", integrationKey)
+                .header("Authorization", "Bearer $accessToken")
                 .header("Accept", "application/json")
                 .put(json.encodeToString(requestBody).toRequestBody(JSON_MEDIA_TYPE))
                 .build(),
@@ -239,8 +285,8 @@ class PosApiClient(
     @Suppress("UNUSED_PARAMETER")
     override suspend fun create(
         baseUrl: String,
-        integrationKey: String,
-        form: com.niimbot.printagent.label.LabelData,
+        accessToken: String,
+        form: LabelData,
         operationId: String
     ): PosApiResult<PosProduct> {
         val supplierId = form.supplierId
@@ -260,13 +306,8 @@ class PosApiClient(
             foto = "",
             stokAwal = form.jumlahBarangMasuk
         )
-        val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
-            ?: return PosApiResult.Failure("URL Sistem tidak valid")
         return executeProductRequest(
-            Request.Builder()
-                .url(parsedBase.newBuilder().addPathSegments("api/barang").build())
-                .header("X-Integration-Key", integrationKey)
-                .header("Accept", "application/json")
+            requestBuilder(baseUrl, accessToken)
                 .post(json.encodeToString(product).toRequestBody(JSON_MEDIA_TYPE))
                 .build()
         )
@@ -274,8 +315,8 @@ class PosApiClient(
 
     override suspend fun update(
         baseUrl: String,
-        integrationKey: String,
-        form: com.niimbot.printagent.label.LabelData
+        accessToken: String,
+        form: LabelData
     ): PosApiResult<PosProduct> {
         val product = PosProductUpdateRequest(
             nama = form.nama,
@@ -284,7 +325,7 @@ class PosApiClient(
             hargaJual = form.hargaJual
         )
         return executeProductRequest(
-            requestBuilder(baseUrl, integrationKey, form.sku)
+            requestBuilder(baseUrl, accessToken, form.sku)
                 .put(json.encodeToString(product).toRequestBody(JSON_MEDIA_TYPE))
                 .build()
         )
@@ -292,7 +333,7 @@ class PosApiClient(
 
     override suspend fun addStock(
         baseUrl: String,
-        integrationKey: String,
+        accessToken: String,
         sku: String,
         jumlahBarangMasuk: Int,
         hargaSatuan: Long,
@@ -304,26 +345,14 @@ class PosApiClient(
             operationId = operationId
         )
         return executeProductRequest(
-            requestBuilder(baseUrl, integrationKey, sku, stockIn = true)
+            requestBuilder(baseUrl, accessToken, sku, stockIn = true)
                 .post(json.encodeToString(stock).toRequestBody(JSON_MEDIA_TYPE))
                 .build()
         )
     }
 
-    suspend fun testConnection(baseUrl: String, integrationKey: String): PosApiResult<Unit> = withContext(Dispatchers.IO) {
-        val request = requestBuilder(baseUrl, integrationKey, CONNECTION_TEST_SKU).get().build()
-        try {
-            client.newCall(request).execute().use { response ->
-                val body = response.body?.string().orEmpty()
-                when {
-                    response.isSuccessful || response.code == 404 -> PosApiResult.Success(Unit)
-                    else -> failureForStatus(response.code, body)
-                }
-            }
-        } catch (_: IOException) {
-            PosApiResult.Failure("Tidak dapat terhubung ke Sistem. Periksa URL dan jaringan.")
-        }
-    }
+    suspend fun testConnection(baseUrl: String, accessToken: String): PosApiResult<PosIdentity> =
+        me(baseUrl, accessToken)
 
     private suspend fun executeProductRequest(
         request: Request,
@@ -332,6 +361,7 @@ class PosApiClient(
         try {
             client.newCall(request).execute().use { response ->
                 if (allowNotFound && response.code == 404) return@withContext PosApiResult.NotFound
+                if (response.code == 401) return@withContext PosApiResult.SessionExpired
                 val body = response.body?.string().orEmpty()
                 if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
                 decodeProduct(body)?.let { PosApiResult.Success(it) }
@@ -344,7 +374,7 @@ class PosApiClient(
 
     private fun requestBuilder(
         baseUrl: String,
-        integrationKey: String,
+        accessToken: String,
         sku: String? = null,
         stockIn: Boolean = false
     ): Request.Builder {
@@ -362,9 +392,25 @@ class PosApiClient(
             .build()
         return Request.Builder()
             .url(url)
-            .header("X-Integration-Key", integrationKey)
+            .header("Authorization", "Bearer $accessToken")
             .header("Accept", "application/json")
     }
+
+    private fun authenticatedRequest(
+        baseUrl: String,
+        accessToken: String,
+        path: String
+    ): Request.Builder = Request.Builder()
+        .url(apiUrl(baseUrl, path))
+        .header("Authorization", "Bearer $accessToken")
+        .header("Accept", "application/json")
+
+    private fun apiUrl(baseUrl: String, path: String) =
+        PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
+            ?.newBuilder()
+            ?.addPathSegments(path)
+            ?.build()
+            ?: throw IllegalArgumentException("URL Lithia POS tidak valid")
 
     private fun productByIdUrl(baseUrl: String, productId: Long): okhttp3.HttpUrl {
         val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
@@ -382,7 +428,8 @@ class PosApiClient(
     private fun failureForStatus(code: Int, responseBody: String = ""): PosApiResult.Failure {
         val detail = extractApiDetail(responseBody)
         return when (code) {
-            401, 403 -> PosApiResult.Failure("Autentikasi Sistem ditolak. Periksa kunci integrasi.", code)
+            401 -> PosApiResult.Failure("Username atau password Lithia POS salah.", code)
+            403 -> PosApiResult.Failure("Akses Lithia POS ditolak.", code)
             422 -> PosApiResult.Failure(
                     detail?.let { "Data ditolak Sistem: $it" }
                         ?: "Data ditolak Sistem karena ada isian yang tidak valid.",

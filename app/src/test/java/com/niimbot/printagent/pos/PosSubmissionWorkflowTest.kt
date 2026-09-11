@@ -118,6 +118,16 @@ class PosSubmissionWorkflowTest {
     }
 
     @Test
+    fun `expired session requires login and is not queueable`() = runBlocking {
+        val gateway = FakeGateway(lookupResult = PosApiResult.SessionExpired)
+
+        val result = PosSubmissionWorkflow(gateway).submit("https://pos", "access-token", form, operationId)
+
+        assertEquals(PosSubmissionOutcome.SessionExpired, result)
+        assertEquals(listOf("lookup"), gateway.calls)
+    }
+
+    @Test
     fun `stock failure is not queueable`() = runBlocking {
         val gateway = FakeGateway(lookupResult = PosApiResult.Success(posProduct))
         gateway.stockResult = PosApiResult.Failure("stock failed")
@@ -136,24 +146,24 @@ class PosSubmissionWorkflowTest {
         var updateResult: PosApiResult<PosProduct> = PosApiResult.Failure("unexpected update")
         var stockResult: PosApiResult<PosProduct> = PosApiResult.Failure("unexpected stock")
 
-        override suspend fun lookup(baseUrl: String, integrationKey: String, normalizedSku: String): PosApiResult<PosProduct> {
+        override suspend fun lookup(baseUrl: String, accessToken: String, normalizedSku: String): PosApiResult<PosProduct> {
             calls += "lookup"
             return lookupResult
         }
 
-        override suspend fun create(baseUrl: String, integrationKey: String, form: LabelData, operationId: String): PosApiResult<PosProduct> {
+        override suspend fun create(baseUrl: String, accessToken: String, form: LabelData, operationId: String): PosApiResult<PosProduct> {
             calls += "create:${form.jumlahBarangMasuk}:$operationId"
             return createResult
         }
 
-        override suspend fun update(baseUrl: String, integrationKey: String, form: LabelData): PosApiResult<PosProduct> {
+        override suspend fun update(baseUrl: String, accessToken: String, form: LabelData): PosApiResult<PosProduct> {
             calls += "update"
             return updateResult
         }
 
         override suspend fun addStock(
             baseUrl: String,
-            integrationKey: String,
+            accessToken: String,
             sku: String,
             jumlahBarangMasuk: Int,
             hargaSatuan: Long,
