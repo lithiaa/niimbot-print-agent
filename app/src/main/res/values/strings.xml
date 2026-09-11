@@ -224,7 +224,7 @@
     <string name="pos_logout_success">Sesi Lithia POS dihapus.</string>
     <string name="pos_test_success">Sesi Lithia POS aktif.</string>
     <string name="pos_session_expired">Sesi Lithia POS berakhir. Login kembali.</string>
-    <string name="pos_authenticated_identity">Login sebagai %1$s (%2$s)</string>
+    <string name="pos_authenticated_identity">Login sebagai: %1$s (%2$s)</string>
     <string name="pos_not_authenticated">Belum login ke Lithia POS</string>
 
     <!-- Server Info -->

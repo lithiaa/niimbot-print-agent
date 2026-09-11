@@ -35,6 +35,8 @@ class SettingsFragment : Fragment() {
     private var etPosBaseUrl: EditText? = null
     private var etPosUsername: EditText? = null
     private var etPosPassword: EditText? = null
+    private var posLoginForm: View? = null
+    private var posAuthenticatedPanel: View? = null
     private var tvPosIdentity: TextView? = null
     private var btnPosLogin: Button? = null
     private var btnTestPosConnection: Button? = null
@@ -62,6 +64,8 @@ class SettingsFragment : Fragment() {
         etPosBaseUrl = view.findViewById(R.id.et_pos_base_url)
         etPosUsername = view.findViewById(R.id.et_pos_username)
         etPosPassword = view.findViewById(R.id.et_pos_password)
+        posLoginForm = view.findViewById(R.id.pos_login_form)
+        posAuthenticatedPanel = view.findViewById(R.id.pos_authenticated_panel)
         tvPosIdentity = view.findViewById(R.id.tv_pos_identity)
         btnPosLogin = view.findViewById(R.id.btn_pos_login)
         btnTestPosConnection = view.findViewById(R.id.btn_test_pos_connection)
@@ -215,6 +219,8 @@ class SettingsFragment : Fragment() {
         tvPosIdentity?.text = identity?.let {
             getString(R.string.pos_authenticated_identity, it.username, it.role)
         } ?: getString(R.string.pos_not_authenticated)
+        posLoginForm?.visibility = if (identity == null) View.VISIBLE else View.GONE
+        posAuthenticatedPanel?.visibility = if (identity == null) View.GONE else View.VISIBLE
         btnPosLogout?.isEnabled = identity != null
         btnTestPosConnection?.isEnabled = identity != null
     }
@@ -230,6 +236,8 @@ class SettingsFragment : Fragment() {
         etPosBaseUrl = null
         etPosUsername = null
         etPosPassword = null
+        posLoginForm = null
+        posAuthenticatedPanel = null
         tvPosIdentity = null
         btnPosLogin = null
         btnTestPosConnection = null
