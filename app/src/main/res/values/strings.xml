@@ -159,6 +159,8 @@
     <string name="label_nama_description">Masukkan nama barang</string>
     <string name="label_size">Ukuran label</string>
     <string name="label_size_description">Pilih ukuran fisik media label</string>
+    <string name="label_design">Desain label</string>
+    <string name="label_design_description">Pilih desain Barcode atau QR Code</string>
     <string name="label_data_source">Sumber data barang</string>
     <string name="label_source_manual">Buat sendiri</string>
     <string name="label_source_pos">Ambil dari Sistem</string>
@@ -194,7 +196,7 @@
     <string name="create_and_print_description">Validasi data lalu masukkan label ke antrean cetak</string>
     <string name="confirm_print_title">Konfirmasi cetak</string>
     <string name="confirm_print_message">Periksa desain final berikut sebelum mencetak.</string>
-    <string name="confirm_print_details">Ukuran: %1$s\nJumlah label: %2$d</string>
+    <string name="confirm_print_details">Ukuran: %1$s\nDesain: %2$s\nJumlah label: %3$d</string>
     <string name="confirm_and_print">Cetak sekarang</string>
     <string name="reset_label_form">Hapus</string>
     <string name="reset_label_form_description">Hapus seluruh isian dan draf formulir label</string>

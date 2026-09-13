@@ -45,6 +45,8 @@ data class PrintRequest(
     val stok: Int? = null,
     val satuan: String = "pcs",
     val barcode: String? = null,
+    val labelDesign: String? = null,
+    val labelLayout: String? = null,
     val tanggalMasuk: String? = null,
     val qty: Int = 1,
     val printerMac: String? = null,
@@ -327,6 +329,7 @@ class PrintServer(
                 printerMac = request.printerMac,
                 printerModel = request.printerModel,
                 printDirection = request.printDirection,
+                labelLayout = request.labelDesign ?: request.labelLayout ?: "BARCODE",
                 tanggalMasuk = request.tanggalMasuk
             )
         } catch (e: Exception) {

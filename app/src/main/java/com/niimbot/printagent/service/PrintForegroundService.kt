@@ -22,6 +22,7 @@ import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintLog
 import com.niimbot.printagent.data.PrintStatus
 import com.niimbot.printagent.label.LabelGenerator
+import com.niimbot.printagent.label.LabelDesign
 import com.niimbot.printagent.label.LabelSize
 import com.niimbot.printagent.server.PrintServer
 import com.niimbot.printagent.ui.MainActivity
@@ -310,7 +311,8 @@ class PrintForegroundService : Service() {
                     itemQty = job.itemQty,
                     supplierCode = job.supplierCode,
                     tanggalMasuk = job.tanggalMasuk,
-                    brandLogo = BitmapFactory.decodeResource(resources, R.drawable.lithia_project_logo)
+                    brandLogo = BitmapFactory.decodeResource(resources, R.drawable.lithia_project_logo),
+                    labelDesign = LabelDesign.fromName(job.labelLayout)
                 )
 
                 val requestedCopies = job.qty.coerceAtLeast(1)

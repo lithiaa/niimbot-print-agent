@@ -35,3 +35,13 @@ data class LabelSize(
     fun matches(width: Int, height: Int): Boolean =
         (widthMm == width && heightMm == height) || (widthMm == height && heightMm == width)
 }
+
+enum class LabelDesign(val displayName: String) {
+    BARCODE("Barcode"),
+    QR_CODE("QR Code");
+
+    companion object {
+        fun fromName(value: String?): LabelDesign = entries.firstOrNull { it.name == value }
+            ?: BARCODE
+    }
+}

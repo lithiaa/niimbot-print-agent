@@ -33,6 +33,7 @@ import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintLog
 import com.niimbot.printagent.label.LabelData
 import com.niimbot.printagent.label.LabelDate
+import com.niimbot.printagent.label.LabelDesign
 import com.niimbot.printagent.label.LabelField
 import com.niimbot.printagent.label.LabelFormInput
 import com.niimbot.printagent.label.LabelFormRules
@@ -90,6 +91,7 @@ class LabelFragment : Fragment() {
     private lateinit var labelScrollView: NestedScrollView
     private lateinit var switchPos: SwitchMaterial
     private lateinit var dropdownLabelSize: AutoCompleteTextView
+    private lateinit var dropdownLabelDesign: AutoCompleteTextView
     private lateinit var btnPrint: View
     private lateinit var btnScanSku: View
     private lateinit var btnResetForm: View
@@ -143,6 +145,10 @@ class LabelFragment : Fragment() {
             saveDraft()
             updatePreview(showErrors = false)
         }
+        dropdownLabelDesign.setOnItemClickListener { _, _, _, _ ->
+            saveDraft()
+            updatePreview(showErrors = false)
+        }
         dropdownSupplier.setOnItemClickListener { parent, _, position, _ ->
             val selectedLabel = parent.getItemAtPosition(position)?.toString()
             val selectedSupplier = supplierSuggestions
@@ -190,6 +196,7 @@ class LabelFragment : Fragment() {
         labelScrollView = view.findViewById(R.id.label_scroll_view)
         switchPos = view.findViewById(R.id.switch_add_to_pos)
         dropdownLabelSize = view.findViewById(R.id.dropdown_label_size)
+        dropdownLabelDesign = view.findViewById(R.id.dropdown_label_design)
         btnPrint = view.findViewById(R.id.btn_create_and_print)
         btnScanSku = view.findViewById(R.id.btn_scan_label_sku)
         btnResetForm = view.findViewById(R.id.btn_reset_label_form)
@@ -238,6 +245,7 @@ class LabelFragment : Fragment() {
         etJumlahBarangMasuk.setText("0")
         switchPos.isChecked = false
         dropdownLabelSize.setText(LabelSize.MM_50_X_30.displayName, false)
+        dropdownLabelDesign.setText(LabelDesign.BARCODE.displayName, false)
         showValidationErrors(emptyMap())
         saveDraft()
         updatePreview(showErrors = false)
@@ -565,7 +573,8 @@ class LabelFragment : Fragment() {
                 itemQty = etItemQty.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 1,
                 supplierCode = selectedSupplierCode,
                 tanggalMasuk = etTanggalMasuk.text.toString(),
-                brandLogo = brandLogo
+                brandLogo = brandLogo,
+                labelDesign = selectedLabelDesign()
             )
         ivPreview.setImageBitmap(bitmap)
         updatePreviewDimensions(selectedLabelSize())
@@ -590,12 +599,14 @@ class LabelFragment : Fragment() {
                 itemQty = form.itemQty,
                 supplierCode = form.supplierCode,
                 tanggalMasuk = form.tanggalMasuk,
-                brandLogo = brandLogo
+                brandLogo = brandLogo,
+                labelDesign = selectedLabelDesign()
             )
         )
         confirmationView.findViewById<android.widget.TextView>(R.id.tv_confirm_print_details).text = getString(
             R.string.confirm_print_details,
             form.labelSize.displayName,
+            selectedLabelDesign().displayName,
             form.qty
         )
         MaterialAlertDialogBuilder(requireContext())
@@ -711,6 +722,7 @@ class LabelFragment : Fragment() {
                 sku = data.sku,
                 qty = data.qty,
                 labelSize = data.labelSize.name,
+                labelLayout = selectedLabelDesign().name,
                 itemQty = data.itemQty,
                 supplierCode = data.supplierCode,
                 tanggalMasuk = data.tanggalMasuk,
@@ -786,6 +798,14 @@ class LabelFragment : Fragment() {
     private fun setupLabelOptions() {
         updateLabelSizeAdapter()
         dropdownLabelSize.setText(LabelSize.MM_50_X_30.displayName, false)
+        dropdownLabelDesign.setAdapter(
+            ArrayAdapter(
+                requireContext(),
+                R.layout.item_label_dropdown,
+                LabelDesign.entries.map { it.displayName }
+            )
+        )
+        dropdownLabelDesign.setText(LabelDesign.BARCODE.displayName, false)
     }
 
     private fun updateLabelSizeAdapter() {
@@ -828,6 +848,8 @@ class LabelFragment : Fragment() {
             updateLabelSizeAdapter()
         }
         dropdownLabelSize.setText(size.displayName, false)
+        val design = LabelDesign.fromName(draft.getString(DRAFT_LABEL_DESIGN, null))
+        dropdownLabelDesign.setText(design.displayName, false)
     }
 
     private fun saveDraft() {
@@ -847,12 +869,17 @@ class LabelFragment : Fragment() {
             .putString(DRAFT_JUMLAH_BARANG_MASUK, etJumlahBarangMasuk.text.toString())
             .putBoolean(DRAFT_ADD_TO_POS, switchPos.isChecked)
             .putString(DRAFT_LABEL_SIZE, selectedLabelSize().name)
+            .putString(DRAFT_LABEL_DESIGN, selectedLabelDesign().name)
             .apply()
     }
 
     private fun selectedLabelSize(): LabelSize = availableLabelSizes.firstOrNull {
         it.displayName == dropdownLabelSize.text.toString()
     } ?: LabelSize.MM_50_X_30
+
+    private fun selectedLabelDesign(): LabelDesign = LabelDesign.entries.firstOrNull {
+        it.displayName == dropdownLabelDesign.text.toString()
+    } ?: LabelDesign.BARCODE
 
     private fun updatePreviewDimensions(size: LabelSize) {
         previewContainer.post { applyPreviewDimensions(size) }
@@ -886,6 +913,8 @@ class LabelFragment : Fragment() {
         tilItemQty.isEnabled = !busy
         tilSupplier.isEnabled = !busy
         dropdownSupplier.isEnabled = !busy
+        dropdownLabelSize.isEnabled = !busy
+        dropdownLabelDesign.isEnabled = !busy
         tilJumlahBarangMasuk.isEnabled = !busy && switchPos.isChecked
         etJumlahBarangMasuk.isEnabled = !busy && switchPos.isChecked
     }
@@ -915,6 +944,7 @@ class LabelFragment : Fragment() {
         const val DRAFT_JUMLAH_BARANG_MASUK = "jumlah_barang_masuk"
         const val DRAFT_ADD_TO_POS = "add_to_pos"
         const val DRAFT_LABEL_SIZE = "label_size"
+        const val DRAFT_LABEL_DESIGN = "label_design"
         const val NO_SUPPLIER_ID = -1L
     }
 }

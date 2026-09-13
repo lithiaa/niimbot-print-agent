@@ -30,7 +30,7 @@ data class PrintJob(
     val printerModel: String = "B1",
     val printDirection: String = "top", // "top" or "left"
     val labelSize: String = "MM_50_X_30",
-    val labelLayout: String = "STANDARD",
+    val labelLayout: String = "BARCODE",
     val itemQty: Int = 1,
     val supplierCode: String? = null,
     val tanggalMasuk: String? = null,

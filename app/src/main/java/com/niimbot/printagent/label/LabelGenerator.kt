@@ -13,7 +13,7 @@ import com.google.zxing.MultiFormatWriter
 import com.google.zxing.common.BitMatrix
 import java.util.EnumMap
 
-/** Generates the single fixed Lithia Project label design for every supported size. */
+/** Generates the selectable Lithia Project label designs for every supported size. */
 object LabelGenerator {
 
     const val LABEL_WIDTH = 584
@@ -44,7 +44,8 @@ object LabelGenerator {
         itemQty: Int = 1,
         supplierCode: String? = null,
         tanggalMasuk: String? = null,
-        brandLogo: Bitmap? = null
+        brandLogo: Bitmap? = null,
+        labelDesign: LabelDesign = LabelDesign.BARCODE
     ): Bitmap {
         val width = labelSize.widthPx
         val height = labelSize.heightPx
@@ -56,40 +57,21 @@ object LabelGenerator {
             color = Color.BLACK
             typeface = Typeface.DEFAULT
         }
-        val metrics = FixedLabelMetrics.forSize(labelSize)
         val barcodeContent = barcodeData?.takeIf { it.isNotBlank() } ?: sku
         val salePrice = "Rp ${formatRupiah(hargaJual)}"
         val purchaseCode = kodeHargaBeli?.trim()?.takeIf { it.isNotEmpty() }
             ?: encodePurchasePrice(hargaBeli)
 
-        drawBarcode(canvas, metrics.barcode, barcodeContent, width, height)
-        drawMetadata(
-            canvas = canvas,
-            paint = paint,
-            bounds = metrics.metadata.toPixels(width, height),
-            quantity = "${itemQty.coerceAtLeast(1)} QTY",
-            date = entryDateText(tanggalMasuk).ifEmpty { sku },
-            supplier = supplierCode.orEmpty()
-        )
-        drawProductName(
-            canvas,
-            paint,
-            nama.trim().ifEmpty { "Nama barang" },
-            metrics.productName.toPixels(width, height)
-        )
-        drawTextInBounds(
-            canvas,
-            paint,
-            "$purchaseCode  $salePrice",
-            metrics.price.toPixels(width, height),
-            bold = true
-        )
-        drawBrand(
-            canvas,
-            paint,
-            brandLogo,
-            metrics.brand.toPixels(width, height)
-        )
+        when (labelDesign) {
+            LabelDesign.BARCODE -> drawBarcodeDesign(
+                canvas, paint, labelSize, barcodeContent, nama, purchaseCode, salePrice,
+                itemQty, tanggalMasuk, sku, supplierCode, brandLogo
+            )
+            LabelDesign.QR_CODE -> drawQrDesign(
+                canvas, paint, labelSize, barcodeContent, nama, purchaseCode, salePrice,
+                itemQty, tanggalMasuk, sku, supplierCode, brandLogo
+            )
+        }
 
         return bitmap
     }
@@ -107,8 +89,84 @@ object LabelGenerator {
             ?: "000000"
         val satuan = jsonData["satuan"] as? String ?: "pcs"
         val barcodeData = jsonData["barcode"] as? String
+        val labelDesign = LabelDesign.fromName(
+            jsonData["labelDesign"] as? String ?: jsonData["label_layout"] as? String
+        )
 
-        return generateLabel(nama, hargaJual, hargaBeli, sku, satuan, barcodeData)
+        return generateLabel(
+            nama, hargaJual, hargaBeli, sku, satuan, barcodeData,
+            labelDesign = labelDesign
+        )
+    }
+
+    private fun drawBarcodeDesign(
+        canvas: Canvas,
+        paint: Paint,
+        labelSize: LabelSize,
+        barcodeContent: String,
+        nama: String,
+        purchaseCode: String,
+        salePrice: String,
+        itemQty: Int,
+        tanggalMasuk: String?,
+        sku: String,
+        supplierCode: String?,
+        brandLogo: Bitmap?
+    ) {
+        val width = canvas.width
+        val height = canvas.height
+        val metrics = FixedLabelMetrics.forSize(labelSize)
+        drawBarcode(canvas, metrics.barcode, barcodeContent, width, height)
+        drawMetadata(
+            canvas, paint, metrics.metadata.toPixels(width, height),
+            "${itemQty.coerceAtLeast(1)} QTY",
+            entryDateText(tanggalMasuk).ifEmpty { sku },
+            supplierCode.orEmpty()
+        )
+        drawProductName(
+            canvas, paint, nama.trim().ifEmpty { "Nama barang" },
+            metrics.productName.toPixels(width, height)
+        )
+        drawTextInBounds(
+            canvas, paint, "$purchaseCode  $salePrice",
+            metrics.price.toPixels(width, height), bold = true
+        )
+        drawBrand(canvas, paint, brandLogo, metrics.brand.toPixels(width, height))
+    }
+
+    private fun drawQrDesign(
+        canvas: Canvas,
+        paint: Paint,
+        labelSize: LabelSize,
+        qrContent: String,
+        nama: String,
+        purchaseCode: String,
+        salePrice: String,
+        itemQty: Int,
+        tanggalMasuk: String?,
+        sku: String,
+        supplierCode: String?,
+        brandLogo: Bitmap?
+    ) {
+        val width = canvas.width
+        val height = canvas.height
+        val metrics = QrLabelMetrics.forSize(labelSize)
+        drawQrCode(canvas, metrics.qrCode.toPixels(width, height), qrContent)
+        drawProductName(
+            canvas, paint, nama.trim().ifEmpty { "Nama barang" },
+            metrics.productName.toPixels(width, height)
+        )
+        drawTextInBounds(
+            canvas, paint, "$purchaseCode  $salePrice",
+            metrics.price.toPixels(width, height), bold = true
+        )
+        drawMetadata(
+            canvas, paint, metrics.metadata.toPixels(width, height),
+            "${itemQty.coerceAtLeast(1)} QTY",
+            entryDateText(tanggalMasuk).ifEmpty { sku },
+            supplierCode.orEmpty()
+        )
+        drawBrand(canvas, paint, brandLogo, metrics.brand.toPixels(width, height))
     }
 
     private fun drawBarcode(
@@ -129,6 +187,19 @@ object LabelGenerator {
             barcode,
             blackBounds,
             bounds,
+            Paint(Paint.ANTI_ALIAS_FLAG).apply { isFilterBitmap = false }
+        )
+    }
+
+    private fun drawQrCode(canvas: Canvas, frame: RectF, content: String) {
+        val side = minOf(frame.width(), frame.height()).toInt().coerceAtLeast(1)
+        val qrCode = generateQrCode(content, side)
+        val left = frame.centerX() - side / 2f
+        val top = frame.centerY() - side / 2f
+        canvas.drawBitmap(
+            qrCode,
+            null,
+            RectF(left, top, left + side, top + side),
             Paint(Paint.ANTI_ALIAS_FLAG).apply { isFilterBitmap = false }
         )
     }
@@ -327,6 +398,26 @@ object LabelGenerator {
         return bitmap
     }
 
+    private fun generateQrCode(content: String, size: Int): Bitmap {
+        val hints = EnumMap<EncodeHintType, Any>(EncodeHintType::class.java)
+        hints[EncodeHintType.MARGIN] = 2
+        hints[EncodeHintType.CHARACTER_SET] = "UTF-8"
+        val bitMatrix = MultiFormatWriter().encode(
+            content,
+            BarcodeFormat.QR_CODE,
+            size,
+            size,
+            hints
+        )
+        val bitmap = Bitmap.createBitmap(bitMatrix.width, bitMatrix.height, Bitmap.Config.ARGB_8888)
+        for (x in 0 until bitMatrix.width) {
+            for (y in 0 until bitMatrix.height) {
+                bitmap.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
+            }
+        }
+        return bitmap
+    }
+
     internal fun entryDateText(tanggalMasuk: String?): String =
         LabelDate.display(tanggalMasuk).orEmpty()
 
@@ -411,6 +502,35 @@ internal data class FixedLabelMetrics(
                     productName = FractionalFrame(.055f, .37f, .945f, .65f),
                     price = FractionalFrame(.08f, .67f, .92f, .79f),
                     brand = FractionalFrame(.28f, .84f, .72f, .95f)
+                )
+            }
+    }
+}
+
+internal data class QrLabelMetrics(
+    val qrCode: FractionalFrame,
+    val productName: FractionalFrame,
+    val price: FractionalFrame,
+    val metadata: FractionalFrame,
+    val brand: FractionalFrame
+) {
+    companion object {
+        fun forSize(size: LabelSize): QrLabelMetrics =
+            if (size.matches(30, 20)) {
+                QrLabelMetrics(
+                    qrCode = FractionalFrame(.04f, .08f, .38f, .72f),
+                    productName = FractionalFrame(.41f, .07f, .955f, .37f),
+                    price = FractionalFrame(.41f, .405f, .955f, .555f),
+                    metadata = FractionalFrame(.41f, .59f, .955f, .69f),
+                    brand = FractionalFrame(.22f, .79f, .78f, .935f)
+                )
+            } else {
+                QrLabelMetrics(
+                    qrCode = FractionalFrame(.045f, .08f, .37f, .72f),
+                    productName = FractionalFrame(.40f, .07f, .95f, .37f),
+                    price = FractionalFrame(.40f, .405f, .95f, .555f),
+                    metadata = FractionalFrame(.40f, .59f, .95f, .69f),
+                    brand = FractionalFrame(.26f, .80f, .74f, .94f)
                 )
             }
     }
