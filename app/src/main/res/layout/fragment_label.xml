@@ -54,7 +54,7 @@
                     android:orientation="horizontal">
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.NiimbotPrintAgent.TextInput"
+                        style="@style/Widget.LithiaLabelPrinter.TextInput"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="6dp"
@@ -87,7 +87,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/til_label_sku"
-                        style="@style/Widget.NiimbotPrintAgent.TextInput"
+                        style="@style/Widget.LithiaLabelPrinter.TextInput"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -96,7 +96,7 @@
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_label_sku"
-                            style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                            style="@style/Widget.LithiaLabelPrinter.FormEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:contentDescription="@string/label_sku_description"
@@ -128,7 +128,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/til_label_nama"
-                    style="@style/Widget.NiimbotPrintAgent.TextInput"
+                    style="@style/Widget.LithiaLabelPrinter.TextInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -159,7 +159,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/til_label_item_qty"
-                        style="@style/Widget.NiimbotPrintAgent.TextInput"
+                        style="@style/Widget.LithiaLabelPrinter.TextInput"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="6dp"
@@ -168,7 +168,7 @@
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_label_item_qty"
-                            style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                            style="@style/Widget.LithiaLabelPrinter.FormEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:contentDescription="@string/label_item_qty_description"
@@ -180,7 +180,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/til_label_supplier"
-                        style="@style/Widget.NiimbotPrintAgent.TextInput"
+                        style="@style/Widget.LithiaLabelPrinter.TextInput"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
@@ -206,7 +206,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/til_label_tanggal_masuk"
-                    style="@style/Widget.NiimbotPrintAgent.TextInput"
+                    style="@style/Widget.LithiaLabelPrinter.TextInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -216,7 +216,7 @@
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_label_tanggal_masuk"
-                        style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                        style="@style/Widget.LithiaLabelPrinter.FormEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:clickable="true"
@@ -229,7 +229,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/til_label_kode_harga_beli"
-                    style="@style/Widget.NiimbotPrintAgent.TextInput"
+                    style="@style/Widget.LithiaLabelPrinter.TextInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -238,7 +238,7 @@
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_label_kode_harga_beli"
-                        style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                        style="@style/Widget.LithiaLabelPrinter.FormEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:contentDescription="@string/label_kode_harga_beli_description"
@@ -256,7 +256,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/til_label_harga_beli"
-                        style="@style/Widget.NiimbotPrintAgent.TextInput"
+                        style="@style/Widget.LithiaLabelPrinter.TextInput"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="@string/label_harga_beli"
@@ -264,7 +264,7 @@
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_label_harga_beli"
-                            style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                            style="@style/Widget.LithiaLabelPrinter.FormEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:contentDescription="@string/label_harga_beli_description"
@@ -276,7 +276,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/til_label_harga_jual"
-                        style="@style/Widget.NiimbotPrintAgent.TextInput"
+                        style="@style/Widget.LithiaLabelPrinter.TextInput"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
@@ -285,7 +285,7 @@
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_label_harga_jual"
-                            style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                            style="@style/Widget.LithiaLabelPrinter.FormEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:contentDescription="@string/label_harga_jual_description"
@@ -298,7 +298,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/til_label_qty"
-                    style="@style/Widget.NiimbotPrintAgent.TextInput"
+                    style="@style/Widget.LithiaLabelPrinter.TextInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -307,7 +307,7 @@
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_label_qty"
-                        style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                        style="@style/Widget.LithiaLabelPrinter.FormEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:contentDescription="@string/label_qty_description"
@@ -330,7 +330,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/til_jumlah_barang_masuk"
-                    style="@style/Widget.NiimbotPrintAgent.TextInput"
+                    style="@style/Widget.LithiaLabelPrinter.TextInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -340,7 +340,7 @@
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_jumlah_barang_masuk"
-                        style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                        style="@style/Widget.LithiaLabelPrinter.FormEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:contentDescription="@string/incoming_stock_qty_description"

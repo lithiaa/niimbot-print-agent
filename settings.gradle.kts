@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NiimbotPrintAgent"
+rootProject.name = "LithiaLabelPrinter"
 include(":app")

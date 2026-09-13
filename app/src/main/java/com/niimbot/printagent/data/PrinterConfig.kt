@@ -12,10 +12,10 @@ data class PrinterConfig(
     val id: Int = 1, // Singleton config
     
     val macAddress: String? = null,
-    val model: String = "B1",
-    val name: String = "Niimbot B1 Pro",
-    val printerType: String = "NIIMBOT",
-    val printerDpi: Int = 300,
+    val model: String = "XPrinter TSPL 203 DPI",
+    val name: String = "XPrinter",
+    val printerType: String = "XPRINTER",
+    val printerDpi: Int = 203,
     val isDefault: Boolean = true,
     
     // Connection settings

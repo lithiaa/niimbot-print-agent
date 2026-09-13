@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Niimbot Print Agent - Build Instructions
+# Lithia Label Printer - Build Instructions
 # ========================================
 
 # REQUIRED:
@@ -34,16 +34,16 @@
 
 ## FIRST RUN:
 # 1. Open app → Settings tab
-# 2. Grant Bluetooth + Location permissions (Android 12+: Nearby Devices)
+# 2. Pair the XPrinter from Android Bluetooth settings
 # 3. Go to Printer tab → Scan Devices
-# 4. Select "NIIMBOT B1 Pro" from list
+# 4. Select the XPrinter and its TSPL DPI (203 or 300)
 # 5. Tap Test Print to verify
 # 6. Note the server port (default 8080)
 
 
 ## Lithia POS login
 
-POS-backed product operations require login in **Settings > Lithia POS** with POS username and password. App sends credentials only to `POST /api/auth/login`, stores returned access token encrypted with Android Keystore AES-GCM, and never stores password. Session identity comes from `GET /api/auth/me`; logout or HTTP 401 clears local session.
+POS-backed product operations require login in **Settings > Lithia POS** with POS username and password. App sends credentials only to `POST /api/auth/login`, stores returned access token encrypted with Android Keystore AES-GCM, and never stores password. Session identity comes from `GET /api/auth/me`; logout or a 401 confirmed by that identity endpoint clears the local session.
 
 Local `POST /print` and BLE background printing remain available without Lithia POS login.
 

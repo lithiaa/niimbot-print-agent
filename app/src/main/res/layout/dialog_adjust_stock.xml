@@ -10,13 +10,13 @@
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/til_adjust_stock_quantity"
-        style="@style/Widget.NiimbotPrintAgent.TextInput"
+        style="@style/Widget.LithiaLabelPrinter.TextInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/product_stock_quantity">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_adjust_stock_quantity"
-            style="@style/Widget.NiimbotPrintAgent.FormEditText"
+            style="@style/Widget.LithiaLabelPrinter.FormEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="number"
@@ -25,7 +25,7 @@
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/til_adjust_stock_price"
-        style="@style/Widget.NiimbotPrintAgent.TextInput"
+        style="@style/Widget.LithiaLabelPrinter.TextInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
@@ -33,7 +33,7 @@
         app:prefixText="Rp ">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_adjust_stock_price"
-            style="@style/Widget.NiimbotPrintAgent.FormEditText"
+            style="@style/Widget.LithiaLabelPrinter.FormEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="number"

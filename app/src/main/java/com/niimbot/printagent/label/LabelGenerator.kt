@@ -71,12 +71,11 @@ object LabelGenerator {
             date = entryDateText(tanggalMasuk).ifEmpty { sku },
             supplier = supplierCode.orEmpty()
         )
-        drawTextInBounds(
+        drawProductName(
             canvas,
             paint,
             nama.trim().ifEmpty { "Nama barang" },
-            metrics.productName.toPixels(width, height),
-            bold = true
+            metrics.productName.toPixels(width, height)
         )
         drawTextInBounds(
             canvas,
@@ -253,6 +252,41 @@ object LabelGenerator {
         canvas.drawText(text, x, baseline, paint)
     }
 
+    private fun drawProductName(
+        canvas: Canvas,
+        paint: Paint,
+        text: String,
+        bounds: RectF
+    ) {
+        paint.typeface = Typeface.DEFAULT_BOLD
+        paint.isFakeBoldText = true
+        val lineGap = bounds.height() * .04f
+        val lineHeight = (bounds.height() - lineGap) / 2f
+        fitPaint(paint, "Ag", bounds.width(), lineHeight, bold = true)
+        val lines = wrapTextAtMostTwoLines(text, bounds.width()) { paint.measureText(it) }
+        if (lines.size == 1) {
+            fitPaint(paint, lines.first(), bounds.width(), lineHeight, bold = true)
+            val baseline = bounds.centerY() - (paint.ascent() + paint.descent()) / 2f
+            canvas.drawText(
+                lines.first(),
+                bounds.centerX() - paint.measureText(lines.first()) / 2f,
+                baseline,
+                paint
+            )
+            return
+        }
+
+        val widestLine = lines.maxByOrNull { paint.measureText(it) }.orEmpty()
+        fitPaint(paint, widestLine, bounds.width(), lineHeight, bold = true)
+        val textHeight = paint.descent() - paint.ascent()
+        val blockHeight = textHeight * lines.size + lineGap
+        var baseline = bounds.centerY() - blockHeight / 2f - paint.ascent()
+        lines.forEach { line ->
+            canvas.drawText(line, bounds.centerX() - paint.measureText(line) / 2f, baseline, paint)
+            baseline += textHeight + lineGap
+        }
+    }
+
     private fun fitPaint(
         paint: Paint,
         text: String,
@@ -313,6 +347,32 @@ object LabelGenerator {
     private enum class TextAlignment { START, CENTER, END }
 }
 
+internal fun wrapTextAtMostTwoLines(
+    text: String,
+    maxWidth: Float,
+    measure: (String) -> Float
+): List<String> {
+    val normalized = text.trim().replace(Regex("\\s+"), " ")
+    if (normalized.isEmpty() || measure(normalized) <= maxWidth) return listOf(normalized)
+
+    val candidates = normalized.indices
+        .filter { normalized[it] == ' ' }
+        .map { index -> normalized.substring(0, index).trim() to normalized.substring(index + 1).trim() }
+        .filter { (first, second) -> first.isNotEmpty() && second.isNotEmpty() }
+
+    val split = (candidates.ifEmpty {
+        (1 until normalized.length).map { index ->
+            normalized.substring(0, index) to normalized.substring(index)
+        }
+    }).minByOrNull { (first, second) ->
+        val firstWidth = measure(first)
+        val secondWidth = measure(second)
+        maxOf(firstWidth, secondWidth) + kotlin.math.abs(firstWidth - secondWidth) * .15f
+    }
+
+    return split?.let { listOf(it.first, it.second) } ?: listOf(normalized)
+}
+
 internal data class FractionalFrame(
     val left: Float,
     val top: Float,
@@ -338,19 +398,19 @@ internal data class FixedLabelMetrics(
         fun forSize(size: LabelSize): FixedLabelMetrics =
             if (size.matches(30, 20)) {
                 FixedLabelMetrics(
-                    barcode = FractionalFrame(.055f, .055f, .945f, .285f),
-                    metadata = FractionalFrame(.055f, .305f, .945f, .395f),
-                    productName = FractionalFrame(.055f, .415f, .945f, .555f),
-                    price = FractionalFrame(.055f, .585f, .945f, .735f),
-                    brand = FractionalFrame(.22f, .805f, .78f, .925f)
+                    barcode = FractionalFrame(.055f, .04f, .945f, .245f),
+                    metadata = FractionalFrame(.055f, .255f, .945f, .325f),
+                    productName = FractionalFrame(.055f, .335f, .945f, .615f),
+                    price = FractionalFrame(.055f, .635f, .945f, .765f),
+                    brand = FractionalFrame(.22f, .82f, .78f, .94f)
                 )
             } else {
                 FixedLabelMetrics(
-                    barcode = FractionalFrame(.085f, .105f, .915f, .325f),
-                    metadata = FractionalFrame(.085f, .345f, .915f, .425f),
-                    productName = FractionalFrame(.055f, .455f, .945f, .595f),
-                    price = FractionalFrame(.08f, .645f, .92f, .775f),
-                    brand = FractionalFrame(.28f, .835f, .72f, .94f)
+                    barcode = FractionalFrame(.085f, .075f, .915f, .28f),
+                    metadata = FractionalFrame(.085f, .29f, .915f, .36f),
+                    productName = FractionalFrame(.055f, .37f, .945f, .65f),
+                    price = FractionalFrame(.08f, .67f, .92f, .79f),
+                    brand = FractionalFrame(.28f, .84f, .72f, .95f)
                 )
             }
     }

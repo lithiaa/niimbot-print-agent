@@ -15,13 +15,13 @@
         android:paddingBottom="8dp">
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.NiimbotPrintAgent.TextInput"
+            style="@style/Widget.LithiaLabelPrinter.TextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/label_sku">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_edit_product_sku"
-                style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                style="@style/Widget.LithiaLabelPrinter.FormEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textCapCharacters"
@@ -30,14 +30,14 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_edit_product_name"
-            style="@style/Widget.NiimbotPrintAgent.TextInput"
+            style="@style/Widget.LithiaLabelPrinter.TextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:hint="@string/label_nama">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_edit_product_name"
-                style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                style="@style/Widget.LithiaLabelPrinter.FormEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textCapSentences"
@@ -45,21 +45,21 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.NiimbotPrintAgent.TextInput"
+            style="@style/Widget.LithiaLabelPrinter.TextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:hint="@string/product_brand">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_edit_product_brand"
-                style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                style="@style/Widget.LithiaLabelPrinter.FormEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.NiimbotPrintAgent.TextInput"
+            style="@style/Widget.LithiaLabelPrinter.TextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
@@ -76,7 +76,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.NiimbotPrintAgent.TextInput"
+            style="@style/Widget.LithiaLabelPrinter.TextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
@@ -94,7 +94,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_edit_product_buy_price"
-            style="@style/Widget.NiimbotPrintAgent.TextInput"
+            style="@style/Widget.LithiaLabelPrinter.TextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
@@ -102,7 +102,7 @@
             app:prefixText="Rp ">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_edit_product_buy_price"
-                style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                style="@style/Widget.LithiaLabelPrinter.FormEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="number"
@@ -110,14 +110,14 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.NiimbotPrintAgent.TextInput"
+            style="@style/Widget.LithiaLabelPrinter.TextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:hint="@string/label_kode_harga_beli">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_edit_product_buy_code"
-                style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                style="@style/Widget.LithiaLabelPrinter.FormEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:maxLines="1" />
@@ -125,7 +125,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_edit_product_sell_price"
-            style="@style/Widget.NiimbotPrintAgent.TextInput"
+            style="@style/Widget.LithiaLabelPrinter.TextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
@@ -133,7 +133,7 @@
             app:prefixText="Rp ">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_edit_product_sell_price"
-                style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                style="@style/Widget.LithiaLabelPrinter.FormEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="number"
@@ -141,14 +141,14 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.NiimbotPrintAgent.TextInput"
+            style="@style/Widget.LithiaLabelPrinter.TextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:hint="@string/product_min_stock">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_edit_product_min_stock"
-                style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                style="@style/Widget.LithiaLabelPrinter.FormEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="number"
@@ -156,7 +156,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.NiimbotPrintAgent.TextInput"
+            style="@style/Widget.LithiaLabelPrinter.TextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
@@ -173,14 +173,14 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.NiimbotPrintAgent.TextInput"
+            style="@style/Widget.LithiaLabelPrinter.TextInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:hint="@string/product_description">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_edit_product_description"
-                style="@style/Widget.NiimbotPrintAgent.FormEditText"
+                style="@style/Widget.LithiaLabelPrinter.FormEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="top|start"

@@ -56,7 +56,6 @@ class XPrinterBluetoothManager(context: Context) {
                 disconnectInternal()
                 val device = adapter?.getRemoteDevice(macAddress)
                     ?: throw IOException("Bluetooth tidak tersedia")
-                adapter.cancelDiscovery()
                 val newSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
                 newSocket.connect()
                 socket = newSocket

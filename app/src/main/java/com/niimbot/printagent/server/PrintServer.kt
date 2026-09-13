@@ -3,7 +3,6 @@ package com.niimbot.printagent.server
 import android.graphics.BitmapFactory
 import android.content.Intent
 import android.util.Log
-import com.niimbot.printagent.ble.NiimbotBluetoothManager
 import com.niimbot.printagent.ble.XPrinterBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.data.LogAction
@@ -49,7 +48,7 @@ data class PrintRequest(
     val tanggalMasuk: String? = null,
     val qty: Int = 1,
     val printerMac: String? = null,
-    val printerModel: String = "B1",
+    val printerModel: String = "XPrinter TSPL",
     val printDirection: String = "top"
 )
 
@@ -73,7 +72,7 @@ data class HealthResponse(
 data class PrinterStatus(
     val connected: Boolean,
     val mac: String? = null,
-    val model: String = "B1",
+    val model: String = "XPrinter TSPL",
     val battery: Int? = null,
     val paperStatus: String = "ok"
 )
@@ -104,7 +103,6 @@ data class StatusResponse(
 class PrintServer(
     private val context: android.content.Context,
     private val database: AppDatabase,
-    private val bleManager: NiimbotBluetoothManager,
     private val xPrinterManager: XPrinterBluetoothManager
 ) {
 
@@ -143,7 +141,7 @@ class PrintServer(
                             printer = PrinterStatus(
                                 connected = isPrinterConnected(config),
                                 mac = config?.macAddress,
-                                model = config?.model ?: "B1"
+                                model = config?.model ?: "XPrinter TSPL"
                             ),
                             queue = QueueStatus(
                                 pending = getPendingCount(),
@@ -253,12 +251,8 @@ class PrintServer(
         Log.i("PrintServer", "HTTP server started on $host:$port")
     }
 
-    private fun isPrinterConnected(config: PrinterConfig?): Boolean =
-        if (config?.printerType == "XPRINTER") {
-            xPrinterManager.connectionStateLive.value == XPrinterBluetoothManager.STATE_CONNECTED
-        } else {
-            bleManager.connectionStateLive.value == NiimbotBluetoothManager.STATE_CONNECTED
-        }
+    private fun isPrinterConnected(@Suppress("UNUSED_PARAMETER") config: PrinterConfig?): Boolean =
+        xPrinterManager.connectionStateLive.value == XPrinterBluetoothManager.STATE_CONNECTED
 
     fun stop() {
         server?.stop(1000, 2000)

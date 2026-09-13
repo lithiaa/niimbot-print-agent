@@ -55,7 +55,7 @@
                 android:ellipsize="end"
                 android:fontFamily="sans-serif-medium"
                 android:maxLines="1"
-                android:text="Niimbot B1 Pro"
+                android:text="XPrinter"
                 android:textColor="@color/list_text_primary"
                 android:textSize="16sp" />
 

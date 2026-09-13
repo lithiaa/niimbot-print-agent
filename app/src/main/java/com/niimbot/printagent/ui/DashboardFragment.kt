@@ -15,7 +15,7 @@ import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.niimbot.printagent.R
-import com.niimbot.printagent.ble.NiimbotBluetoothManager
+import com.niimbot.printagent.ble.XPrinterBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintStatus
@@ -35,6 +35,9 @@ class DashboardFragment : Fragment() {
 
     @Inject
     lateinit var database: AppDatabase
+
+    @Inject
+    lateinit var xPrinterManager: XPrinterBluetoothManager
 
     private var tvPrinterStatus: TextView? = null
     private var tvStatusDot: TextView? = null
@@ -59,7 +62,7 @@ class DashboardFragment : Fragment() {
     private var printingJobs: List<PrintJob> = emptyList()
     private var doneJobs: List<PrintJob> = emptyList()
     private var failedJobs: List<PrintJob> = emptyList()
-    private var connectionState = NiimbotBluetoothManager.STATE_DISCONNECTED
+    private var connectionState = XPrinterBluetoothManager.STATE_DISCONNECTED
     private var uptimeJob: Job? = null
 
     override fun onCreateView(
@@ -125,21 +128,18 @@ class DashboardFragment : Fragment() {
     }
 
     private fun observeData() {
-        val bleManager = (requireActivity().applicationContext as com.niimbot.printagent.NiimbotPrintApplication)
-            .getNiimbotManager()
-
-        bleManager.connectionStateLive.observe(viewLifecycleOwner) { state ->
+        xPrinterManager.connectionStateLive.observe(viewLifecycleOwner) { state ->
             connectionState = state
             val statusText = when (state) {
-                NiimbotBluetoothManager.STATE_CONNECTED -> "Terhubung"
-                NiimbotBluetoothManager.STATE_CONNECTING -> "Menghubungkan..."
-                NiimbotBluetoothManager.STATE_DISCONNECTED -> "Terputus"
+                XPrinterBluetoothManager.STATE_CONNECTED -> "Terhubung"
+                XPrinterBluetoothManager.STATE_CONNECTING -> "Menghubungkan..."
+                XPrinterBluetoothManager.STATE_DISCONNECTED -> "Terputus"
                 else -> "Tidak diketahui"
             }
             val statusColor = when (state) {
-                NiimbotBluetoothManager.STATE_CONNECTED -> R.color.success
-                NiimbotBluetoothManager.STATE_CONNECTING -> R.color.warning
-                NiimbotBluetoothManager.STATE_DISCONNECTED -> R.color.error
+                XPrinterBluetoothManager.STATE_CONNECTED -> R.color.success
+                XPrinterBluetoothManager.STATE_CONNECTING -> R.color.warning
+                XPrinterBluetoothManager.STATE_DISCONNECTED -> R.color.error
                 else -> R.color.text_muted
             }
             tvPrinterStatus?.text = statusText
@@ -328,7 +328,7 @@ class ConnectionGaugeView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : DashboardChartView(context, attrs) {
-    private var connectionState = NiimbotBluetoothManager.STATE_DISCONNECTED
+    private var connectionState = XPrinterBluetoothManager.STATE_DISCONNECTED
     private var hasJobs = false
     private val arcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
 
@@ -355,18 +355,18 @@ class ConnectionGaugeView @JvmOverloads constructor(
         canvas.drawArc(rect, 180f, -180f, false, arcPaint)
 
         val sweep = when (connectionState) {
-            NiimbotBluetoothManager.STATE_CONNECTED -> 180f
-            NiimbotBluetoothManager.STATE_CONNECTING -> 90f
+            XPrinterBluetoothManager.STATE_CONNECTED -> 180f
+            XPrinterBluetoothManager.STATE_CONNECTING -> 90f
             else -> 0f
         }
         if (sweep > 0f) {
-            arcPaint.color = if (connectionState == NiimbotBluetoothManager.STATE_CONNECTED) success else ContextCompat.getColor(context, R.color.warning)
+            arcPaint.color = if (connectionState == XPrinterBluetoothManager.STATE_CONNECTED) success else ContextCompat.getColor(context, R.color.warning)
             canvas.drawArc(rect, 180f, -sweep, false, arcPaint)
         }
 
         val status = when (connectionState) {
-            NiimbotBluetoothManager.STATE_CONNECTED -> "Siap"
-            NiimbotBluetoothManager.STATE_CONNECTING -> "Menghubungkan"
+            XPrinterBluetoothManager.STATE_CONNECTED -> "Siap"
+            XPrinterBluetoothManager.STATE_CONNECTING -> "Menghubungkan"
             else -> "Luring"
         }
         labelPaint.color = ContextCompat.getColor(context, R.color.text_primary)

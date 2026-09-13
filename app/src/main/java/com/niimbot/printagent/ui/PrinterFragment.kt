@@ -16,9 +16,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.niimbot.printagent.NiimbotPrintApplication
 import com.niimbot.printagent.R
-import com.niimbot.printagent.ble.NiimbotBluetoothManager
 import com.niimbot.printagent.ble.XPrinterBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.data.PrintStatus
@@ -27,7 +25,6 @@ import com.niimbot.printagent.service.PrintForegroundService
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -51,7 +48,7 @@ class PrinterFragment : Fragment() {
     private var tvPrintQueueEmpty: TextView? = null
     private var printQueueAdapter: JobAdapter? = null
     private lateinit var printerTypeDropdown: AutoCompleteTextView
-    private var selectedChoice = PrinterChoice.NIIMBOT
+    private var selectedChoice = PrinterChoice.XPRINTER_203
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -92,17 +89,15 @@ class PrinterFragment : Fragment() {
             ArrayAdapter(requireContext(), R.layout.item_label_dropdown, PrinterChoice.entries.map { it.label })
         )
         printerTypeDropdown.setText(selectedChoice.label, false)
+        btnScan?.setText(R.string.load_paired_xprinters)
         printerTypeDropdown.setOnClickListener { printerTypeDropdown.showDropDown() }
         printerTypeDropdown.setOnItemClickListener { parent, _, position, _ ->
             val label = parent.getItemAtPosition(position)?.toString()
-            selectedChoice = PrinterChoice.entries.firstOrNull { it.label == label } ?: PrinterChoice.NIIMBOT
+            selectedChoice = PrinterChoice.entries.firstOrNull { it.label == label } ?: PrinterChoice.XPRINTER_203
             deviceAdapter?.submitList(emptyList())
             rvDevices?.visibility = View.GONE
             tvDiscoveredLabel?.visibility = View.GONE
-            btnScan?.text = getString(
-                if (selectedChoice.type == TYPE_NIIMBOT) R.string.scan_printers
-                else R.string.load_paired_xprinters
-            )
+            btnScan?.setText(R.string.load_paired_xprinters)
             updateConnectionUi()
         }
     }
@@ -139,57 +134,51 @@ class PrinterFragment : Fragment() {
                 btnForgetPrinter?.visibility = View.GONE
                 return@observe
             }
-            selectedChoice = PrinterChoice.from(config.printerType, config.printerDpi)
+            if (config.printerType != TYPE_XPRINTER) {
+                requireContext().getSharedPreferences("niimbot_prefs", android.content.Context.MODE_PRIVATE)
+                    .edit()
+                    .remove("printer_mac")
+                    .remove("printer_name")
+                    .putString("printer_type", TYPE_XPRINTER)
+                    .putInt("printer_dpi", 203)
+                    .apply()
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                    database.printerConfigDao().clear()
+                }
+                xPrinterManager.disconnect()
+                return@observe
+            }
+            selectedChoice = PrinterChoice.from(config.printerDpi)
             printerTypeDropdown.setText(selectedChoice.label, false)
             tvPrinterName?.text = config.name
             tvPrinterMac?.text = config.macAddress ?: "—"
             tvPrinterModel?.text = config.model
             btnForgetPrinter?.visibility = if (config.macAddress != null) View.VISIBLE else View.GONE
-            btnScan?.text = getString(
-                if (selectedChoice.type == TYPE_NIIMBOT) R.string.scan_printers
-                else R.string.load_paired_xprinters
-            )
+            btnScan?.setText(R.string.load_paired_xprinters)
             updateConnectionUi()
         }
     }
 
     private fun observeConnectionState() {
-        niimbotManager().connectionStateLive.observe(viewLifecycleOwner) { updateConnectionUi() }
         xPrinterManager.connectionStateLive.observe(viewLifecycleOwner) { updateConnectionUi() }
-        niimbotManager().discoveredDevicesLive.observe(viewLifecycleOwner) { devices ->
-            if (selectedChoice.type != TYPE_NIIMBOT) return@observe
-            showDevices(devices)
-        }
     }
 
     private fun updateConnectionUi() {
-        val state = if (selectedChoice.type == TYPE_NIIMBOT) {
-            niimbotManager().connectionStateLive.value ?: NiimbotBluetoothManager.STATE_DISCONNECTED
-        } else {
-            xPrinterManager.connectionStateLive.value ?: XPrinterBluetoothManager.STATE_DISCONNECTED
-        }
-        val connectedState = if (selectedChoice.type == TYPE_NIIMBOT) {
-            NiimbotBluetoothManager.STATE_CONNECTED
-        } else {
-            XPrinterBluetoothManager.STATE_CONNECTED
-        }
-        val connectingState = if (selectedChoice.type == TYPE_NIIMBOT) {
-            NiimbotBluetoothManager.STATE_CONNECTING
-        } else {
-            XPrinterBluetoothManager.STATE_CONNECTING
-        }
+        val state = xPrinterManager.connectionStateLive.value ?: XPrinterBluetoothManager.STATE_DISCONNECTED
+        val connectedState = XPrinterBluetoothManager.STATE_CONNECTED
+        val connectingState = XPrinterBluetoothManager.STATE_CONNECTING
         tvConnectionStatus?.text = when (state) {
             connectedState -> getString(R.string.printer_connected)
             connectingState -> getString(R.string.printer_connecting)
             else -> getString(R.string.printer_disconnected)
         }
         btnTestPrint?.isEnabled = state == connectedState
-        tvBattery?.text = if (selectedChoice.type == TYPE_NIIMBOT) "—" else getString(R.string.printer_battery_unavailable)
+        tvBattery?.setText(R.string.printer_battery_unavailable)
     }
 
     private fun setupClickListeners() {
         btnScan?.setOnClickListener {
-            if (selectedChoice.type == TYPE_NIIMBOT) scanNiimbot() else loadPairedXPrinters()
+            loadPairedXPrinters()
         }
         btnTestPrint?.setOnClickListener {
             val intent = android.content.Intent(requireContext(), PrintForegroundService::class.java).apply {
@@ -199,18 +188,6 @@ class PrinterFragment : Fragment() {
             androidx.core.content.ContextCompat.startForegroundService(requireContext(), intent)
         }
         btnForgetPrinter?.setOnClickListener { forgetPrinter() }
-    }
-
-    private fun scanNiimbot() {
-        progressBar?.visibility = View.VISIBLE
-        btnScan?.isEnabled = false
-        niimbotManager().startScan()
-        viewLifecycleOwner.lifecycleScope.launch {
-            delay(10_000)
-            niimbotManager().stopScan()
-            btnScan?.isEnabled = true
-            progressBar?.visibility = View.GONE
-        }
     }
 
     @SuppressLint("MissingPermission")
@@ -232,16 +209,7 @@ class PrinterFragment : Fragment() {
     }
 
     private fun pairPrinter(device: BluetoothDevice) {
-        if (selectedChoice.type == TYPE_NIIMBOT) pairNiimbot(device) else pairXPrinter(device)
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun pairNiimbot(device: BluetoothDevice) {
-        niimbotManager().stopScan()
-        niimbotManager().connect(device.address) { success ->
-            if (success) savePrinter(device, PrinterChoice.NIIMBOT)
-            showPairingResult(success, device.name, null)
-        }
+        pairXPrinter(device)
     }
 
     @SuppressLint("MissingPermission")
@@ -266,7 +234,7 @@ class PrinterFragment : Fragment() {
             database.printerConfigDao().insert(
                 PrinterConfig(
                     macAddress = device.address,
-                    model = if (choice.type == TYPE_NIIMBOT) "B1" else "XPrinter TSPL ${choice.dpi} DPI",
+                    model = "XPrinter TSPL ${choice.dpi} DPI",
                     name = name,
                     printerType = choice.type,
                     printerDpi = choice.dpi,
@@ -296,30 +264,23 @@ class PrinterFragment : Fragment() {
             .remove("printer_dpi")
             .apply()
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) { database.printerConfigDao().clear() }
-        niimbotManager().disconnect()
         xPrinterManager.disconnect()
         Toast.makeText(requireContext(), R.string.printer_forgotten, Toast.LENGTH_SHORT).show()
     }
 
-    private fun niimbotManager(): NiimbotBluetoothManager =
-        (requireActivity().applicationContext as NiimbotPrintApplication).getNiimbotManager()
-
     private enum class PrinterChoice(val label: String, val type: String, val dpi: Int) {
-        NIIMBOT("Niimbot BLE (B1/B1 Pro)", TYPE_NIIMBOT, 300),
         XPRINTER_203("XPrinter Bluetooth TSPL · 203 DPI", TYPE_XPRINTER, 203),
         XPRINTER_300("XPrinter Bluetooth TSPL · 300 DPI", TYPE_XPRINTER, 300);
 
         companion object {
-            fun from(type: String, dpi: Int): PrinterChoice = when {
-                type == TYPE_XPRINTER && dpi >= 300 -> XPRINTER_300
-                type == TYPE_XPRINTER -> XPRINTER_203
-                else -> NIIMBOT
+            fun from(dpi: Int): PrinterChoice = when {
+                dpi >= 300 -> XPRINTER_300
+                else -> XPRINTER_203
             }
         }
     }
 
     private companion object {
-        const val TYPE_NIIMBOT = "NIIMBOT"
         const val TYPE_XPRINTER = "XPRINTER"
     }
 }

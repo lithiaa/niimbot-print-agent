@@ -54,7 +54,7 @@ abstract class AppDatabase : RoomDatabase() {
         private val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE print_jobs ADD COLUMN tanggalMasuk TEXT")
-                db.execSQL("ALTER TABLE printer_configs ADD COLUMN printerType TEXT NOT NULL DEFAULT 'NIIMBOT'")
+                db.execSQL("ALTER TABLE printer_configs ADD COLUMN printerType TEXT NOT NULL DEFAULT 'XPRINTER'")
                 db.execSQL("ALTER TABLE printer_configs ADD COLUMN printerDpi INTEGER NOT NULL DEFAULT 300")
             }
         }

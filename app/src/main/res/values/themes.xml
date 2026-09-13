@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.NiimbotPrintAgent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.LithiaLabelPrinter" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryVariant">@color/primary_dark</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -17,13 +17,13 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
         <item name="android:fontFamily">sans</item>
-        <item name="materialCardViewStyle">@style/Widget.NiimbotPrintAgent.Card</item>
-        <item name="materialButtonStyle">@style/Widget.NiimbotPrintAgent.Button</item>
-        <item name="bottomNavigationStyle">@style/Widget.NiimbotPrintAgent.BottomNavigation</item>
-        <item name="textInputStyle">@style/Widget.NiimbotPrintAgent.TextInput</item>
+        <item name="materialCardViewStyle">@style/Widget.LithiaLabelPrinter.Card</item>
+        <item name="materialButtonStyle">@style/Widget.LithiaLabelPrinter.Button</item>
+        <item name="bottomNavigationStyle">@style/Widget.LithiaLabelPrinter.BottomNavigation</item>
+        <item name="textInputStyle">@style/Widget.LithiaLabelPrinter.TextInput</item>
     </style>
 
-    <style name="Widget.NiimbotPrintAgent.TextInput" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+    <style name="Widget.LithiaLabelPrinter.TextInput" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
         <item name="boxBackgroundColor">@color/surface</item>
         <item name="boxStrokeColor">@color/primary</item>
         <item name="hintTextColor">@color/text_secondary</item>
@@ -36,14 +36,14 @@
         <item name="boxCornerRadiusBottomEnd">16dp</item>
     </style>
 
-    <style name="Widget.NiimbotPrintAgent.FormEditText" parent="Widget.MaterialComponents.TextInputEditText.OutlinedBox">
+    <style name="Widget.LithiaLabelPrinter.FormEditText" parent="Widget.MaterialComponents.TextInputEditText.OutlinedBox">
         <item name="android:textColor">@color/text_primary</item>
         <item name="android:textColorHint">@color/text_secondary</item>
         <item name="android:fontFamily">sans-serif</item>
         <item name="android:textSize">16sp</item>
     </style>
 
-    <style name="Widget.NiimbotPrintAgent.Card" parent="Widget.MaterialComponents.CardView">
+    <style name="Widget.LithiaLabelPrinter.Card" parent="Widget.MaterialComponents.CardView">
         <item name="cardBackgroundColor">@color/surface</item>
         <item name="cardCornerRadius">20dp</item>
         <item name="cardElevation">0dp</item>
@@ -51,52 +51,52 @@
         <item name="strokeWidth">1dp</item>
     </style>
 
-    <style name="Widget.NiimbotPrintAgent.Button" parent="Widget.MaterialComponents.Button">
+    <style name="Widget.LithiaLabelPrinter.Button" parent="Widget.MaterialComponents.Button">
         <item name="cornerRadius">24dp</item>
         <item name="android:minHeight">48dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
 
-    <style name="Widget.NiimbotPrintAgent.BottomNavigation" parent="Widget.MaterialComponents.BottomNavigationView">
+    <style name="Widget.LithiaLabelPrinter.BottomNavigation" parent="Widget.MaterialComponents.BottomNavigationView">
         <item name="itemIconTint">@color/nav_item_color</item>
         <item name="itemTextColor">@color/nav_item_color</item>
         <item name="itemRippleColor">@android:color/transparent</item>
-        <item name="itemTextAppearanceActive">@style/TextAppearance.Niimbot.Nav.Active</item>
-        <item name="itemTextAppearanceInactive">@style/TextAppearance.Niimbot.Nav.Inactive</item>
+        <item name="itemTextAppearanceActive">@style/TextAppearance.LithiaLabel.Nav.Active</item>
+        <item name="itemTextAppearanceInactive">@style/TextAppearance.LithiaLabel.Nav.Inactive</item>
         <item name="elevation">0dp</item>
     </style>
 
-    <style name="TextAppearance.Niimbot.Nav.Active" parent="TextAppearance.MaterialComponents.Caption">
+    <style name="TextAppearance.LithiaLabel.Nav.Active" parent="TextAppearance.MaterialComponents.Caption">
         <item name="android:textSize">10sp</item>
         <item name="android:fontFamily">sans-serif</item>
     </style>
 
-    <style name="TextAppearance.Niimbot.Nav.Inactive" parent="TextAppearance.MaterialComponents.Caption">
+    <style name="TextAppearance.LithiaLabel.Nav.Inactive" parent="TextAppearance.MaterialComponents.Caption">
         <item name="android:textSize">10sp</item>
         <item name="android:fontFamily">sans-serif</item>
     </style>
 
-    <style name="Theme.NiimbotPrintAgent.NoActionBar" parent="Theme.NiimbotPrintAgent">
+    <style name="Theme.LithiaLabelPrinter.NoActionBar" parent="Theme.LithiaLabelPrinter">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
 
-    <style name="Theme.NiimbotPrintAgent.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog">
+    <style name="Theme.LithiaLabelPrinter.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorSurface">@color/surface</item>
     </style>
 
-    <style name="Theme.NiimbotPrintAgent.BottomSheet" parent="Theme.MaterialComponents.BottomSheetDialog">
-        <item name="bottomSheetStyle">@style/Widget.NiimbotPrintAgent.BottomSheet.Modal</item>
+    <style name="Theme.LithiaLabelPrinter.BottomSheet" parent="Theme.MaterialComponents.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.LithiaLabelPrinter.BottomSheet.Modal</item>
     </style>
 
-    <style name="Widget.NiimbotPrintAgent.BottomSheet.Modal" parent="Widget.MaterialComponents.BottomSheet.Modal">
+    <style name="Widget.LithiaLabelPrinter.BottomSheet.Modal" parent="Widget.MaterialComponents.BottomSheet.Modal">
         <item name="android:background">@color/surface</item>
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NiimbotPrintAgent.BottomSheet</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.LithiaLabelPrinter.BottomSheet</item>
     </style>
 
-    <style name="ShapeAppearanceOverlay.NiimbotPrintAgent.BottomSheet" parent="">
+    <style name="ShapeAppearanceOverlay.LithiaLabelPrinter.BottomSheet" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSizeTopLeft">16dp</item>
         <item name="cornerSizeTopRight">16dp</item>

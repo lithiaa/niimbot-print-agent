@@ -31,7 +31,7 @@ data class PosProduct(
     val kategori: PosCategory? = null,
     val supplier: PosSupplier? = null,
     @SerialName("stok_minimum") val stokMinimum: Int = 0,
-    @SerialName("stok_status") val stokStatus: String? = null,
+    @SerialName("stok_status") @JsonNames("status") val stokStatus: String? = null,
     val deskripsi: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null

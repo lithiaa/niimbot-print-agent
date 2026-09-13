@@ -27,9 +27,6 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputLayout
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.niimbot.printagent.R
-import com.niimbot.printagent.NiimbotPrintApplication
-import com.niimbot.printagent.ble.NiimbotBluetoothManager
-import com.niimbot.printagent.ble.NiimbotLabelMetadataClient
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.data.LogAction
 import com.niimbot.printagent.data.PrintJob
@@ -68,7 +65,6 @@ class LabelFragment : Fragment() {
     @Inject lateinit var database: AppDatabase
     @Inject lateinit var configStore: IntegrationConfigStore
     @Inject lateinit var posApiClient: PosApiClient
-    @Inject lateinit var labelMetadataClient: NiimbotLabelMetadataClient
 
     private lateinit var tilSku: TextInputLayout
     private lateinit var tilNama: TextInputLayout
@@ -109,7 +105,6 @@ class LabelFragment : Fragment() {
     private var selectedSupplierId: Long? = null
     private var applyingProductSuggestion = false
     private val availableLabelSizes = LabelSize.entries.toMutableList()
-    private var metadataConsentPromptShown = false
     private var isTabletLayout = false
     private var brandLogo: Bitmap? = null
 
@@ -167,7 +162,6 @@ class LabelFragment : Fragment() {
         tilTanggalMasuk.setEndIconOnClickListener { showEntryDatePicker() }
         btnResetForm.setOnClickListener { confirmResetForm() }
         btnPrint.setOnClickListener { confirmPrint() }
-        observePrinterConnection()
         updatePreview(showErrors = false)
     }
 
@@ -218,63 +212,6 @@ class LabelFragment : Fragment() {
             ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply { topMargin = dp(12) }
     }
-
-    private fun observePrinterConnection() {
-        niimbotManager().connectionStateLive.observe(viewLifecycleOwner) { state ->
-            if (state == NiimbotBluetoothManager.STATE_CONNECTED) {
-                refreshDetectedLabelSize()
-            }
-        }
-    }
-
-    private fun refreshDetectedLabelSize() {
-        val manager = niimbotManager()
-        if (manager.connectionStateLive.value != NiimbotBluetoothManager.STATE_CONNECTED) {
-            return
-        }
-        manager.readLabelRollIdentity { roll, _ ->
-            view?.post {
-                if (!isAdded) return@post
-                if (roll != null) resolveAndApplyLabelSize(roll.barcode)
-            }
-        }
-    }
-
-    private fun resolveAndApplyLabelSize(barcode: String) {
-        val preferences = requireContext().getSharedPreferences(METADATA_PREFERENCES, 0)
-        if (!preferences.getBoolean(NIIMBOT_METADATA_CONSENT, false)) {
-            if (!metadataConsentPromptShown) {
-                metadataConsentPromptShown = true
-                MaterialAlertDialogBuilder(requireContext())
-                    .setTitle(R.string.label_size_detection_consent_title)
-                    .setMessage(R.string.label_size_detection_consent_message)
-                    .setNegativeButton(R.string.not_now, null)
-                    .setPositiveButton(R.string.allow_detection) { _, _ ->
-                        preferences.edit().putBoolean(NIIMBOT_METADATA_CONSENT, true).apply()
-                        fetchAndApplyLabelSize(barcode)
-                    }
-                    .show()
-            }
-            return
-        }
-        fetchAndApplyLabelSize(barcode)
-    }
-
-    private fun fetchAndApplyLabelSize(barcode: String) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            val detected = labelMetadataClient.getLabelSize(barcode)
-            if (!isAdded || detected == null) return@launch
-            val size = LabelSize.detected(detected.widthMm, detected.heightMm)
-            if (size !in availableLabelSizes) availableLabelSizes += size
-            updateLabelSizeAdapter()
-            dropdownLabelSize.setText(size.displayName, false)
-            saveDraft()
-            updatePreview(showErrors = false)
-        }
-    }
-
-    private fun niimbotManager(): NiimbotBluetoothManager =
-        (requireActivity().applicationContext as NiimbotPrintApplication).getNiimbotManager()
 
     private fun confirmResetForm() {
         MaterialAlertDialogBuilder(requireContext())
@@ -964,7 +901,6 @@ class LabelFragment : Fragment() {
     private companion object {
         const val TAG = "LabelFragment"
         const val DRAFT_PREFERENCES = "label_draft"
-        const val METADATA_PREFERENCES = "label_metadata_preferences"
         const val DRAFT_SKU = "sku"
         const val DRAFT_NAMA = "nama"
         const val DRAFT_KODE_HARGA_BELI = "kode_harga_beli"
@@ -980,6 +916,5 @@ class LabelFragment : Fragment() {
         const val DRAFT_ADD_TO_POS = "add_to_pos"
         const val DRAFT_LABEL_SIZE = "label_size"
         const val NO_SUPPLIER_ID = -1L
-        const val NIIMBOT_METADATA_CONSENT = "niimbot_metadata_consent"
     }
 }

@@ -82,7 +82,7 @@ class PosApiClientRequestTest {
     }
 
     @Test
-    fun `create posts current barang payload with supplier id`() = runBlocking {
+    fun `create posts current payload with supplier id to barang endpoint`() = runBlocking {
         val recorder = RecordingResponder(
             """{"sku":"SKU-1","nama":"Barang","harga_modal":100,"harga_jual":150,"stok_awal":4}"""
         )
@@ -97,7 +97,7 @@ class PosApiClientRequestTest {
 
         assertTrue(result is PosApiResult.Success)
         assertEquals("POST", recorder.request.method)
-        assertEquals("/base/api/integration/barang", recorder.request.url.encodedPath)
+        assertEquals("/base/api/barang", recorder.request.url.encodedPath)
         assertEquals("Bearer secret", recorder.request.header("Authorization"))
         assertNull(recorder.request.header("X-Integration-Key"))
         assertEquals(
@@ -158,7 +158,9 @@ class PosApiClientRequestTest {
 
     @Test
     fun `search sends query and bearer token then decodes product list`() = runBlocking {
-        val recorder = RecordingResponder("""{"data":[$responseJson]}""")
+        val recorder = RecordingResponder(
+            """{"data":[$responseJson],"total":1,"page":1,"limit":7}"""
+        )
         val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
 
         val result = api.searchProducts(
@@ -170,8 +172,9 @@ class PosApiClientRequestTest {
 
         assertTrue(result is PosApiResult.Success)
         assertEquals("GET", recorder.request.method)
-        assertEquals("/base/api/integration/barang/search", recorder.request.url.encodedPath)
-        assertEquals("Barang", recorder.request.url.queryParameter("q"))
+        assertEquals("/base/api/barang", recorder.request.url.encodedPath)
+        assertEquals("Barang", recorder.request.url.queryParameter("search"))
+        assertEquals("1", recorder.request.url.queryParameter("page"))
         assertEquals("7", recorder.request.url.queryParameter("limit"))
         assertEquals("Bearer secret", recorder.request.header("Authorization"))
         assertNull(recorder.request.header("X-Integration-Key"))
@@ -190,7 +193,7 @@ class PosApiClientRequestTest {
 
         assertTrue(result is PosApiResult.Success)
         assertEquals("GET", recorder.request.method)
-        assertEquals("/base/api/integration/suppliers", recorder.request.url.encodedPath)
+        assertEquals("/base/api/supplier", recorder.request.url.encodedPath)
         assertEquals("Bearer secret", recorder.request.header("Authorization"))
         assertNull(recorder.request.header("X-Integration-Key"))
         assertEquals("SA", (result as PosApiResult.Success).value.single().codeForLabel)
@@ -205,7 +208,7 @@ class PosApiClientRequestTest {
 
         assertTrue(result is PosApiResult.Success)
         assertEquals("GET", recorder.request.method)
-        assertEquals("/base/api/integration/barang/42", recorder.request.url.encodedPath)
+        assertEquals("/base/api/barang/42", recorder.request.url.encodedPath)
         assertEquals("Bearer secret", recorder.request.header("Authorization"))
         assertNull(recorder.request.header("X-Integration-Key"))
     }
@@ -236,7 +239,7 @@ class PosApiClientRequestTest {
 
         assertTrue(result is PosApiResult.Success)
         assertEquals("PUT", recorder.request.method)
-        assertEquals("/base/api/integration/barang/42", recorder.request.url.encodedPath)
+        assertEquals("/base/api/barang/42", recorder.request.url.encodedPath)
         assertEquals("Bearer secret", recorder.request.header("Authorization"))
         assertNull(recorder.request.header("X-Integration-Key"))
         val body = recorder.request.bodyText()
@@ -246,7 +249,7 @@ class PosApiClientRequestTest {
     }
 
     @Test
-    fun `product list uses integration endpoint with pagination and optional query`() = runBlocking {
+    fun `product list uses authenticated endpoint with pagination and supported filters`() = runBlocking {
         val recorder = RecordingResponder(
             """{"data":[$responseJson],"total":21,"page":2,"limit":10}"""
         )
@@ -256,19 +259,91 @@ class PosApiClientRequestTest {
             "https://pos.example/base/",
             "secret",
             query = "Kopi",
+            stockStatus = "menipis",
             page = 2,
             limit = 10
         )
 
         assertTrue(result is PosApiResult.Success)
         assertEquals("GET", recorder.request.method)
-        assertEquals("/base/api/integration/barang", recorder.request.url.encodedPath)
-        assertEquals("Kopi", recorder.request.url.queryParameter("q"))
+        assertEquals("/base/api/barang", recorder.request.url.encodedPath)
+        assertEquals("Kopi", recorder.request.url.queryParameter("search"))
+        assertEquals("true", recorder.request.url.queryParameter("stok_menipis"))
         assertEquals("2", recorder.request.url.queryParameter("page"))
         assertEquals("10", recorder.request.url.queryParameter("limit"))
         assertEquals("Bearer secret", recorder.request.header("Authorization"))
         assertNull(recorder.request.header("X-Integration-Key"))
         assertEquals(21, (result as PosApiResult.Success).value.total)
+    }
+
+    @Test
+    fun `feature 401 keeps local session when auth identity is still valid`() = runBlocking {
+        val requests = mutableListOf<Request>()
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                requests += request
+                val isIdentityCheck = request.url.encodedPath.endsWith("/api/auth/me")
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(if (isIdentityCheck) 200 else 401)
+                    .message("OK")
+                    .body(
+                        (if (isIdentityCheck) {
+                            """{"username":"operator","role":"admin"}"""
+                        } else {
+                            "{}"
+                        }).toResponseBody()
+                    )
+                    .build()
+            }
+            .build()
+        val api = PosApiClient(client, Json { ignoreUnknownKeys = true })
+
+        val result = api.listSuppliers("https://pos.example/base/", "still-valid")
+
+        assertTrue(result is PosApiResult.Failure)
+        assertEquals(401, (result as PosApiResult.Failure).statusCode)
+        assertEquals(
+            listOf("/base/api/supplier", "/base/api/auth/me"),
+            requests.map { it.url.encodedPath }
+        )
+    }
+
+    @Test
+    fun `product metadata uses authenticated category and supplier endpoints`() = runBlocking {
+        val requests = mutableListOf<Request>()
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                requests += request
+                val body = if (request.url.encodedPath.endsWith("/api/kategori")) {
+                    """[{"id":3,"nama":"Oli"}]"""
+                } else {
+                    """[{"id":7,"nama":"Supplier A"}]"""
+                }
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(body.toResponseBody())
+                    .build()
+            }
+            .build()
+        val api = PosApiClient(client, Json { ignoreUnknownKeys = true })
+
+        val result = api.getProductMeta("https://pos.example/base/", "secret")
+
+        assertTrue(result is PosApiResult.Success)
+        result as PosApiResult.Success
+        assertEquals("Oli", result.value.categories.single().nama)
+        assertEquals("Supplier A", result.value.suppliers.single().displayName)
+        assertEquals(
+            listOf("/base/api/kategori", "/base/api/supplier"),
+            requests.map { it.url.encodedPath }
+        )
     }
 
     private class RecordingResponder(responseJson: String, private val statusCode: Int? = null) {

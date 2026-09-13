@@ -7,8 +7,8 @@ data class LabelSize(
     val heightMm: Int
 ) {
 
-    // A 50 mm B1 Pro roll has a validated printable width of 584 px. The raw
-    // 300-dpi conversion is 590 px, which the printer rejects at SetPageSize.
+    // Keep the established 50 mm design canvas at 584 px; XPrinter output is
+    // scaled to the configured 203/300 DPI immediately before TSPL encoding.
     val widthPx: Int get() = if (widthMm == 50) 584 else mmToPx(widthMm)
     val heightPx: Int get() = mmToPx(heightMm)
 

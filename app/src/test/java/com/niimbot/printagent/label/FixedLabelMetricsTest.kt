@@ -30,4 +30,18 @@ class FixedLabelMetricsTest {
                 }
         }
     }
+
+    @Test
+    fun `product name reserves two near-original-height lines without overlap`() {
+        listOf(LabelSize.MM_50_X_30, LabelSize.MM_30_X_20).forEach { size ->
+            val metrics = FixedLabelMetrics.forSize(size)
+            val productHeight = metrics.productName.bottom - metrics.productName.top
+            val lineHeight = productHeight * .96f / 2f
+
+            assertTrue(productHeight >= .279f)
+            assertTrue(lineHeight >= .134f)
+            assertTrue(metrics.metadata.bottom < metrics.productName.top)
+            assertTrue(metrics.productName.bottom < metrics.price.top)
+        }
+    }
 }

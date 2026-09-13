@@ -1,7 +1,6 @@
 package com.niimbot.printagent.di
 
 import android.content.Context
-import com.niimbot.printagent.ble.NiimbotBluetoothManager
 import com.niimbot.printagent.ble.XPrinterBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.pos.IntegrationConfigStore
@@ -20,12 +19,6 @@ import java.util.concurrent.TimeUnit
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-
-    @Provides
-    @Singleton
-    fun provideNiimbotBluetoothManager(@ApplicationContext context: Context): NiimbotBluetoothManager {
-        return NiimbotBluetoothManager(context)
-    }
 
     @Provides
     @Singleton
@@ -74,9 +67,8 @@ object AppModule {
     fun providePrintServer(
         @ApplicationContext context: Context,
         database: AppDatabase,
-        bleManager: NiimbotBluetoothManager,
         xPrinterManager: XPrinterBluetoothManager
     ): PrintServer {
-        return PrintServer(context, database, bleManager, xPrinterManager)
+        return PrintServer(context, database, xPrinterManager)
     }
 }
