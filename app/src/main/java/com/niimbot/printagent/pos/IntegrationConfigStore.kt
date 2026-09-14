@@ -12,7 +12,7 @@ import javax.crypto.spec.GCMParameterSpec
 
 class IntegrationConfigStore(context: Context) {
     companion object {
-        const val DEFAULT_BASE_URL = "https://api.ijm.lithiaproject.site"
+        const val DEFAULT_BASE_URL = "https://api-ijm.lithiaproject.site"
 
         private const val PREFS_NAME = "niimbot_pos_integration"
         private const val PREF_BASE_URL = "base_url"
