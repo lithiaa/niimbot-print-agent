@@ -12,8 +12,7 @@ internal data class LabelPrefill(
     val purchasePriceCode: String,
     val supplierId: Long?,
     val supplierCode: String,
-    val supplierDisplay: String,
-    val createdAt: String?
+    val supplierDisplay: String
 )
 
 internal object LabelPrefillContract {
@@ -27,7 +26,6 @@ internal object LabelPrefillContract {
     private const val SUPPLIER_ID = "supplier_id"
     private const val SUPPLIER_CODE = "supplier_code"
     private const val SUPPLIER_DISPLAY = "supplier_display"
-    private const val CREATED_AT = "created_at"
 
     fun fromProduct(product: PosProduct): LabelPrefill {
         val supplier = product.supplier
@@ -43,8 +41,7 @@ internal object LabelPrefillContract {
             purchasePriceCode = product.hargaBeliKode.orEmpty(),
             supplierId = supplier?.id,
             supplierCode = supplier?.codeForLabel.orEmpty(),
-            supplierDisplay = supplierDisplay,
-            createdAt = product.createdAt
+            supplierDisplay = supplierDisplay
         )
     }
 
@@ -59,7 +56,6 @@ internal object LabelPrefillContract {
             prefill.supplierId?.let { putLong(SUPPLIER_ID, it) }
             putString(SUPPLIER_CODE, prefill.supplierCode)
             putString(SUPPLIER_DISPLAY, prefill.supplierDisplay)
-            putString(CREATED_AT, prefill.createdAt)
         }
     }
 
@@ -71,7 +67,6 @@ internal object LabelPrefillContract {
         purchasePriceCode = bundle.getString(PURCHASE_PRICE_CODE).orEmpty(),
         supplierId = bundle.getLong(SUPPLIER_ID).takeIf { bundle.containsKey(SUPPLIER_ID) },
         supplierCode = bundle.getString(SUPPLIER_CODE).orEmpty(),
-        supplierDisplay = bundle.getString(SUPPLIER_DISPLAY).orEmpty(),
-        createdAt = bundle.getString(CREATED_AT)
+        supplierDisplay = bundle.getString(SUPPLIER_DISPLAY).orEmpty()
     )
 }

@@ -1,11 +1,91 @@
 package com.niimbot.printagent.pos
 
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PosProductSerializationTest {
+
+    @Test
+    fun `product detail decodes photo filename and relative URL`() {
+        val product = Json.decodeFromString<PosProduct>(
+            """{
+                "id":12,"sku":"FLT-1","nama":"Filter Udara",
+                "harga_beli":10000,"harga_jual":15000,
+                "foto":"uuid.webp","foto_url":"/storage/foto-barang/uuid.webp"
+            }""".trimIndent()
+        )
+
+        assertEquals("uuid.webp", product.foto)
+        assertEquals("/storage/foto-barang/uuid.webp", product.fotoUrl)
+    }
+
+    @Test
+    fun `product detail decodes and orders multiple photos and suppliers`() {
+        val product = Json.decodeFromString<PosProduct>(
+            """{
+                "id":12,"sku":"FLT-1","nama":"Filter Udara",
+                "harga_modal":10000,"harga_jual":15000,
+                "primary_supplier_id":8,
+                "suppliers":[
+                    {"id":7,"nama":"Supplier A","is_primary":false,"jumlah_masuk_kumulatif":4},
+                    {"id":8,"nama":"Supplier B","is_primary":true,"jumlah_masuk_kumulatif":9}
+                ],
+                "photos":[
+                    {"id":21,"foto_url":"/storage/foto-barang/dua.webp","urutan":2,"is_primary":false},
+                    {"id":20,"foto_url":"/storage/foto-barang/utama.webp","urutan":1,"is_primary":true}
+                ]
+            }""".trimIndent()
+        )
+
+        assertEquals(listOf(20L, 21L), product.displayPhotos.map { it.id })
+        assertEquals(listOf("Supplier B", "Supplier A"), product.displaySuppliers.map { it.displayName })
+        assertEquals(9, product.displaySuppliers.first().jumlahMasukKumulatif)
+    }
+
+    @Test
+    fun `legacy single photo and supplier remain available for detail`() {
+        val legacySupplier = PosSupplier(id = 7, nama = "Supplier Lama")
+        val product = PosProduct(
+            id = 12,
+            sku = "FLT-1",
+            nama = "Filter Udara",
+            hargaBeli = 10_000,
+            hargaJual = 15_000,
+            foto = "uuid.webp",
+            fotoUrl = "/storage/foto-barang/uuid.webp",
+            supplier = legacySupplier
+        )
+
+        assertEquals("/storage/foto-barang/uuid.webp", product.displayPhotos.single().downloadReference)
+        assertEquals("Supplier Lama", product.displaySuppliers.single().displayName)
+        assertEquals(true, product.displaySuppliers.single().isPrimary)
+    }
+
+    @Test
+    fun `inventory statistics decodes documented response`() {
+        val response = Json.decodeFromString<PosInventoryStatistics>(
+            """{
+                "total_barang":2,
+                "total_stok":15,
+                "total_stok_menipis":1,
+                "total_stok_habis":0,
+                "stok_menipis":[{
+                    "id":10,"sku":"SKU-10","nama":"Barang Tipis","stok":2,
+                    "stok_minimum":4,"satuan":"pcs","foto":null
+                }],
+                "stok_habis":[]
+            }""".trimIndent()
+        )
+
+        assertEquals(2, response.totalBarang)
+        assertEquals(15L, response.totalStok)
+        assertEquals(1, response.totalStokMenipis)
+        assertEquals("Barang Tipis", response.stokMenipis.single().nama)
+        assertEquals(4, response.stokMenipis.single().stokMinimum)
+    }
 
     @Test
     fun `create request serializes exact barang contract with supplier id`() {
@@ -36,15 +116,17 @@ class PosProductSerializationTest {
 
     @Test
     fun `existing stock request serializes exact stock contract`() {
-        val request = PosStockInRequest(
-            jumlahBarangMasuk = 4,
+        val request = PosStockAdjustmentRequest(
+            barangId = 42,
+            jumlah = 4,
             hargaSatuan = 10_000L,
-            operationId = "11111111-1111-4111-8111-111111111111"
+            keterangan = "Lithia Label Printer | OPERATION_ID=11111111-1111-4111-8111-111111111111"
         )
 
         assertEquals(
-            "{\"jumlah_barang_masuk\":4,\"harga_satuan\":10000," +
-                "\"operation_id\":\"11111111-1111-4111-8111-111111111111\"}",
+            "{\"barang_id\":42,\"jumlah\":4,\"harga_satuan\":10000," +
+                "\"keterangan\":\"Lithia Label Printer | " +
+                "OPERATION_ID=11111111-1111-4111-8111-111111111111\"}",
             Json.encodeToString(request)
         )
     }
@@ -53,13 +135,12 @@ class PosProductSerializationTest {
     fun `update request serializes only backend accepted keys`() {
         val request = PosProductUpdateRequest(
             nama = "Gula",
-            hargaBeli = 10_000L,
-            hargaBeliKode = "AUP",
-            hargaJual = 12_000L
+            hargaModal = 10_000L,
+            hargaJualKode = "ABP"
         )
 
         assertEquals(
-            "{\"nama\":\"Gula\",\"harga_beli\":10000,\"harga_beli_kode\":\"AUP\",\"harga_jual\":12000}",
+            "{\"nama\":\"Gula\",\"harga_modal\":10000,\"harga_jual_kode\":\"ABP\"}",
             Json.encodeToString(request)
         )
     }

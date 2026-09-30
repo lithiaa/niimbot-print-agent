@@ -4,6 +4,7 @@ import android.content.Intent
 import android.app.DatePickerDialog
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -19,8 +20,11 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.core.widget.NestedScrollView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.switchmaterial.SwitchMaterial
@@ -32,6 +36,7 @@ import com.niimbot.printagent.data.LogAction
 import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintLog
 import com.niimbot.printagent.label.LabelData
+import com.niimbot.printagent.label.LabelBarcodeRules
 import com.niimbot.printagent.label.LabelDate
 import com.niimbot.printagent.label.LabelDesign
 import com.niimbot.printagent.label.LabelField
@@ -100,6 +105,14 @@ class LabelFragment : Fragment() {
     private lateinit var previewCard: MaterialCardView
     private lateinit var labelOptionsRow: LinearLayout
     private lateinit var qtySupplierRow: LinearLayout
+    private lateinit var productPhotoCard: MaterialCardView
+    private lateinit var productPhotoList: RecyclerView
+    private lateinit var productPhotoEmpty: View
+    private lateinit var productPhotoStatus: android.widget.TextView
+    private lateinit var photoCameraButton: View
+    private lateinit var photoGalleryButton: View
+    private lateinit var productPhotoAdapter: EditableProductPhotoAdapter
+    private var skuSearchJob: Job? = null
     private var productSearchJob: Job? = null
     private var productSuggestions: List<PosProduct> = emptyList()
     private var supplierSuggestions: List<PosSupplier> = emptyList()
@@ -109,6 +122,23 @@ class LabelFragment : Fragment() {
     private val availableLabelSizes = LabelSize.entries.toMutableList()
     private var isTabletLayout = false
     private var brandLogo: Bitmap? = null
+    private val selectedProductPhotos = mutableListOf<EditableProductPhoto.Pending>()
+    private var nextLocalPhotoId = 0L
+    private var pendingCameraUri: Uri? = null
+
+    private val productPhotoPicker = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        if (uris.isNotEmpty()) loadSelectedProductPhotos(uris)
+    }
+
+    private val productPhotoCamera = registerForActivityResult(ActivityResultContracts.TakePicture()) { captured ->
+        val uri = pendingCameraUri
+        if (captured && uri != null) {
+            loadSelectedProductPhotos(listOf(uri), cameraUri = uri)
+        } else {
+            ProductPhotoCamera.deleteOutput(requireContext(), uri)
+            pendingCameraUri = null
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -118,6 +148,7 @@ class LabelFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        pendingCameraUri = savedInstanceState?.getString(STATE_CAMERA_URI)?.let(Uri::parse)
         bindViews(view)
         moveLabelOptionsToPreview()
         configureResponsiveLayout()
@@ -136,6 +167,9 @@ class LabelFragment : Fragment() {
         }
         etNama.doAfterTextChanged { text ->
             if (!applyingProductSuggestion) scheduleProductSearch(text?.toString().orEmpty())
+        }
+        etSku.doAfterTextChanged { text ->
+            if (!applyingProductSuggestion) scheduleSkuSearch(text?.toString().orEmpty())
         }
         etJumlahBarangMasuk.doAfterTextChanged {
             tilJumlahBarangMasuk.error = null
@@ -168,6 +202,9 @@ class LabelFragment : Fragment() {
         tilTanggalMasuk.setEndIconOnClickListener { showEntryDatePicker() }
         btnResetForm.setOnClickListener { confirmResetForm() }
         btnPrint.setOnClickListener { confirmPrint() }
+        photoCameraButton.setOnClickListener { launchProductCamera() }
+        photoGalleryButton.setOnClickListener { productPhotoPicker.launch("image/*") }
+        renderSelectedProductPhotos()
         updatePreview(showErrors = false)
     }
 
@@ -205,6 +242,24 @@ class LabelFragment : Fragment() {
         previewCard = view.findViewById(R.id.card_label_preview)
         labelOptionsRow = view.findViewById(R.id.row_label_options)
         qtySupplierRow = view.findViewById(R.id.row_label_qty_supplier)
+        productPhotoCard = view.findViewById(R.id.card_label_product_photo)
+        productPhotoList = view.findViewById(R.id.rv_label_product_photos)
+        productPhotoEmpty = view.findViewById(R.id.label_product_photo_empty)
+        productPhotoStatus = view.findViewById(R.id.tv_label_product_photo_status)
+        photoCameraButton = view.findViewById(R.id.btn_label_photo_camera)
+        photoGalleryButton = view.findViewById(R.id.btn_label_photo_gallery)
+        productPhotoList.layoutManager = LinearLayoutManager(requireContext(), RecyclerView.HORIZONTAL, false)
+        productPhotoAdapter = EditableProductPhotoAdapter(
+            scope = viewLifecycleOwner.lifecycleScope,
+            loadPhoto = { null },
+            onRemove = { selected ->
+                if (selected is EditableProductPhoto.Pending) {
+                    selectedProductPhotos.removeAll { it.localId == selected.localId }
+                    renderSelectedProductPhotos()
+                }
+            }
+        )
+        productPhotoList.adapter = productPhotoAdapter
         brandLogo = BitmapFactory.decodeResource(resources, R.drawable.lithia_project_logo)
     }
 
@@ -226,11 +281,17 @@ class LabelFragment : Fragment() {
             .setMessage(R.string.reset_label_form_message)
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.reset_label_form) { _, _ -> resetForm() }
-            .show()
+            .showWithBoxedButtons()
     }
 
     private fun resetForm() {
-        requireContext().getSharedPreferences(DRAFT_PREFERENCES, 0).edit().clear().apply()
+        val selectedSize = selectedLabelSize()
+        val selectedDesign = selectedLabelDesign()
+        requireContext().getSharedPreferences(DRAFT_PREFERENCES, 0).edit()
+            .clear()
+            .putString(DRAFT_LABEL_SIZE, selectedSize.name)
+            .putString(DRAFT_LABEL_DESIGN, selectedDesign.name)
+            .apply()
         etSku.text?.clear()
         etNama.setText("", false)
         etKodeHargaBeli.text?.clear()
@@ -242,10 +303,11 @@ class LabelFragment : Fragment() {
         dropdownSupplier.setText("", false)
         selectedSupplierCode = null
         selectedSupplierId = null
+        clearSelectedProductPhotos()
         etJumlahBarangMasuk.setText("0")
         switchPos.isChecked = false
-        dropdownLabelSize.setText(LabelSize.MM_50_X_30.displayName, false)
-        dropdownLabelDesign.setText(LabelDesign.BARCODE.displayName, false)
+        dropdownLabelSize.setText(selectedSize.displayName, false)
+        dropdownLabelDesign.setText(selectedDesign.displayName, false)
         showValidationErrors(emptyMap())
         saveDraft()
         updatePreview(showErrors = false)
@@ -475,7 +537,7 @@ class LabelFragment : Fragment() {
         etHargaBeli.setText(prefill.purchasePrice.toString())
         etHargaJual.setText(prefill.salePrice.toString())
         etKodeHargaBeli.setText(prefill.purchasePriceCode)
-        etTanggalMasuk.setText(LabelDate.fromTimestamp(prefill.createdAt) ?: LabelDate.todayIso())
+        etTanggalMasuk.setText(LabelDate.todayIso())
         dropdownSupplier.setText(prefill.supplierDisplay, false)
         selectedSupplierCode = prefill.supplierCode.ifBlank { null }
         selectedSupplierId = prefill.supplierId
@@ -585,7 +647,20 @@ class LabelFragment : Fragment() {
         ensureSku()
         val validation = LabelFormRules.validate(currentInput())
         showValidationErrors(validation.errors)
-        val form = validation.data ?: return
+        val form = validation.data
+        if (form == null) {
+            showFormValidationAlert(validation.errors)
+            return
+        }
+        if (
+            selectedLabelDesign() == LabelDesign.BARCODE &&
+            !LabelBarcodeRules.isCode128Compatible(form.sku)
+        ) {
+            val message = getString(R.string.label_sku_code128_invalid)
+            tilSku.error = message
+            showFormValidationAlert(mapOf(LabelField.SKU to message))
+            return
+        }
         updatePreview(showErrors = false)
         val confirmationView = layoutInflater.inflate(R.layout.dialog_print_confirmation, null)
         confirmationView.findViewById<ImageView>(R.id.iv_confirm_print_preview).setImageBitmap(
@@ -614,7 +689,34 @@ class LabelFragment : Fragment() {
             .setView(confirmationView)
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.confirm_and_print) { _, _ -> submitConfirmed(form) }
-            .show()
+            .showWithBoxedButtons()
+    }
+
+    private fun showFormValidationAlert(errors: Map<LabelField, String>) {
+        if (errors.isEmpty()) return
+        val details = errors.values.distinct().joinToString("\n") { message -> "• $message" }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.label_validation_alert_title)
+            .setMessage(getString(R.string.label_validation_alert_message, details))
+            .setPositiveButton(R.string.label_validation_alert_action) { _, _ ->
+                focusValidationField(errors.keys.first())
+            }
+            .showWithBoxedButtons()
+    }
+
+    private fun focusValidationField(field: LabelField) {
+        val target = when (field) {
+            LabelField.SKU -> etSku
+            LabelField.NAMA -> etNama
+            LabelField.HARGA_BELI -> etHargaBeli
+            LabelField.HARGA_JUAL -> etHargaJual
+            LabelField.QTY -> etQty
+            LabelField.ITEM_QTY -> etItemQty
+            LabelField.SUPPLIER_CODE -> dropdownSupplier
+            LabelField.JUMLAH_BARANG_MASUK -> etJumlahBarangMasuk
+            LabelField.TANGGAL_MASUK -> etTanggalMasuk
+        }
+        target.requestFocus()
     }
 
     private fun submitConfirmed(form: LabelData) {
@@ -644,11 +746,7 @@ class LabelFragment : Fragment() {
 
     private fun handlePosOutcome(result: PosSubmissionOutcome) {
         when (result) {
-            is PosSubmissionOutcome.ReadyToQueue -> enqueue(
-                result.labelData,
-                result.stockAdded,
-                result.currentStock
-            )
+            is PosSubmissionOutcome.ReadyToQueue -> handleReadyToQueue(result)
             is PosSubmissionOutcome.Conflict -> {
                 setBusy(false)
                 showConflictDialog(result)
@@ -663,6 +761,83 @@ class LabelFragment : Fragment() {
                 showError(result.message)
             }
             PosSubmissionOutcome.Cancelled -> setBusy(false)
+        }
+    }
+
+    private fun handleReadyToQueue(result: PosSubmissionOutcome.ReadyToQueue) {
+        val photos = selectedProductPhotos.map { it.upload }
+        if (photos.isEmpty()) {
+            enqueue(result.labelData, result.stockAdded, result.currentStock)
+            return
+        }
+        val targetProductId = result.productId
+        if (targetProductId == null) {
+            clearSelectedProductPhotos()
+            enqueue(
+                result.labelData,
+                result.stockAdded,
+                result.currentStock,
+                getString(R.string.label_photo_upload_failed, getString(R.string.product_not_found))
+            )
+            return
+        }
+        val accessToken = configStore.getAccessToken()
+        if (accessToken.isNullOrBlank()) {
+            clearSelectedProductPhotos()
+            enqueue(
+                result.labelData,
+                result.stockAdded,
+                result.currentStock,
+                getString(R.string.label_photo_upload_failed, getString(R.string.pos_login_required))
+            )
+            return
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            val upload = posApiClient.uploadProductPhotos(
+                configStore.getBaseUrl(),
+                accessToken,
+                targetProductId,
+                photos
+            )
+            clearSelectedProductPhotos()
+            val warning = when (upload) {
+                is PosApiResult.Success -> null
+                PosApiResult.NotFound -> getString(
+                    R.string.label_photo_upload_failed,
+                    getString(R.string.product_not_found)
+                )
+                PosApiResult.SessionExpired -> {
+                    configStore.clearSession()
+                    getString(R.string.label_photo_upload_failed, getString(R.string.pos_session_expired))
+                }
+                is PosApiResult.Failure -> getString(R.string.label_photo_upload_failed, upload.message)
+            }
+            enqueue(result.labelData, result.stockAdded, result.currentStock, warning)
+        }
+    }
+
+    private fun scheduleSkuSearch(rawSku: String) {
+        skuSearchJob?.cancel()
+        val normalizedSku = PosProductRules.normalizeSku(rawSku)
+        if (normalizedSku.isBlank()) return
+        val accessToken = configStore.getAccessToken() ?: return
+        skuSearchJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(300)
+            when (val result = posApiClient.lookup(configStore.getBaseUrl(), accessToken, normalizedSku)) {
+                is PosApiResult.Success -> {
+                    val currentSku = PosProductRules.normalizeSku(etSku.text.toString())
+                    if (currentSku == normalizedSku) applyProductSuggestion(result.value)
+                }
+                PosApiResult.NotFound -> Unit
+                PosApiResult.SessionExpired -> {
+                    configStore.clearSession()
+                    tilSku.helperText = getString(R.string.pos_session_expired)
+                    updateProductSearchHelper()
+                }
+                is PosApiResult.Failure -> {
+                    Log.w(TAG, "SKU search failed: ${result.message}")
+                }
+            }
         }
     }
 
@@ -704,13 +879,14 @@ class LabelFragment : Fragment() {
             .setNeutralButton(R.string.cancel) { _, _ ->
                 handlePosOutcome(PosSubmissionOutcome.Cancelled)
             }
-            .show()
+            .showWithBoxedButtons()
     }
 
     private fun enqueue(
         data: LabelData,
         stockAdded: Int? = null,
-        currentStock: Int? = null
+        currentStock: Int? = null,
+        photoWarning: String? = null
     ) {
         setBusy(true)
         viewLifecycleOwner.lifecycleScope.launch {
@@ -751,7 +927,11 @@ class LabelFragment : Fragment() {
             } else {
                 getString(R.string.label_queued, data.qty)
             }
-            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                requireContext(),
+                photoWarning ?: message,
+                if (photoWarning == null) Toast.LENGTH_SHORT else Toast.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -793,6 +973,98 @@ class LabelFragment : Fragment() {
             etJumlahBarangMasuk.setText(nextValue)
         }
         if (!enabled) tilJumlahBarangMasuk.error = null
+        productPhotoCard.alpha = if (enabled) 1f else 0.55f
+        photoCameraButton.isEnabled = enabled
+        photoGalleryButton.isEnabled = enabled
+    }
+
+    private fun launchProductCamera() {
+        val uri = runCatching { ProductPhotoCamera.createOutputUri(requireContext()) }
+            .getOrElse {
+                Toast.makeText(
+                    requireContext(),
+                    R.string.product_photo_camera_unavailable,
+                    Toast.LENGTH_LONG
+                ).show()
+                return
+        }
+        pendingCameraUri = uri
+        runCatching { productPhotoCamera.launch(uri) }
+            .onFailure {
+                ProductPhotoCamera.deleteOutput(requireContext(), uri)
+                pendingCameraUri = null
+                Toast.makeText(
+                    requireContext(),
+                    R.string.product_photo_camera_unavailable,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+
+    private fun loadSelectedProductPhotos(uris: List<Uri>, cameraUri: Uri? = null) {
+        productPhotoStatus.setText(R.string.product_photo_batch_loading)
+        photoCameraButton.isEnabled = false
+        photoGalleryButton.isEnabled = false
+        viewLifecycleOwner.lifecycleScope.launch {
+            var added = 0
+            var rejected = 0
+            uris.forEach { uri ->
+                when (val result = ProductPhotoFiles.read(requireContext(), uri)) {
+                    is ProductPhotoReadResult.Success -> {
+                        selectedProductPhotos += EditableProductPhoto.Pending(
+                            localId = ++nextLocalPhotoId,
+                            upload = result.upload,
+                            preview = result.preview
+                        )
+                        added += 1
+                    }
+                    ProductPhotoReadResult.TooLarge,
+                    ProductPhotoReadResult.Unsupported,
+                    ProductPhotoReadResult.Unreadable -> rejected += 1
+                }
+            }
+            if (cameraUri != null) {
+                ProductPhotoCamera.deleteOutput(requireContext(), cameraUri)
+                pendingCameraUri = null
+            }
+            renderSelectedProductPhotos()
+            if (rejected > 0) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.product_photo_some_invalid, added, rejected),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            updateIncomingStockState()
+        }
+    }
+
+    private fun showPhotoSelectionError(messageRes: Int) {
+        productPhotoStatus.setText(messageRes)
+        Toast.makeText(requireContext(), messageRes, Toast.LENGTH_LONG).show()
+    }
+
+    private fun clearSelectedProductPhotos() {
+        selectedProductPhotos.clear()
+        if (!this::productPhotoList.isInitialized) return
+        renderSelectedProductPhotos()
+        if (this::switchPos.isInitialized) updateIncomingStockState()
+    }
+
+    private fun renderSelectedProductPhotos() {
+        productPhotoAdapter.submitList(selectedProductPhotos)
+        val hasPhotos = selectedProductPhotos.isNotEmpty()
+        productPhotoList.visibility = if (hasPhotos) View.VISIBLE else View.GONE
+        productPhotoEmpty.visibility = if (hasPhotos) View.GONE else View.VISIBLE
+        productPhotoStatus.text = if (hasPhotos) {
+            resources.getQuantityString(
+                R.plurals.product_photo_selected_count,
+                selectedProductPhotos.size,
+                selectedProductPhotos.size
+            )
+        } else {
+            getString(R.string.product_photo_batch_help)
+        }
     }
 
     private fun setupLabelOptions() {
@@ -917,6 +1189,8 @@ class LabelFragment : Fragment() {
         dropdownLabelDesign.isEnabled = !busy
         tilJumlahBarangMasuk.isEnabled = !busy && switchPos.isChecked
         etJumlahBarangMasuk.isEnabled = !busy && switchPos.isChecked
+        photoCameraButton.isEnabled = !busy && switchPos.isChecked
+        photoGalleryButton.isEnabled = !busy && switchPos.isChecked
     }
 
     private fun showError(message: String) {
@@ -924,7 +1198,12 @@ class LabelFragment : Fragment() {
             .setTitle(R.string.cannot_print_title)
             .setMessage(message)
             .setPositiveButton(R.string.ok, null)
-            .show()
+            .showWithBoxedButtons()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        pendingCameraUri?.let { outState.putString(STATE_CAMERA_URI, it.toString()) }
+        super.onSaveInstanceState(outState)
     }
 
     private companion object {
@@ -945,6 +1224,7 @@ class LabelFragment : Fragment() {
         const val DRAFT_ADD_TO_POS = "add_to_pos"
         const val DRAFT_LABEL_SIZE = "label_size"
         const val DRAFT_LABEL_DESIGN = "label_design"
+        const val STATE_CAMERA_URI = "product_photo_camera_uri"
         const val NO_SUPPLIER_ID = -1L
     }
 }

@@ -147,6 +147,24 @@
             android:textSize="12sp"
             android:visibility="gone" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancel_job"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_gravity="end"
+            android:layout_marginTop="12dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minHeight="0dp"
+            android:text="@string/job_cancel_action"
+            android:textAllCaps="false"
+            android:textColor="@color/list_error"
+            android:visibility="gone"
+            app:backgroundTint="@color/list_error_surface"
+            app:cornerRadius="12dp"
+            app:strokeColor="@color/list_error_border" />
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

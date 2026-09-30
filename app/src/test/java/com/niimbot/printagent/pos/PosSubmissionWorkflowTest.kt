@@ -8,7 +8,7 @@ import org.junit.Test
 
 class PosSubmissionWorkflowTest {
     private val form = LabelData("SKU-1", "Form name", 100L, 150L, 3, 4)
-    private val posProduct = PosProduct("SKU-1", "Form name", 100L, 150L, stok = 10)
+    private val posProduct = PosProduct("SKU-1", "Form name", 100L, 150L, stok = 10, id = 42)
     private val operationId = "11111111-1111-4111-8111-111111111111"
 
     @Test
@@ -24,6 +24,7 @@ class PosSubmissionWorkflowTest {
         assertEquals(3, result.labelData.qty)
         assertEquals(4, result.stockAdded)
         assertEquals(4, result.currentStock)
+        assertEquals(42L, result.productId)
     }
 
     @Test
@@ -156,7 +157,12 @@ class PosSubmissionWorkflowTest {
             return createResult
         }
 
-        override suspend fun update(baseUrl: String, accessToken: String, form: LabelData): PosApiResult<PosProduct> {
+        override suspend fun update(
+            baseUrl: String,
+            accessToken: String,
+            form: LabelData,
+            product: PosProduct
+        ): PosApiResult<PosProduct> {
             calls += "update"
             return updateResult
         }
@@ -164,7 +170,7 @@ class PosSubmissionWorkflowTest {
         override suspend fun addStock(
             baseUrl: String,
             accessToken: String,
-            sku: String,
+            product: PosProduct,
             jumlahBarangMasuk: Int,
             hargaSatuan: Long,
             operationId: String

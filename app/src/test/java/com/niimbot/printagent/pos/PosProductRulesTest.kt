@@ -20,6 +20,21 @@ class PosProductRulesTest {
     }
 
     @Test
+    fun `photo URL combines configured base and backend relative path`() {
+        assertEquals(
+            "https://api-ijm.lithiaproject.site/storage/foto-barang/uuid.webp",
+            PosProductRules.resolvePhotoUrl(
+                "https://api-ijm.lithiaproject.site/",
+                "/storage/foto-barang/uuid.webp"
+            )
+        )
+        assertEquals(
+            "https://cdn.example/foto.webp",
+            PosProductRules.resolvePhotoUrl("https://api.example", "https://cdn.example/foto.webp")
+        )
+    }
+
+    @Test
     fun `existing product with exact editable data prints without dialog`() {
         val form = LabelData("ABC-1", "Gula", 10_000L, 12_000L, 3, 5)
         val product = PosProduct(

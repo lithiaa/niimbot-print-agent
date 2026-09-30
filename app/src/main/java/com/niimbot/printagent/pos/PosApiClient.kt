@@ -12,6 +12,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -41,13 +42,14 @@ interface PosProductGateway {
     suspend fun update(
         baseUrl: String,
         accessToken: String,
-        form: LabelData
+        form: LabelData,
+        product: PosProduct
     ): PosApiResult<PosProduct>
 
     suspend fun addStock(
         baseUrl: String,
         accessToken: String,
-        sku: String,
+        product: PosProduct,
         jumlahBarangMasuk: Int,
         hargaSatuan: Long,
         operationId: String
@@ -103,13 +105,45 @@ class PosApiClient(
             }
         }
 
-    override suspend fun lookup(baseUrl: String, accessToken: String, normalizedSku: String): PosApiResult<PosProduct> =
-        executeProductRequest(
-            baseUrl = baseUrl,
-            accessToken = accessToken,
-            request = requestBuilder(baseUrl, accessToken, normalizedSku).get().build(),
-            allowNotFound = true
-        )
+    override suspend fun lookup(
+        baseUrl: String,
+        accessToken: String,
+        normalizedSku: String
+    ): PosApiResult<PosProduct> = withContext(Dispatchers.IO) {
+        val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
+            ?: return@withContext PosApiResult.Failure("URL Sistem tidak valid")
+        val normalized = PosProductRules.normalizeSku(normalizedSku)
+        val url = parsedBase.newBuilder()
+            .addPathSegments("api/barang")
+            .addQueryParameter("search", normalized)
+            .addQueryParameter("page", "1")
+            .addQueryParameter("limit", "100")
+            .build()
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $accessToken")
+            .header("Accept", "application/json")
+            .get()
+            .build()
+        try {
+            client.newCall(request).execute().use { response ->
+                if (response.code == 401) {
+                    response.close()
+                    return@withContext resolveUnauthorized(baseUrl, accessToken)
+                }
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
+                val products = runCatching { json.decodeFromString<PosProductListResponse>(body).data }
+                    .recoverCatching { json.decodeFromString<PosProductSearchResponse>(body).data }
+                    .getOrElse { return@withContext PosApiResult.Failure("Respons pencarian Sistem tidak valid.") }
+                products.firstOrNull { PosProductRules.normalizeSku(it.sku) == normalized }
+                    ?.let { PosApiResult.Success(it) }
+                    ?: PosApiResult.NotFound
+            }
+        } catch (_: IOException) {
+            PosApiResult.Failure("Tidak dapat terhubung ke Sistem. Periksa URL dan jaringan.")
+        }
+    }
 
     suspend fun searchProducts(
         baseUrl: String,
@@ -197,6 +231,39 @@ class PosApiClient(
         }
     }
 
+    suspend fun getInventoryStatistics(
+        baseUrl: String,
+        accessToken: String
+    ): PosApiResult<PosInventoryStatistics> = withContext(Dispatchers.IO) {
+        val request = authenticatedRequest(
+            baseUrl,
+            accessToken,
+            "api/integration/barang/statistik"
+        ).get().build()
+        try {
+            client.newCall(request).execute().use { response ->
+                if (response.code == 401) {
+                    response.close()
+                    return@withContext resolveUnauthorized(baseUrl, accessToken)
+                }
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
+                runCatching { json.decodeFromString<PosInventoryStatistics>(body) }
+                    .fold(
+                        onSuccess = { PosApiResult.Success(it) },
+                        onFailure = {
+                            PosApiResult.Failure(
+                                "Respons statistik barang Sistem tidak valid.",
+                                response.code
+                            )
+                        }
+                    )
+            }
+        } catch (_: IOException) {
+            PosApiResult.Failure("Tidak dapat mengambil statistik barang. Periksa URL dan jaringan.")
+        }
+    }
+
     suspend fun listSuppliers(
         baseUrl: String,
         accessToken: String
@@ -219,11 +286,11 @@ class PosApiClient(
                 if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
                 val suppliers = runCatching { json.decodeFromString<List<PosSupplier>>(body) }.getOrNull()
                     ?: runCatching { json.decodeFromString<PosSupplierEnvelope>(body).data }.getOrNull()
-                    ?: return@withContext PosApiResult.Failure("Respons pemasok Sistem tidak valid.")
+                    ?: return@withContext PosApiResult.Failure("Respons supplier Sistem tidak valid.")
                 PosApiResult.Success(suppliers)
             }
         } catch (_: IOException) {
-            PosApiResult.Failure("Tidak dapat mengambil pemasok dari Sistem. Periksa URL dan jaringan.")
+            PosApiResult.Failure("Tidak dapat mengambil supplier dari Sistem. Periksa URL dan jaringan.")
         }
     }
 
@@ -243,49 +310,203 @@ class PosApiClient(
         allowNotFound = true
     )
 
+    suspend fun uploadProductPhoto(
+        baseUrl: String,
+        accessToken: String,
+        productId: Long,
+        photo: PosPhotoUpload
+    ): PosApiResult<PosProduct> = updateProductPhotos(
+        baseUrl = baseUrl,
+        accessToken = accessToken,
+        productId = productId,
+        uploads = listOf(photo)
+    )
+
+    suspend fun uploadProductPhotos(
+        baseUrl: String,
+        accessToken: String,
+        productId: Long,
+        photos: List<PosPhotoUpload>
+    ): PosApiResult<PosProduct> = updateProductPhotos(
+        baseUrl = baseUrl,
+        accessToken = accessToken,
+        productId = productId,
+        uploads = photos
+    )
+
+    suspend fun updateProductPhotos(
+        baseUrl: String,
+        accessToken: String,
+        productId: Long,
+        deletePhotoIds: List<Long> = emptyList(),
+        deleteLegacyPhoto: Boolean = false,
+        uploads: List<PosPhotoUpload> = emptyList()
+    ): PosApiResult<PosProduct> {
+        val preparedUploads = mutableListOf<Pair<PosPhotoUpload, String>>()
+        uploads.forEach { photo ->
+            if (!PosPhotoRules.isWithinSizeLimit(photo.bytes)) {
+                return PosApiResult.Failure("Ukuran setiap foto harus lebih dari 0 dan maksimal 5 MiB.")
+            }
+            val mediaType = PosPhotoRules.detectMediaType(photo.bytes)
+                ?: return PosApiResult.Failure("Format setiap foto harus berupa JPEG, PNG, atau WebP yang valid.")
+            preparedUploads += photo to mediaType
+        }
+
+        deletePhotoIds.distinct().forEach { photoId ->
+            val mutation = executePhotoMutation(
+                baseUrl,
+                accessToken,
+                Request.Builder()
+                    .url(productPhotoByIdUrl(baseUrl, productId, photoId))
+                    .header("Authorization", "Bearer $accessToken")
+                    .header("Accept", "application/json")
+                    .delete()
+                    .build()
+            )
+            when (mutation) {
+                is PosApiResult.Success -> Unit
+                PosApiResult.NotFound -> return PosApiResult.NotFound
+                PosApiResult.SessionExpired -> return PosApiResult.SessionExpired
+                is PosApiResult.Failure -> return mutation
+            }
+        }
+
+        if (deleteLegacyPhoto) {
+            val mutation = executePhotoMutation(
+                baseUrl,
+                accessToken,
+                Request.Builder()
+                    .url(integrationProductPhotoUrl(baseUrl, productId))
+                    .header("Authorization", "Bearer $accessToken")
+                    .header("Accept", "application/json")
+                    .delete()
+                    .build()
+            )
+            when (mutation) {
+                is PosApiResult.Success -> Unit
+                PosApiResult.NotFound -> return PosApiResult.NotFound
+                PosApiResult.SessionExpired -> return PosApiResult.SessionExpired
+                is PosApiResult.Failure -> return mutation
+            }
+        }
+
+        preparedUploads.forEach { (photo, mediaType) ->
+            val multipart = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart(
+                    "file",
+                    PosPhotoRules.normalizedFileName(photo.fileName, mediaType),
+                    photo.bytes.toRequestBody(mediaType.toMediaType())
+                )
+                .build()
+            val mutation = executePhotoMutation(
+                baseUrl,
+                accessToken,
+                Request.Builder()
+                    .url(productPhotosUrl(baseUrl, productId))
+                    .header("Authorization", "Bearer $accessToken")
+                    .header("Accept", "application/json")
+                    .post(multipart)
+                    .build()
+            )
+            when (mutation) {
+                is PosApiResult.Success -> Unit
+                PosApiResult.NotFound -> return PosApiResult.NotFound
+                PosApiResult.SessionExpired -> return PosApiResult.SessionExpired
+                is PosApiResult.Failure -> return mutation
+            }
+        }
+
+        return getProductById(baseUrl, accessToken, productId)
+    }
+
+    suspend fun deleteProductPhoto(
+        baseUrl: String,
+        accessToken: String,
+        productId: Long
+    ): PosApiResult<PosProduct> {
+        val mutation = executePhotoMutation(
+            baseUrl,
+            accessToken,
+            Request.Builder()
+                .url(integrationProductPhotoUrl(baseUrl, productId))
+                .header("Authorization", "Bearer $accessToken")
+                .header("Accept", "application/json")
+                .delete()
+                .build()
+        )
+        return mutation.thenReloadProduct(baseUrl, accessToken, productId)
+    }
+
+    suspend fun downloadProductPhoto(
+        baseUrl: String,
+        fotoUrl: String?
+    ): PosApiResult<ByteArray> = withContext(Dispatchers.IO) {
+        val finalUrl = PosProductRules.resolvePhotoUrl(baseUrl, fotoUrl)?.toHttpUrlOrNull()
+            ?: return@withContext PosApiResult.NotFound
+        try {
+            client.newCall(Request.Builder().url(finalUrl).get().build()).execute().use { response ->
+                if (response.code == 404) return@withContext PosApiResult.NotFound
+                if (!response.isSuccessful) {
+                    return@withContext PosApiResult.Failure(
+                        "Foto barang gagal dimuat (HTTP ${response.code}).",
+                        response.code
+                    )
+                }
+                val body = response.body ?: return@withContext PosApiResult.NotFound
+                if (body.contentLength() > PosPhotoRules.MAX_BYTES) {
+                    return@withContext PosApiResult.Failure("Ukuran foto barang melebihi 5 MiB.")
+                }
+                val bytes = body.bytes()
+                if (bytes.size > PosPhotoRules.MAX_BYTES) {
+                    return@withContext PosApiResult.Failure("Ukuran foto barang melebihi 5 MiB.")
+                }
+                PosApiResult.Success(bytes)
+            }
+        } catch (_: IOException) {
+            PosApiResult.Failure("Foto barang tidak dapat dimuat. Periksa jaringan.")
+        }
+    }
+
     suspend fun getProductMeta(
         baseUrl: String,
         accessToken: String
-    ): PosApiResult<PosProductMeta> = withContext(Dispatchers.IO) {
-        val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
-            ?: return@withContext PosApiResult.Failure("URL Sistem tidak valid")
-        try {
-            val categoriesRequest = Request.Builder()
-                .url(parsedBase.newBuilder().addPathSegments("api/kategori").build())
-                .header("Authorization", "Bearer $accessToken")
-                .header("Accept", "application/json")
-                .get()
-                .build()
-            val categories = client.newCall(categoriesRequest).execute().use { response ->
-                if (response.code == 401) {
-                    response.close()
-                    return@withContext resolveUnauthorized(baseUrl, accessToken)
-                }
-                val body = response.body?.string().orEmpty()
-                if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
-                runCatching { json.decodeFromString<List<PosCategory>>(body) }.getOrNull()
-                    ?: return@withContext PosApiResult.Failure("Respons kategori Sistem tidak valid.")
-            }
-            val suppliersRequest = Request.Builder()
-                .url(parsedBase.newBuilder().addPathSegments("api/supplier").build())
-                .header("Authorization", "Bearer $accessToken")
-                .header("Accept", "application/json")
-                .get()
-                .build()
-            val suppliers = client.newCall(suppliersRequest).execute().use { response ->
-                if (response.code == 401) {
-                    response.close()
-                    return@withContext resolveUnauthorized(baseUrl, accessToken)
-                }
-                val body = response.body?.string().orEmpty()
-                if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
-                runCatching { json.decodeFromString<List<PosSupplier>>(body) }.getOrNull()
-                    ?: return@withContext PosApiResult.Failure("Respons pemasok Sistem tidak valid.")
-            }
-            PosApiResult.Success(PosProductMeta(categories, suppliers, listOf("pcs")))
-        } catch (_: IOException) {
-            PosApiResult.Failure("Tidak dapat mengambil metadata barang Sistem.")
+    ): PosApiResult<PosProductMeta> = when (val result = listSuppliers(baseUrl, accessToken)) {
+        is PosApiResult.Success -> PosApiResult.Success(
+            PosProductMeta(suppliers = result.value, satuan = listOf("pcs"))
+        )
+        PosApiResult.NotFound -> PosApiResult.Success(PosProductMeta(satuan = listOf("pcs")))
+        PosApiResult.SessionExpired -> PosApiResult.SessionExpired
+        is PosApiResult.Failure -> result
+    }
+
+    suspend fun subtractStock(
+        baseUrl: String,
+        accessToken: String,
+        product: PosProduct,
+        quantity: Int,
+        unitPrice: Long,
+        operationId: String
+    ): PosApiResult<PosProduct> {
+        if (quantity > product.stok) {
+            return PosApiResult.Failure("Jumlah stok keluar melebihi stok yang tersedia.")
         }
+        val productId = product.id
+            ?: return PosApiResult.Failure("ID barang Sistem tidak tersedia. Muat ulang data barang.")
+        val stock = PosStockAdjustmentRequest(
+            barangId = productId,
+            jumlah = quantity,
+            hargaSatuan = unitPrice,
+            keterangan = "Lithia Label Printer | OPERATION_ID=$operationId"
+        )
+        return executeStockMutation(
+            baseUrl = baseUrl,
+            accessToken = accessToken,
+            request = authenticatedRequest(baseUrl, accessToken, "api/stok/keluar")
+                .post(json.encodeToString(stock).toRequestBody(JSON_MEDIA_TYPE))
+                .build(),
+            updatedProduct = product.copy(stok = product.stok - quantity)
+        )
     }
 
     suspend fun updateProductById(
@@ -298,16 +519,16 @@ class PosApiClient(
             sku = input.sku,
             nama = input.nama,
             merek = input.merek,
-            kategoriId = input.kategoriId,
             supplierId = input.supplierId,
-            hargaBeli = input.hargaBeli,
+            hargaModal = input.hargaBeli,
             hargaBeliKode = input.hargaBeliKode,
+            hargaJualKode = LabelGenerator.encodePurchasePrice(input.hargaJual),
             hargaJual = input.hargaJual,
             stokMinimum = input.stokMinimum,
             satuan = input.satuan,
             deskripsi = input.deskripsi
         )
-        return executeProductRequest(
+        val mutation = executeMutation(
             baseUrl = baseUrl,
             accessToken = accessToken,
             request = Request.Builder()
@@ -316,8 +537,9 @@ class PosApiClient(
                 .header("Accept", "application/json")
                 .put(json.encodeToString(requestBody).toRequestBody(JSON_MEDIA_TYPE))
                 .build(),
-            allowNotFound = true
+            networkError = "Informasi barang gagal diperbarui. Periksa jaringan."
         )
+        return mutation.thenReloadProduct(baseUrl, accessToken, productId)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -356,19 +578,21 @@ class PosApiClient(
     override suspend fun update(
         baseUrl: String,
         accessToken: String,
-        form: LabelData
+        form: LabelData,
+        product: PosProduct
     ): PosApiResult<PosProduct> {
-        val product = PosProductUpdateRequest(
+        val productId = product.id
+            ?: return PosApiResult.Failure("ID barang Sistem tidak tersedia. Muat ulang data barang.")
+        val requestBody = PosProductUpdateRequest(
             nama = form.nama,
-            hargaBeli = form.hargaBeli,
-            hargaBeliKode = form.kodeHargaBeli ?: LabelGenerator.encodePurchasePrice(form.hargaBeli),
-            hargaJual = form.hargaJual
+            hargaModal = form.hargaBeli,
+            hargaJualKode = LabelGenerator.encodePurchasePrice(form.hargaJual)
         )
         return executeProductRequest(
             baseUrl = baseUrl,
             accessToken = accessToken,
-            request = requestBuilder(baseUrl, accessToken, form.sku)
-                .put(json.encodeToString(product).toRequestBody(JSON_MEDIA_TYPE))
+            request = authenticatedRequest(baseUrl, accessToken, "api/barang/$productId")
+                .put(json.encodeToString(requestBody).toRequestBody(JSON_MEDIA_TYPE))
                 .build()
         )
     }
@@ -376,22 +600,26 @@ class PosApiClient(
     override suspend fun addStock(
         baseUrl: String,
         accessToken: String,
-        sku: String,
+        product: PosProduct,
         jumlahBarangMasuk: Int,
         hargaSatuan: Long,
         operationId: String
     ): PosApiResult<PosProduct> {
-        val stock = PosStockInRequest(
-            jumlahBarangMasuk = jumlahBarangMasuk,
+        val productId = product.id
+            ?: return PosApiResult.Failure("ID barang Sistem tidak tersedia. Muat ulang data barang.")
+        val stock = PosStockAdjustmentRequest(
+            barangId = productId,
+            jumlah = jumlahBarangMasuk,
             hargaSatuan = hargaSatuan,
-            operationId = operationId
+            keterangan = "Lithia Label Printer | OPERATION_ID=$operationId"
         )
-        return executeProductRequest(
+        return executeStockMutation(
             baseUrl = baseUrl,
             accessToken = accessToken,
-            request = requestBuilder(baseUrl, accessToken, sku, stockIn = true)
+            request = authenticatedRequest(baseUrl, accessToken, "api/stok/masuk")
                 .post(json.encodeToString(stock).toRequestBody(JSON_MEDIA_TYPE))
-                .build()
+                .build(),
+            updatedProduct = product.copy(stok = product.stok + jumlahBarangMasuk)
         )
     }
 
@@ -421,28 +649,67 @@ class PosApiClient(
         }
     }
 
-    private fun requestBuilder(
+    private suspend fun executePhotoMutation(
         baseUrl: String,
         accessToken: String,
-        sku: String? = null,
-        stockIn: Boolean = false
-    ): Request.Builder {
-        val parsedBase = PosProductRules.normalizeBaseUrl(baseUrl).toHttpUrlOrNull()
-            ?: throw IllegalArgumentException("URL Sistem tidak valid")
-        val url = parsedBase.newBuilder()
-            .addPathSegments("api/integration/barang")
-            .apply {
-                if (sku != null) {
-                    addPathSegment("by-sku")
-                    addPathSegment(sku)
-                    if (stockIn) addPathSegment("stok-masuk")
+        request: Request
+    ): PosApiResult<Unit> = executeMutation(
+        baseUrl,
+        accessToken,
+        request,
+        "Foto barang gagal diperbarui. Periksa jaringan."
+    )
+
+    private suspend fun executeStockMutation(
+        baseUrl: String,
+        accessToken: String,
+        request: Request,
+        updatedProduct: PosProduct
+    ): PosApiResult<PosProduct> = when (
+        val result = executeMutation(
+            baseUrl,
+            accessToken,
+            request,
+            "Stok barang gagal diperbarui. Periksa jaringan."
+        )
+    ) {
+        is PosApiResult.Success -> PosApiResult.Success(updatedProduct)
+        PosApiResult.NotFound -> PosApiResult.NotFound
+        PosApiResult.SessionExpired -> PosApiResult.SessionExpired
+        is PosApiResult.Failure -> result
+    }
+
+    private suspend fun executeMutation(
+        baseUrl: String,
+        accessToken: String,
+        request: Request,
+        networkError: String
+    ): PosApiResult<Unit> = withContext(Dispatchers.IO) {
+        try {
+            client.newCall(request).execute().use { response ->
+                if (response.code == 401) {
+                    response.close()
+                    return@withContext resolveUnauthorized(baseUrl, accessToken)
                 }
+                if (response.code == 404) return@withContext PosApiResult.NotFound
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
+                PosApiResult.Success(Unit)
             }
-            .build()
-        return Request.Builder()
-            .url(url)
-            .header("Authorization", "Bearer $accessToken")
-            .header("Accept", "application/json")
+        } catch (_: IOException) {
+            PosApiResult.Failure(networkError)
+        }
+    }
+
+    private suspend fun PosApiResult<Unit>.thenReloadProduct(
+        baseUrl: String,
+        accessToken: String,
+        productId: Long
+    ): PosApiResult<PosProduct> = when (this) {
+        is PosApiResult.Success -> getProductById(baseUrl, accessToken, productId)
+        PosApiResult.NotFound -> PosApiResult.NotFound
+        PosApiResult.SessionExpired -> PosApiResult.SessionExpired
+        is PosApiResult.Failure -> this
     }
 
     private fun authenticatedRequest(
@@ -469,6 +736,18 @@ class PosApiClient(
             .addPathSegment(productId.toString())
             .build()
     }
+
+    private fun integrationProductByIdUrl(baseUrl: String, productId: Long): okhttp3.HttpUrl =
+        apiUrl(baseUrl, "api/integration/barang/$productId")
+
+    private fun integrationProductPhotoUrl(baseUrl: String, productId: Long): okhttp3.HttpUrl =
+        apiUrl(baseUrl, "api/integration/barang/$productId/foto")
+
+    private fun productPhotosUrl(baseUrl: String, productId: Long): okhttp3.HttpUrl =
+        apiUrl(baseUrl, "api/barang/$productId/photos")
+
+    private fun productPhotoByIdUrl(baseUrl: String, productId: Long, photoId: Long): okhttp3.HttpUrl =
+        apiUrl(baseUrl, "api/barang/$productId/photos/$photoId")
 
     private fun decodeProduct(body: String): PosProduct? =
         runCatching { json.decodeFromString<PosProduct>(body) }.getOrNull()

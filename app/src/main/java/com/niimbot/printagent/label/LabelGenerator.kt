@@ -381,9 +381,8 @@ object LabelGenerator {
     private fun generateCode128(content: String, width: Int, height: Int): Bitmap {
         val hints = EnumMap<EncodeHintType, Any>(EncodeHintType::class.java)
         hints[EncodeHintType.MARGIN] = 1
-        hints[EncodeHintType.CHARACTER_SET] = "UTF-8"
         val bitMatrix: BitMatrix = MultiFormatWriter().encode(
-            content,
+            LabelBarcodeRules.safeCode128Content(content),
             BarcodeFormat.CODE_128,
             width,
             height,

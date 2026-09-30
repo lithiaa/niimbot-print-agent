@@ -6,36 +6,53 @@
     android:layout_height="match_parent"
     android:background="@color/background">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/app_bar"
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/page_header"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_app_header"
+        android:layout_height="76dp"
         android:elevation="0dp"
-        app:elevation="0dp">
+        app:cardBackgroundColor="@color/surface"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/divider"
+        app:strokeWidth="1dp">
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="84dp"
-            android:background="@android:color/transparent"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            app:title="@string/dashboard_title"
-            app:subtitle="@string/app_name"
-            app:subtitleCentered="true"
-            app:subtitleTextColor="#C9C5FF"
-            app:titleCentered="true"
-            app:titleTextColor="@color/white"
-            app:titleTextAppearance="@style/TextAppearance.MaterialComponents.Subtitle1" />
-    </com.google.android.material.appbar.AppBarLayout>
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp">
+
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:adjustViewBounds="true"
+                android:contentDescription="@string/dashboard_logo_description"
+                android:scaleType="centerInside"
+                android:src="@drawable/lithia_project_logo" />
+
+            <TextView
+                android:id="@+id/tv_page_header_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:fontFamily="sans-serif"
+                android:text="@string/dashboard_header_title"
+                android:textColor="@color/text_primary"
+                android:textSize="23sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <FrameLayout
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingBottom="100dp"
-        android:clipToPadding="false" />
+        android:layout_marginTop="76dp"
+        android:clipToPadding="false"
+        android:paddingBottom="100dp" />
 
     <FrameLayout
         android:id="@+id/footer_navigation"

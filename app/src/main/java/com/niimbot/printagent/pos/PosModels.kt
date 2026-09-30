@@ -28,13 +28,65 @@ data class PosProduct(
     val merek: String? = null,
     val foto: String? = null,
     @SerialName("foto_url") val fotoUrl: String? = null,
-    val kategori: PosCategory? = null,
     val supplier: PosSupplier? = null,
+    @SerialName("primary_supplier_id") val primarySupplierId: Long? = null,
+    @SerialName("primary_supplier") val primarySupplier: PosSupplier? = null,
+    val suppliers: List<PosSupplier> = emptyList(),
+    val photos: List<PosProductPhoto> = emptyList(),
     @SerialName("stok_minimum") val stokMinimum: Int = 0,
     @SerialName("stok_status") @JsonNames("status") val stokStatus: String? = null,
     val deskripsi: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
+) {
+    val displayPhotos: List<PosProductPhoto>
+        get() {
+            val available = photos.filter { !it.downloadReference.isNullOrBlank() }
+                .sortedWith(compareByDescending<PosProductPhoto> { it.isPrimary }.thenBy { it.urutan })
+            if (available.isNotEmpty()) {
+                return if (available.any { it.isPrimary }) available else {
+                    available.mapIndexed { index, photo ->
+                        if (index == 0) photo.copy(isPrimary = true) else photo
+                    }
+                }
+            }
+            val legacyUrl = fotoUrl?.trim()?.takeIf { it.isNotEmpty() } ?: return emptyList()
+            return listOf(PosProductPhoto(foto = foto, fotoUrl = legacyUrl, isPrimary = true))
+        }
+
+    val displaySuppliers: List<PosSupplier>
+        get() {
+            val primary = primarySupplier ?: supplier
+            val primaryId = primarySupplierId ?: primary?.id
+            val available = if (suppliers.isNotEmpty()) suppliers else listOfNotNull(primary)
+            return available.distinctBy { it.id }.map { supplierItem ->
+                if (!supplierItem.isPrimary && supplierItem.id == primaryId) {
+                    supplierItem.copy(isPrimary = true)
+                } else {
+                    supplierItem
+                }
+            }.sortedByDescending { it.isPrimary }
+        }
+}
+
+@Serializable
+data class PosProductPhoto(
+    val id: Long? = null,
+    val filename: String? = null,
+    val foto: String? = null,
+    @SerialName("foto_url") val fotoUrl: String? = null,
+    val urutan: Int = 0,
+    @SerialName("is_primary") val isPrimary: Boolean = false,
+    @SerialName("created_at") val createdAt: String? = null
+) {
+    val downloadReference: String?
+        get() = fotoUrl?.trim()?.takeIf { it.isNotEmpty() }
+}
+
+data class PosPhotoUpload(
+    val bytes: ByteArray,
+    val mediaType: String,
+    val fileName: String
 )
 
 @Serializable
@@ -52,6 +104,27 @@ data class PosProductListResponse(
 )
 
 @Serializable
+data class PosStockStatisticItem(
+    val id: Long,
+    val sku: String,
+    val nama: String,
+    val stok: Int,
+    @SerialName("stok_minimum") val stokMinimum: Int,
+    val satuan: String = "pcs",
+    val foto: String? = null
+)
+
+@Serializable
+data class PosInventoryStatistics(
+    @SerialName("total_barang") val totalBarang: Int,
+    @SerialName("total_stok") val totalStok: Long,
+    @SerialName("total_stok_menipis") val totalStokMenipis: Int,
+    @SerialName("total_stok_habis") val totalStokHabis: Int,
+    @SerialName("stok_menipis") val stokMenipis: List<PosStockStatisticItem> = emptyList(),
+    @SerialName("stok_habis") val stokHabis: List<PosStockStatisticItem> = emptyList()
+)
+
+@Serializable
 data class PosSupplier(
     val id: Long,
     val nama: String = "",
@@ -60,11 +133,14 @@ data class PosSupplier(
     @SerialName("kode_supplier") val kodeSupplier: String? = null,
     val kontak: String? = null,
     val telepon: String? = null,
-    val email: String? = null
+    val email: String? = null,
+    @SerialName("jumlah_barang") val jumlahBarang: Int = 0,
+    @SerialName("jumlah_masuk_kumulatif") val jumlahMasukKumulatif: Int = 0,
+    @SerialName("is_primary") val isPrimary: Boolean = false
 ) {
     val displayName: String
         get() = namaSupplier?.trim()?.takeIf { it.isNotEmpty() }
-            ?: nama.trim().ifEmpty { "Pemasok #$id" }
+            ?: nama.trim().ifEmpty { "Supplier #$id" }
 
     val codeForLabel: String
         get() = kodeSupplier?.trim()?.takeIf { it.isNotEmpty() }
@@ -76,15 +152,7 @@ data class PosSupplier(
 internal data class PosSupplierEnvelope(val data: List<PosSupplier>)
 
 @Serializable
-data class PosCategory(
-    val id: Long,
-    val nama: String,
-    val deskripsi: String? = null
-)
-
-@Serializable
 data class PosProductMeta(
-    val categories: List<PosCategory> = emptyList(),
     val suppliers: List<PosSupplier> = emptyList(),
     val satuan: List<String> = emptyList()
 )
@@ -107,18 +175,18 @@ internal data class PosProductCreateRequest(
 )
 
 @Serializable
-internal data class PosStockInRequest(
-    @SerialName("jumlah_barang_masuk") val jumlahBarangMasuk: Int,
+internal data class PosStockAdjustmentRequest(
+    @SerialName("barang_id") val barangId: Long,
+    @SerialName("jumlah") val jumlah: Int,
     @SerialName("harga_satuan") val hargaSatuan: Long,
-    @SerialName("operation_id") val operationId: String
+    val keterangan: String
 )
 
 @Serializable
 internal data class PosProductUpdateRequest(
     val nama: String,
-    @SerialName("harga_beli") val hargaBeli: Long,
-    @SerialName("harga_beli_kode") val hargaBeliKode: String?,
-    @SerialName("harga_jual") val hargaJual: Long
+    @SerialName("harga_modal") val hargaModal: Long,
+    @SerialName("harga_jual_kode") val hargaJualKode: String
 )
 
 @Serializable
@@ -126,7 +194,6 @@ data class PosProductEditInput(
     val sku: String,
     val nama: String,
     val merek: String?,
-    val kategoriId: Long?,
     val supplierId: Long?,
     val hargaBeli: Long,
     val hargaBeliKode: String?,
@@ -141,10 +208,10 @@ internal data class PosProductUpdateByIdRequest(
     val sku: String,
     val nama: String,
     val merek: String?,
-    @SerialName("kategori_id") val kategoriId: Long?,
     @SerialName("supplier_id") val supplierId: Long?,
-    @SerialName("harga_beli") val hargaBeli: Long,
+    @SerialName("harga_modal") val hargaModal: Long,
     @SerialName("harga_beli_kode") val hargaBeliKode: String?,
+    @SerialName("harga_jual_kode") val hargaJualKode: String,
     @SerialName("harga_jual") val hargaJual: Long,
     @SerialName("stok_minimum") val stokMinimum: Int,
     val satuan: String,

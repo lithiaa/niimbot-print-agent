@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import java.util.Date
 
 @Dao
 interface PrintJobDao {
@@ -56,6 +57,19 @@ interface PrintJobDao {
 
     @Query("UPDATE print_jobs SET status = :status, errorMessage = :error, updatedAt = CURRENT_TIMESTAMP WHERE id = :id")
     suspend fun updateStatus(id: Long, status: PrintStatus, error: String?): Int
+
+    @Query(
+        """UPDATE print_jobs
+            SET status = :newStatus, errorMessage = :error, updatedAt = :updatedAt
+            WHERE id = :id AND status = :expectedStatus"""
+    )
+    suspend fun updateStatusIfCurrent(
+        id: Long,
+        expectedStatus: PrintStatus,
+        newStatus: PrintStatus,
+        error: String?,
+        updatedAt: Date
+    ): Int
 
     @Query("UPDATE print_jobs SET retryCount = retryCount + 1, updatedAt = CURRENT_TIMESTAMP WHERE id = :id")
     suspend fun incrementRetry(id: Long): Int

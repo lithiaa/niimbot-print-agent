@@ -3,18 +3,14 @@ package com.niimbot.printagent.ui
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
+import android.widget.TextView
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.appbar.AppBarLayout
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import com.niimbot.printagent.R
 import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.data.PrintStatus
@@ -29,23 +25,17 @@ class MainActivity : AppCompatActivity() {
     lateinit var database: AppDatabase
 
     private lateinit var bottomNav: BottomNavigationView
-    private lateinit var toolbar: MaterialToolbar
-    private lateinit var appBar: AppBarLayout
-    private lateinit var fragmentContainer: View
+    private lateinit var pageHeaderTitle: TextView
     private lateinit var labelNavButton: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        toolbar = findViewById(R.id.toolbar)
-        appBar = findViewById(R.id.app_bar)
-        fragmentContainer = findViewById(R.id.fragment_container)
+        pageHeaderTitle = findViewById(R.id.tv_page_header_title)
         bottomNav = findViewById(R.id.bottom_navigation)
         labelNavButton = findViewById(R.id.btn_nav_label)
         labelNavButton.bringToFront()
-        setSupportActionBar(toolbar)
-
         setupBottomNavigation(savedInstanceState)
         observePrintQueue()
 
@@ -112,16 +102,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showDestination(itemId: Int): Boolean {
-        appBar.visibility = View.GONE
-        val containerParams = fragmentContainer.layoutParams as CoordinatorLayout.LayoutParams
-        containerParams.topMargin = 0
-        fragmentContainer.layoutParams = containerParams
         val fragment = when (itemId) {
-            R.id.nav_dashboard -> DashboardFragment().also { toolbar.title = getString(R.string.dashboard_title) }
-            R.id.nav_printer   -> PrinterFragment().also { toolbar.title = getString(R.string.printer_title) }
-            R.id.nav_product_info -> ProductInfoFragment().also { toolbar.title = getString(R.string.product_info_title) }
-            R.id.nav_label     -> LabelFragment().also { toolbar.title = getString(R.string.create_label_title) }
-            R.id.nav_settings  -> SettingsFragment().also { toolbar.title = getString(R.string.settings_title) }
+            R.id.nav_dashboard -> DashboardFragment().also {
+                pageHeaderTitle.setText(R.string.dashboard_header_title)
+            }
+            R.id.nav_printer -> PrinterFragment().also {
+                pageHeaderTitle.setText(R.string.printer_title)
+            }
+            R.id.nav_product_info -> ProductInfoFragment().also {
+                pageHeaderTitle.setText(R.string.product_info_title)
+            }
+            R.id.nav_label -> LabelFragment().also {
+                pageHeaderTitle.setText(R.string.create_label_nav)
+            }
+            R.id.nav_settings -> SettingsFragment().also {
+                pageHeaderTitle.setText(R.string.settings_title)
+            }
             else -> return false
         }
         labelNavButton.isSelected = itemId == R.id.nav_label
@@ -164,28 +160,4 @@ class MainActivity : AppCompatActivity() {
         Log.i("MainActivity", "Print service start requested")
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_refresh -> showDestination(bottomNav.selectedItemId)
-            R.id.action_test_print -> {
-                val intent = Intent(this, PrintForegroundService::class.java).apply {
-                    action = PrintForegroundService.ACTION_TEST_PRINT
-                    putExtra(PrintForegroundService.EXTRA_TEST_DATA, "UJI MANUAL")
-                }
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    startForegroundService(intent)
-                } else {
-                    startService(intent)
-                }
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-
-    }
 }

@@ -13,7 +13,8 @@ sealed interface PosSubmissionOutcome {
     data class ReadyToQueue(
         val labelData: LabelData,
         val stockAdded: Int,
-        val currentStock: Int
+        val currentStock: Int,
+        val productId: Long? = null
     ) : PosSubmissionOutcome
 
     data class Conflict(
@@ -54,6 +55,7 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
                         baseUrl,
                         accessToken,
                         form,
+                        lookup.value,
                         lookup.value.hargaBeli,
                         operationId,
                         useProductData = false
@@ -74,10 +76,10 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
             conflict.baseUrl,
             conflict.accessToken,
             conflict.form,
+            conflict.product,
             conflict.product.hargaBeli,
             conflict.operationId,
-            useProductData = true,
-            stockSku = conflict.product.sku
+            useProductData = true
         )
         PosConflictChoice.UPDATE_POS -> updateThenAddStock(conflict)
     }
@@ -99,12 +101,13 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
     private suspend fun updateThenAddStock(
         conflict: PosSubmissionOutcome.Conflict
     ): PosSubmissionOutcome = when (val result = safeRequest {
-        gateway.update(conflict.baseUrl, conflict.accessToken, conflict.form)
+        gateway.update(conflict.baseUrl, conflict.accessToken, conflict.form, conflict.product)
     }) {
         is PosApiResult.Success -> addStock(
             conflict.baseUrl,
             conflict.accessToken,
             conflict.form,
+            result.value,
             conflict.form.hargaBeli,
             conflict.operationId,
             useProductData = false
@@ -118,15 +121,15 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
         baseUrl: String,
         accessToken: String,
         form: LabelData,
+        product: PosProduct,
         hargaSatuan: Long,
         operationId: String,
-        useProductData: Boolean,
-        stockSku: String = form.sku
+        useProductData: Boolean
     ): PosSubmissionOutcome = when (val result = safeRequest {
         gateway.addStock(
             baseUrl,
             accessToken,
-            stockSku,
+            product,
             form.jumlahBarangMasuk,
             hargaSatuan,
             operationId
@@ -158,7 +161,8 @@ class PosSubmissionWorkflow(private val gateway: PosProductGateway) {
         return PosSubmissionOutcome.ReadyToQueue(
             labelData = labelData,
             stockAdded = form.jumlahBarangMasuk,
-            currentStock = product.stok
+            currentStock = product.stok,
+            productId = product.id
         )
     }
 

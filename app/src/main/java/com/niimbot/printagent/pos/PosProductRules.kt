@@ -13,6 +13,12 @@ object PosProductRules {
 
     fun normalizeBaseUrl(baseUrl: String): String = baseUrl.trim().trimEnd('/')
 
+    fun resolvePhotoUrl(baseUrl: String, fotoUrl: String?): String? {
+        val path = fotoUrl?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (path.startsWith("https://") || path.startsWith("http://")) return path
+        return "${normalizeBaseUrl(baseUrl)}/${path.trimStart('/')}"
+    }
+
     fun decideExisting(form: LabelData, product: PosProduct): PosLookupDecision {
         val isSame = normalizeSku(form.sku) == normalizeSku(product.sku) &&
             form.nama == product.nama &&

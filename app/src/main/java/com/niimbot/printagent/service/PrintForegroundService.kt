@@ -35,6 +35,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.Date
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -286,7 +287,13 @@ class PrintForegroundService : Service() {
 
                 // Check printer before claiming the Room job.
                 if (!isSelectedPrinterConnected()) {
-                    database.printJobDao().updateStatus(job.id, PrintStatus.PENDING, "Printer tidak terhubung")
+                    database.printJobDao().updateStatusIfCurrent(
+                        id = job.id,
+                        expectedStatus = PrintStatus.PENDING,
+                        newStatus = PrintStatus.PENDING,
+                        error = "Printer tidak terhubung",
+                        updatedAt = Date()
+                    )
                     serviceScope.launch {
                         delay(5000)
                         queueSignal.trySend(Unit)
@@ -294,7 +301,14 @@ class PrintForegroundService : Service() {
                     break
                 }
 
-                database.printJobDao().updateStatus(job.id, PrintStatus.PRINTING, null)
+                val claimed = database.printJobDao().updateStatusIfCurrent(
+                    id = job.id,
+                    expectedStatus = PrintStatus.PENDING,
+                    newStatus = PrintStatus.PRINTING,
+                    error = null,
+                    updatedAt = Date()
+                )
+                if (claimed == 0) continue
                 database.printLogDao().insert(
                     PrintLog(printJobId = job.id, action = LogAction.PRINTING_STARTED)
                 )

@@ -16,9 +16,11 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.niimbot.printagent.R
 import com.niimbot.printagent.ble.XPrinterBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
+import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintStatus
 import com.niimbot.printagent.data.PrinterConfig
 import com.niimbot.printagent.service.PrintForegroundService
@@ -26,6 +28,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Date
 
 @AndroidEntryPoint
 class PrinterFragment : Fragment() {
@@ -110,18 +114,53 @@ class PrinterFragment : Fragment() {
         rvDevices?.adapter = deviceAdapter
         rvPrintQueue?.layoutManager = LinearLayoutManager(requireContext())
         rvPrintQueue?.isNestedScrollingEnabled = false
-        printQueueAdapter = JobAdapter()
+        printQueueAdapter = JobAdapter(::confirmCancelPrint)
         rvPrintQueue?.adapter = printQueueAdapter
     }
 
     private fun observePrintQueue() {
         database.printJobDao().getByStatuses(
-            listOf(PrintStatus.PENDING, PrintStatus.PRINTING, PrintStatus.FAILED, PrintStatus.DONE)
+            listOf(
+                PrintStatus.PENDING,
+                PrintStatus.PRINTING,
+                PrintStatus.FAILED,
+                PrintStatus.DONE,
+                PrintStatus.CANCELLED
+            )
         ).observe(viewLifecycleOwner) { jobs ->
             val items = jobs.orEmpty()
             printQueueAdapter?.submitList(items)
             tvPrintQueueEmpty?.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
             rvPrintQueue?.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
+        }
+    }
+
+    private fun confirmCancelPrint(job: PrintJob) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.job_cancel_title)
+            .setMessage(getString(R.string.job_cancel_message, job.nama))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.job_cancel_confirm) { _, _ -> cancelPrint(job) }
+            .showWithBoxedButtons()
+    }
+
+    private fun cancelPrint(job: PrintJob) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val changed = withContext(Dispatchers.IO) {
+                database.printJobDao().updateStatusIfCurrent(
+                    id = job.id,
+                    expectedStatus = PrintStatus.PENDING,
+                    newStatus = PrintStatus.CANCELLED,
+                    error = null,
+                    updatedAt = Date()
+                )
+            }
+            val message = if (changed == 1) {
+                R.string.job_cancel_success
+            } else {
+                R.string.job_cancel_unavailable
+            }
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
     }
 

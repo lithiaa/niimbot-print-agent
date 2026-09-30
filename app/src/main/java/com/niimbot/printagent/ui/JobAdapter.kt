@@ -6,14 +6,18 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 import com.niimbot.printagent.R
 import com.niimbot.printagent.data.PrintJob
+import com.niimbot.printagent.data.PrintQueueRules
 import com.niimbot.printagent.data.PrintStatus
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class JobAdapter : RecyclerView.Adapter<JobAdapter.JobViewHolder>() {
+class JobAdapter(
+    private val onCancel: (PrintJob) -> Unit
+) : RecyclerView.Adapter<JobAdapter.JobViewHolder>() {
     private var jobs: List<PrintJob> = emptyList()
 
     fun submitList(newJobs: List<PrintJob>) {
@@ -38,6 +42,7 @@ class JobAdapter : RecyclerView.Adapter<JobAdapter.JobViewHolder>() {
         private val status: TextView = view.findViewById(R.id.tv_job_status)
         private val time: TextView = view.findViewById(R.id.tv_job_time)
         private val retry: TextView = view.findViewById(R.id.tv_job_retry)
+        private val cancel: MaterialButton = view.findViewById(R.id.btn_cancel_job)
 
         fun bind(job: PrintJob) {
             name.text = job.nama
@@ -60,6 +65,8 @@ class JobAdapter : RecyclerView.Adapter<JobAdapter.JobViewHolder>() {
                     append(localizeLegacyPrintMessage(it))
                 }
             }
+            cancel.visibility = if (PrintQueueRules.canCancel(job.status)) View.VISIBLE else View.GONE
+            cancel.setOnClickListener { onCancel(job) }
         }
 
         private fun setStatus(label: String, color: String) {

@@ -22,6 +22,31 @@
         android:orientation="horizontal"
         android:padding="12dp">
 
+        <FrameLayout
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/list_icon_container"
+            android:clipToOutline="true">
+
+            <ImageView
+                android:id="@+id/iv_product_photo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/product_photo_description"
+                android:padding="18dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_photo_placeholder" />
+
+            <ProgressBar
+                android:id="@+id/progress_product_photo"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:indeterminateTint="@color/primary"
+                android:visibility="gone" />
+        </FrameLayout>
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -55,7 +80,7 @@
                     android:fontFamily="monospace"
                     android:maxLines="1"
                     android:textColor="@color/list_text_muted"
-                    android:textSize="11sp" />
+                    android:textSize="12sp" />
 
                 <TextView
                     android:id="@+id/tv_product_stock"
@@ -68,7 +93,7 @@
                     android:paddingHorizontal="8dp"
                     android:paddingVertical="3dp"
                     android:textColor="@color/list_accent_dark"
-                    android:textSize="11sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <TextView
@@ -77,9 +102,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
                 android:ellipsize="end"
-                android:maxLines="1"
+                android:lineSpacingExtra="1dp"
+                android:maxLines="2"
                 android:textColor="@color/list_text_secondary"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
         </LinearLayout>
 
         <LinearLayout

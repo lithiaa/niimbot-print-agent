@@ -33,6 +33,5 @@ class LabelPrefillContractTest {
         assertEquals(7L, result.supplierId)
         assertEquals("SUP-7", result.supplierCode)
         assertEquals("Supplier Utama - SUP-7", result.supplierDisplay)
-        assertEquals(product.createdAt, result.createdAt)
     }
 }

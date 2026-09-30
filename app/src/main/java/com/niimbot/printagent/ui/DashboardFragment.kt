@@ -1,458 +1,255 @@
 package com.niimbot.printagent.ui
 
-import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.RectF
+import android.content.res.ColorStateList
 import android.os.Bundle
-import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
-import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
 import com.niimbot.printagent.R
 import com.niimbot.printagent.ble.XPrinterBluetoothManager
 import com.niimbot.printagent.data.AppDatabase
-import com.niimbot.printagent.data.PrintJob
-import com.niimbot.printagent.data.PrintStatus
-import com.niimbot.printagent.service.PrintForegroundService
+import com.niimbot.printagent.pos.IntegrationConfigStore
+import com.niimbot.printagent.pos.PosApiClient
+import com.niimbot.printagent.pos.PosApiResult
+import com.niimbot.printagent.pos.PosInventoryStatistics
+import com.niimbot.printagent.pos.PosStockStatisticItem
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
-import kotlin.math.max
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class DashboardFragment : Fragment() {
 
-    @Inject
-    lateinit var database: AppDatabase
+    @Inject lateinit var database: AppDatabase
+    @Inject lateinit var xPrinterManager: XPrinterBluetoothManager
+    @Inject lateinit var configStore: IntegrationConfigStore
+    @Inject lateinit var posApiClient: PosApiClient
 
-    @Inject
-    lateinit var xPrinterManager: XPrinterBluetoothManager
+    private lateinit var swipeRefresh: SwipeRefreshLayout
+    private lateinit var progressBar: ProgressBar
+    private lateinit var retryButton: MaterialButton
+    private lateinit var statisticsStatus: TextView
+    private lateinit var totalProducts: TextView
+    private lateinit var totalStock: TextView
+    private lateinit var lowStockCount: TextView
+    private lateinit var outOfStockCount: TextView
+    private lateinit var lowStockContainer: LinearLayout
+    private lateinit var outOfStockContainer: LinearLayout
+    private lateinit var lowStockEmpty: TextView
+    private lateinit var outOfStockEmpty: TextView
+    private lateinit var printerStatus: TextView
+    private lateinit var printerStatusDot: View
+    private lateinit var printerMac: TextView
 
-    private var tvPrinterStatus: TextView? = null
-    private var tvStatusDot: TextView? = null
-    private var tvMac: TextView? = null
-    private var tvTotalCount: TextView? = null
-    private var tvTotalMeta: TextView? = null
-    private var tvPendingCount: TextView? = null
-    private var tvPendingMeta: TextView? = null
-    private var tvPrintingCount: TextView? = null
-    private var tvDoneCount: TextView? = null
-    private var tvDoneMeta: TextView? = null
-    private var tvFailedCount: TextView? = null
-    private var tvFailedMeta: TextView? = null
-    private var tvUptime: TextView? = null
-    private var activityChart: StatusBarChartView? = null
-    private var printerGauge: ConnectionGaugeView? = null
-    private var recentTrendChart: RecentTrendChartView? = null
-    private var tvServerEndpoint: TextView? = null
-    private var tvServerStatus: TextView? = null
-
-    private var pendingJobs: List<PrintJob> = emptyList()
-    private var printingJobs: List<PrintJob> = emptyList()
-    private var doneJobs: List<PrintJob> = emptyList()
-    private var failedJobs: List<PrintJob> = emptyList()
-    private var connectionState = XPrinterBluetoothManager.STATE_DISCONNECTED
-    private var uptimeJob: Job? = null
+    private var statisticsJob: Job? = null
+    private val numberFormat = NumberFormat.getIntegerInstance(Locale("id", "ID"))
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
-    ): View {
-        return inflater.inflate(R.layout.fragment_dashboard, container, false)
-    }
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View = inflater.inflate(R.layout.fragment_dashboard, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        swipeRefresh = view.findViewById(R.id.swipe_dashboard)
+        progressBar = view.findViewById(R.id.progress_dashboard_statistics)
+        retryButton = view.findViewById(R.id.btn_retry_dashboard_statistics)
+        statisticsStatus = view.findViewById(R.id.tv_dashboard_statistics_status)
+        totalProducts = view.findViewById(R.id.tv_total_products)
+        totalStock = view.findViewById(R.id.tv_total_stock)
+        lowStockCount = view.findViewById(R.id.tv_low_stock_count)
+        outOfStockCount = view.findViewById(R.id.tv_out_of_stock_count)
+        lowStockContainer = view.findViewById(R.id.container_low_stock)
+        outOfStockContainer = view.findViewById(R.id.container_out_of_stock)
+        lowStockEmpty = view.findViewById(R.id.tv_low_stock_empty)
+        outOfStockEmpty = view.findViewById(R.id.tv_out_of_stock_empty)
+        printerStatus = view.findViewById(R.id.tv_printer_status)
+        printerStatusDot = view.findViewById(R.id.view_status_dot)
+        printerMac = view.findViewById(R.id.tv_mac)
 
-        tvPrinterStatus = view.findViewById(R.id.tv_printer_status)
-        tvStatusDot = view.findViewById(R.id.tv_status_dot)
-        tvMac = view.findViewById(R.id.tv_mac)
-        tvTotalCount = view.findViewById(R.id.tv_total_count)
-        tvTotalMeta = view.findViewById(R.id.tv_total_meta)
-        tvPendingCount = view.findViewById(R.id.tv_pending_count)
-        tvPendingMeta = view.findViewById(R.id.tv_pending_meta)
-        tvPrintingCount = view.findViewById(R.id.tv_printing_count)
-        tvDoneCount = view.findViewById(R.id.tv_done_count)
-        tvDoneMeta = view.findViewById(R.id.tv_done_meta)
-        tvFailedCount = view.findViewById(R.id.tv_failed_count)
-        tvFailedMeta = view.findViewById(R.id.tv_failed_meta)
-        tvUptime = view.findViewById(R.id.tv_uptime)
-        activityChart = view.findViewById(R.id.chart_activity)
-        printerGauge = view.findViewById(R.id.chart_printer_gauge)
-        recentTrendChart = view.findViewById(R.id.chart_recent_trend)
-        tvServerEndpoint = view.findViewById(R.id.tv_server_endpoint)
-        tvServerStatus  = view.findViewById(R.id.tv_server_status)
+        swipeRefresh.setColorSchemeResources(R.color.primary)
+        swipeRefresh.setOnRefreshListener(::loadStatistics)
+        retryButton.setOnClickListener { loadStatistics() }
 
-        view.findViewById<View>(R.id.btn_dashboard_create_label).setOnClickListener {
-            (requireActivity() as MainActivity).selectLabelTab()
-        }
-
-        observeData()
-        showServerInfo()
-        setupActions(view)
+        observePrinterStatus()
+        loadStatistics()
     }
 
-    private fun setupActions(view: View) {
-        view.findViewById<View>(R.id.btn_quick_test_print).setOnClickListener {
-            val intent = Intent(requireContext(), PrintForegroundService::class.java).apply {
-                action = PrintForegroundService.ACTION_TEST_PRINT
-                putExtra(PrintForegroundService.EXTRA_TEST_DATA, "UJI DASBOR")
-            }
-            ContextCompat.startForegroundService(requireContext(), intent)
-        }
-        view.findViewById<View>(R.id.btn_open_queue).setOnClickListener {
-            requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
-                R.id.bottom_navigation
-            ).selectedItemId = R.id.nav_printer
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        startUptimeTicker()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        uptimeJob?.cancel()
-    }
-
-    private fun observeData() {
+    private fun observePrinterStatus() {
         xPrinterManager.connectionStateLive.observe(viewLifecycleOwner) { state ->
-            connectionState = state
             val statusText = when (state) {
-                XPrinterBluetoothManager.STATE_CONNECTED -> "Terhubung"
-                XPrinterBluetoothManager.STATE_CONNECTING -> "Menghubungkan..."
-                XPrinterBluetoothManager.STATE_DISCONNECTED -> "Terputus"
-                else -> "Tidak diketahui"
+                XPrinterBluetoothManager.STATE_CONNECTED -> R.string.printer_connected
+                XPrinterBluetoothManager.STATE_CONNECTING -> R.string.printer_connecting
+                else -> R.string.printer_disconnected
             }
             val statusColor = when (state) {
                 XPrinterBluetoothManager.STATE_CONNECTED -> R.color.success
                 XPrinterBluetoothManager.STATE_CONNECTING -> R.color.warning
-                XPrinterBluetoothManager.STATE_DISCONNECTED -> R.color.error
-                else -> R.color.text_muted
+                else -> R.color.error
             }
-            tvPrinterStatus?.text = statusText
-            tvStatusDot?.setTextColor(ContextCompat.getColor(requireContext(), statusColor))
-            printerGauge?.setConnectionState(state)
+            printerStatus.setText(statusText)
+            printerStatusDot.backgroundTintList = ColorStateList.valueOf(
+                ContextCompat.getColor(requireContext(), statusColor)
+            )
         }
 
         database.printerConfigDao().getConfig().observe(viewLifecycleOwner) { config ->
-            tvMac?.text = config?.macAddress ?: "Belum ada printer terpasang"
-        }
-
-        database.printJobDao().getByStatus(PrintStatus.PENDING).observe(viewLifecycleOwner) { jobs ->
-            pendingJobs = jobs ?: emptyList()
-            tvPendingCount?.text = pendingJobs.size.toString()
-            updateDashboard()
-        }
-
-        database.printJobDao().getByStatus(PrintStatus.PRINTING).observe(viewLifecycleOwner) { jobs ->
-            printingJobs = jobs ?: emptyList()
-            tvPrintingCount?.text = "Sedang dicetak: ${printingJobs.size}"
-            updateDashboard()
-        }
-
-        database.printJobDao().getByStatus(PrintStatus.DONE).observe(viewLifecycleOwner) { jobs ->
-            doneJobs = jobs ?: emptyList()
-            tvDoneCount?.text = doneJobs.size.toString()
-            updateDashboard()
-        }
-
-        database.printJobDao().getByStatus(PrintStatus.FAILED).observe(viewLifecycleOwner) { jobs ->
-            failedJobs = jobs ?: emptyList()
-            tvFailedCount?.text = failedJobs.size.toString()
-            updateDashboard()
+            printerMac.text = config?.macAddress ?: getString(R.string.printer_not_paired)
         }
     }
 
-    private fun updateDashboard() {
-        val total = pendingJobs.size + printingJobs.size + doneJobs.size + failedJobs.size
-        val donePercent = if (total == 0) 0 else (doneJobs.size * 100 / total)
-        tvTotalCount?.text = total.toString()
-        tvTotalMeta?.text = if (total == 0) "Belum ada tugas" else "$donePercent% selesai"
-        tvPendingMeta?.text = "${printingJobs.size} sedang dicetak"
-        tvDoneMeta?.text = "$donePercent% dari total"
-        tvFailedMeta?.text = if (failedJobs.isEmpty()) "Tidak ada kegagalan" else "Perlu diperiksa"
+    private fun loadStatistics() {
+        val accessToken = configStore.getAccessToken()
+        if (accessToken.isNullOrBlank()) {
+            showStatisticsMessage(getString(R.string.pos_login_required), showRetry = false)
+            showUnavailableStatistics()
+            return
+        }
 
-        activityChart?.setCounts(
-            pendingJobs.size,
-            printingJobs.size,
-            doneJobs.size,
-            failedJobs.size
-        )
-        recentTrendChart?.setJobs(pendingJobs + printingJobs + doneJobs + failedJobs)
-        printerGauge?.setHasJobs(total > 0)
-    }
-
-    private fun showServerInfo() {
-        val prefs = requireContext().getSharedPreferences("niimbot_prefs", android.content.Context.MODE_PRIVATE)
-        val port = prefs.getInt("server_port", 8080)
-        val ip = getDeviceIpAddress()
-        tvServerEndpoint?.text = "$ip:$port"
-        tvServerStatus?.text = "🟢 Berjalan"
-    }
-
-    private fun getDeviceIpAddress(): String {
-        try {
-            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
-            while (interfaces.hasMoreElements()) {
-                val networkInterface = interfaces.nextElement()
-                val addresses = networkInterface.inetAddresses
-                while (addresses.hasMoreElements()) {
-                    val address = addresses.nextElement()
-                    if (!address.isLoopbackAddress && address is java.net.Inet4Address) {
-                        return address.hostAddress ?: "0.0.0.0"
-                    }
+        statisticsJob?.cancel()
+        setStatisticsLoading(true)
+        statisticsJob = viewLifecycleOwner.lifecycleScope.launch {
+            val result = posApiClient.getInventoryStatistics(configStore.getBaseUrl(), accessToken)
+            setStatisticsLoading(false)
+            when (result) {
+                is PosApiResult.Success -> renderStatistics(result.value)
+                PosApiResult.SessionExpired -> {
+                    configStore.clearSession()
+                    showUnavailableStatistics()
+                    showStatisticsMessage(getString(R.string.pos_session_expired), showRetry = false)
+                }
+                PosApiResult.NotFound -> {
+                    showUnavailableStatistics()
+                    showStatisticsMessage(getString(R.string.dashboard_statistics_not_found), showRetry = true)
+                }
+                is PosApiResult.Failure -> {
+                    showStatisticsMessage(result.message, showRetry = true)
                 }
             }
-        } catch (_: Exception) { }
-        return "0.0.0.0"
+        }
     }
 
-    companion object {
-        val appStartTime = System.currentTimeMillis()
+    private fun setStatisticsLoading(loading: Boolean) {
+        progressBar.visibility = if (loading && !swipeRefresh.isRefreshing) View.VISIBLE else View.GONE
+        if (!loading) swipeRefresh.isRefreshing = false
+        retryButton.visibility = View.GONE
+        if (loading) statisticsStatus.setText(R.string.dashboard_statistics_loading)
     }
 
-    private fun startUptimeTicker() {
-        uptimeJob?.cancel()
-        uptimeJob = CoroutineScope(Dispatchers.Main).launch {
-            while (isActive) {
-                val uptimeMs = System.currentTimeMillis() - appStartTime
-                tvUptime?.text = formatUptime(uptimeMs / 1000)
-                delay(10_000)
+    private fun renderStatistics(statistics: PosInventoryStatistics) {
+        totalProducts.text = numberFormat.format(statistics.totalBarang)
+        totalStock.text = numberFormat.format(statistics.totalStok)
+        lowStockCount.text = numberFormat.format(statistics.totalStokMenipis)
+        outOfStockCount.text = numberFormat.format(statistics.totalStokHabis)
+
+        renderStockItems(
+            container = lowStockContainer,
+            emptyView = lowStockEmpty,
+            items = statistics.stokMenipis,
+            accentColor = R.color.warning,
+            accentBackground = 0xFFFFF7E6.toInt()
+        )
+        renderStockItems(
+            container = outOfStockContainer,
+            emptyView = outOfStockEmpty,
+            items = statistics.stokHabis,
+            accentColor = R.color.error,
+            accentBackground = 0xFFFFEEF1.toInt()
+        )
+
+        val updatedAt = SimpleDateFormat("HH.mm", Locale("id", "ID")).format(Date())
+        statisticsStatus.text = getString(R.string.dashboard_statistics_updated, updatedAt)
+        statisticsStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+        retryButton.visibility = View.GONE
+    }
+
+    private fun renderStockItems(
+        container: LinearLayout,
+        emptyView: TextView,
+        items: List<PosStockStatisticItem>,
+        accentColor: Int,
+        accentBackground: Int
+    ) {
+        container.removeAllViews()
+        emptyView.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+        val foreground = ContextCompat.getColor(requireContext(), accentColor)
+
+        val visibleItems = DashboardStockListRules.visibleItems(items)
+        visibleItems.forEach { item ->
+            val itemView = layoutInflater.inflate(R.layout.item_dashboard_stock_alert, container, false)
+            val initialCard = itemView.findViewById<MaterialCardView>(R.id.card_stock_initial)
+            val initial = itemView.findViewById<TextView>(R.id.tv_stock_initial)
+            initialCard.setCardBackgroundColor(accentBackground)
+            initial.setTextColor(foreground)
+            initial.text = item.nama.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+            itemView.findViewById<TextView>(R.id.tv_stock_name).text = item.nama
+            itemView.findViewById<TextView>(R.id.tv_stock_sku).text =
+                getString(R.string.dashboard_stock_sku, item.sku)
+            itemView.findViewById<TextView>(R.id.tv_stock_value).apply {
+                setTextColor(foreground)
+                text = getString(
+                    R.string.dashboard_stock_item_value,
+                    numberFormat.format(item.stok),
+                    item.satuan,
+                    numberFormat.format(item.stokMinimum)
+                )
             }
-        }
-    }
-
-    private fun formatUptime(seconds: Long): String {
-        val days = seconds / 86400
-        val hours = (seconds % 86400) / 3600
-        val minutes = (seconds % 3600) / 60
-        return when {
-            days > 0 -> "${days}d ${hours}h ${minutes}m"
-            hours > 0 -> "${hours}h ${minutes}m"
-            else -> "${minutes}m"
-        }
-    }
-}
-
-abstract class DashboardChartView @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null
-) : View(context, attrs) {
-    protected val primary = ContextCompat.getColor(context, R.color.primary)
-    protected val primaryLight = ContextCompat.getColor(context, R.color.primary_light)
-    protected val success = ContextCompat.getColor(context, R.color.success_light)
-    protected val error = ContextCompat.getColor(context, R.color.error)
-    protected val info = ContextCompat.getColor(context, R.color.info)
-    protected val muted = ContextCompat.getColor(context, R.color.text_muted)
-    protected val secondary = ContextCompat.getColor(context, R.color.text_secondary)
-    protected val divider = ContextCompat.getColor(context, R.color.divider)
-    protected val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = secondary
-        textSize = 12f * resources.displayMetrics.scaledDensity
-        typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
-    }
-
-    protected fun emptyState(canvas: Canvas, text: String) {
-        labelPaint.color = muted
-        canvas.drawText(text, width / 2f - labelPaint.measureText(text) / 2f, height / 2f, labelPaint)
-        labelPaint.color = secondary
-    }
-
-    protected fun chartBounds(): RectF {
-        val density = resources.displayMetrics.density
-        return RectF(12f * density, 12f * density, width - 12f * density, height - 30f * density)
-    }
-}
-
-class StatusBarChartView @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null
-) : DashboardChartView(context, attrs) {
-    private val counts = intArrayOf(0, 0, 0, 0)
-    private val names = arrayOf("Menunggu", "Mencetak", "Selesai", "Gagal")
-    private val colors: IntArray
-        get() = intArrayOf(info, primaryLight, success, error)
-    private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-
-    fun setCounts(pending: Int, printing: Int, done: Int, failed: Int) {
-        counts[0] = pending
-        counts[1] = printing
-        counts[2] = done
-        counts[3] = failed
-        invalidate()
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val total = counts.sum()
-        if (total == 0) {
-            emptyState(canvas, "Belum ada aktivitas tugas")
-            return
+            container.addView(itemView)
         }
 
-        val bounds = chartBounds()
-        val maxCount = max(1, counts.maxOrNull() ?: 1)
-        val slotWidth = bounds.width() / counts.size
-        val density = resources.displayMetrics.density
-        val labelBaseline = height - 8f * density
-        for (index in counts.indices) {
-            val barHeight = bounds.height() * counts[index] / maxCount
-            val left = bounds.left + slotWidth * index + slotWidth * 0.25f
-            val right = bounds.left + slotWidth * index + slotWidth * 0.75f
-            val top = bounds.bottom - barHeight
-            barPaint.color = colors[index]
-            canvas.drawRoundRect(RectF(left, top, right, bounds.bottom), 6f * density, 6f * density, barPaint)
-            labelPaint.color = secondary
-            canvas.drawText(names[index], left, labelBaseline, labelPaint)
-            labelPaint.color = muted
-            val value = counts[index].toString()
-            canvas.drawText(value, (left + right) / 2f - labelPaint.measureText(value) / 2f, top - 6f * density, labelPaint)
-        }
-    }
-}
-
-class ConnectionGaugeView @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null
-) : DashboardChartView(context, attrs) {
-    private var connectionState = XPrinterBluetoothManager.STATE_DISCONNECTED
-    private var hasJobs = false
-    private val arcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-
-    fun setConnectionState(state: Int) {
-        connectionState = state
-        invalidate()
-    }
-
-    fun setHasJobs(value: Boolean) {
-        hasJobs = value
-        invalidate()
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val density = resources.displayMetrics.density
-        val centerX = width / 2f
-        val centerY = height - 18f * density
-        val radius = (width / 2f - 28f * density).coerceAtMost(height - 36f * density)
-        val rect = RectF(centerX - radius, centerY - radius, centerX + radius, centerY + radius)
-        arcPaint.strokeWidth = 16f * density
-        arcPaint.strokeCap = Paint.Cap.ROUND
-        arcPaint.color = divider
-        canvas.drawArc(rect, 180f, -180f, false, arcPaint)
-
-        val sweep = when (connectionState) {
-            XPrinterBluetoothManager.STATE_CONNECTED -> 180f
-            XPrinterBluetoothManager.STATE_CONNECTING -> 90f
-            else -> 0f
-        }
-        if (sweep > 0f) {
-            arcPaint.color = if (connectionState == XPrinterBluetoothManager.STATE_CONNECTED) success else ContextCompat.getColor(context, R.color.warning)
-            canvas.drawArc(rect, 180f, -sweep, false, arcPaint)
-        }
-
-        val status = when (connectionState) {
-            XPrinterBluetoothManager.STATE_CONNECTED -> "Siap"
-            XPrinterBluetoothManager.STATE_CONNECTING -> "Menghubungkan"
-            else -> "Luring"
-        }
-        labelPaint.color = ContextCompat.getColor(context, R.color.text_primary)
-        labelPaint.textSize = 20f * resources.displayMetrics.scaledDensity
-        labelPaint.typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
-        canvas.drawText(status, centerX - labelPaint.measureText(status) / 2f, centerY - 10f * density, labelPaint)
-        labelPaint.color = secondary
-        labelPaint.textSize = 12f * resources.displayMetrics.scaledDensity
-        labelPaint.typeface = android.graphics.Typeface.DEFAULT
-        val detail = if (hasJobs) "Antrean aktif" else "Tidak ada tugas dalam antrean"
-        canvas.drawText(detail, centerX - labelPaint.measureText(detail) / 2f, centerY + 14f * density, labelPaint)
-    }
-}
-
-class RecentTrendChartView @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null
-) : DashboardChartView(context, attrs) {
-    private var jobs: List<PrintJob> = emptyList()
-    private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 3f * resources.displayMetrics.density
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-    }
-
-    fun setJobs(value: List<PrintJob>) {
-        jobs = value
-        invalidate()
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        if (jobs.isEmpty()) {
-            emptyState(canvas, "Belum ada tugas terbaru")
-            return
-        }
-
-        val density = resources.displayMetrics.density
-        val bounds = chartBounds()
-        val now = System.currentTimeMillis()
-        val totalBuckets = IntArray(6)
-        val doneBuckets = IntArray(6)
-        jobs.forEach { job ->
-            val ageHours = ((now - job.createdAt.time).coerceAtLeast(0L) / 3_600_000L).toInt()
-            if (ageHours < 24) {
-                val bucket = 5 - (ageHours / 4).coerceIn(0, 5)
-                totalBuckets[bucket]++
-                if (job.status == PrintStatus.DONE) doneBuckets[bucket]++
+        val hiddenCount = items.size - visibleItems.size
+        if (hiddenCount > 0) {
+            val summary = layoutInflater.inflate(R.layout.item_dashboard_stock_more, container, false)
+            summary.findViewById<TextView>(R.id.tv_stock_more).text = getString(
+                R.string.dashboard_stock_more,
+                DashboardStockListRules.MAX_VISIBLE_ITEMS,
+                items.size
+            )
+            summary.setOnClickListener {
+                requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
+                    R.id.bottom_navigation
+                ).selectedItemId = R.id.nav_product_info
             }
+            container.addView(summary)
         }
-
-        if (totalBuckets.sum() == 0) {
-            emptyState(canvas, "Tidak ada tugas dalam 24 jam terakhir")
-            return
-        }
-
-        val maxCount = max(1, totalBuckets.maxOrNull() ?: 1)
-        val step = bounds.width() / (totalBuckets.size - 1)
-        drawLine(canvas, bounds, totalBuckets, maxCount, step, primary)
-        drawLine(canvas, bounds, doneBuckets, maxCount, step, success)
-
-        labelPaint.color = secondary
-        labelPaint.textSize = 10f * resources.displayMetrics.scaledDensity
-        for (index in totalBuckets.indices) {
-            val label = if (index == totalBuckets.lastIndex) "Sekarang" else "-${(5 - index) * 4}j"
-            val x = bounds.left + step * index
-            canvas.drawText(label, x - labelPaint.measureText(label) / 2f, height - 8f * density, labelPaint)
-        }
-        labelPaint.textSize = 12f * resources.displayMetrics.scaledDensity
     }
 
-    private fun drawLine(canvas: Canvas, bounds: RectF, values: IntArray, maxCount: Int, step: Float, color: Int) {
-        val path = Path()
-        values.forEachIndexed { index, value ->
-            val x = bounds.left + step * index
-            val y = bounds.bottom - bounds.height() * value / maxCount
-            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-        }
-        linePaint.color = color
-        canvas.drawPath(path, linePaint)
-        val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color; style = Paint.Style.FILL }
-        values.forEachIndexed { index, value ->
-            val x = bounds.left + step * index
-            val y = bounds.bottom - bounds.height() * value / maxCount
-            canvas.drawCircle(x, y, 4f * resources.displayMetrics.density, pointPaint)
-        }
+    private fun showUnavailableStatistics() {
+        totalProducts.text = "—"
+        totalStock.text = "—"
+        lowStockCount.text = "—"
+        outOfStockCount.text = "—"
+        lowStockContainer.removeAllViews()
+        outOfStockContainer.removeAllViews()
+        lowStockEmpty.visibility = View.VISIBLE
+        outOfStockEmpty.visibility = View.VISIBLE
+    }
+
+    private fun showStatisticsMessage(message: String, showRetry: Boolean) {
+        progressBar.visibility = View.GONE
+        swipeRefresh.isRefreshing = false
+        statisticsStatus.text = message
+        statisticsStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.error))
+        retryButton.visibility = if (showRetry) View.VISIBLE else View.GONE
+    }
+
+    override fun onDestroyView() {
+        statisticsJob?.cancel()
+        super.onDestroyView()
     }
 }

@@ -31,10 +31,20 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_product_detail_back"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
+                    android:layout_width="48dp"
                     android:layout_height="48dp"
+                    android:contentDescription="@string/product_detail_back"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
                     android:minWidth="48dp"
-                    android:text="@string/product_detail_back" />
+                    android:padding="12dp"
+                    android:text=""
+                    app:icon="@drawable/ic_chevron_left"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconTint="@color/primary" />
 
                 <TextView
                     android:layout_width="0dp"
@@ -64,6 +74,70 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="@string/product_photos"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/tv_product_detail_photo_count"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/list_metadata_chip"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="5dp"
+                            android:textColor="@color/list_accent_dark"
+                            android:textSize="12sp"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rv_product_detail_photos"
+                        android:layout_width="match_parent"
+                        android:layout_height="220dp"
+                        android:clipToPadding="false"
+                        android:overScrollMode="never"
+                        android:paddingEnd="8dp"
+                        android:visibility="gone" />
+
+                    <FrameLayout
+                        android:id="@+id/product_detail_photo_empty"
+                        android:layout_width="220dp"
+                        android:layout_height="220dp"
+                        android:layout_gravity="center_horizontal"
+                        android:background="@color/surface_variant">
+
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:contentDescription="@string/product_photo_description"
+                            android:padding="58dp"
+                            android:scaleType="centerInside"
+                            android:src="@drawable/ic_photo_placeholder" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom"
+                            android:background="#CCFFFFFF"
+                            android:gravity="center"
+                            android:padding="8dp"
+                            android:text="@string/product_photo_none"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </FrameLayout>
 
                     <TextView
                         android:id="@+id/tv_product_detail_name"
@@ -139,8 +213,6 @@
 
                     <TextView style="@style/ProductDetailLabel" android:text="@string/product_brand" />
                     <TextView android:id="@+id/tv_product_detail_brand" style="@style/ProductDetailValue" />
-                    <TextView style="@style/ProductDetailLabel" android:text="@string/product_category" />
-                    <TextView android:id="@+id/tv_product_detail_category" style="@style/ProductDetailValue" />
                     <TextView style="@style/ProductDetailLabel" android:text="@string/product_supplier" />
                     <TextView android:id="@+id/tv_product_detail_supplier" style="@style/ProductDetailValue" />
                     <TextView style="@style/ProductDetailLabel" android:text="@string/product_prices" />
@@ -164,7 +236,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:minHeight="50dp"
-                android:text="@string/product_edit_information" />
+                android:text="@string/product_edit_information"
+                app:icon="@drawable/ic_edit"
+                app:iconGravity="textStart"
+                app:iconPadding="10dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_product_detail_add_stock"
@@ -173,7 +248,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:minHeight="50dp"
-                android:text="@string/product_add_stock" />
+                android:text="@string/product_add_stock"
+                app:icon="@drawable/ic_add"
+                app:iconGravity="textStart"
+                app:iconPadding="10dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_product_detail_subtract_stock"
@@ -182,7 +260,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:minHeight="50dp"
-                android:text="@string/product_subtract_stock" />
+                android:text="@string/product_subtract_stock"
+                app:icon="@drawable/ic_remove"
+                app:iconGravity="textStart"
+                app:iconPadding="10dp" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

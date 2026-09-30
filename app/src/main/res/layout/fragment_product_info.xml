@@ -10,18 +10,9 @@
     android:paddingEnd="12dp">
 
     <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fontFamily="sans-serif-medium"
-        android:text="@string/product_info_title"
-        android:textColor="@color/text_primary"
-        android:textSize="22sp" />
-
-    <TextView
         android:id="@+id/tv_product_info_summary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
         android:text="@string/product_info_subtitle"
         android:textColor="@color/text_muted"
         android:textSize="13sp" />
@@ -49,7 +40,8 @@
                 android:imeOptions="actionSearch"
                 android:inputType="text"
                 android:maxLines="1"
-                android:minHeight="48dp" />
+                android:minHeight="48dp"
+                android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.button.MaterialButton
@@ -142,7 +134,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:layout_marginBottom="92dp"
+        android:layout_marginBottom="8dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:visibility="gone">
@@ -150,12 +142,22 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_previous_products"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="@string/product_page_previous"
             android:enabled="false"
-            android:text="@string/product_page_previous"
-            android:textColor="@color/primary"
-            app:cornerRadius="22dp"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:padding="12dp"
+            android:text=""
+            app:cornerRadius="12dp"
+            app:icon="@drawable/ic_chevron_left"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconTint="@color/primary"
             app:strokeColor="@color/primary" />
 
         <TextView
@@ -164,19 +166,30 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
+            android:maxLines="1"
             android:text="@string/product_page_initial"
             android:textColor="@color/text_primary"
-            android:textSize="14sp" />
+            android:textSize="15sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_next_products"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="@string/product_page_next"
             android:enabled="false"
-            android:text="@string/product_page_next"
-            android:textColor="@color/primary"
-            app:cornerRadius="22dp"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:padding="12dp"
+            android:text=""
+            app:cornerRadius="12dp"
+            app:icon="@drawable/ic_chevron_right"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconTint="@color/primary"
             app:strokeColor="@color/primary" />
     </LinearLayout>
 </LinearLayout>

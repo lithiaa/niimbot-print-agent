@@ -1,16 +1,20 @@
 package com.niimbot.printagent.ui
 
+import android.graphics.Bitmap
 import android.os.Bundle
+import android.util.LruCache
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -26,14 +30,19 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.text.NumberFormat
 import java.util.Locale
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class ProductInfoFragment : Fragment() {
     @Inject lateinit var configStore: IntegrationConfigStore
     @Inject lateinit var posApiClient: PosApiClient
+
+    private val savedState: ProductInfoStateViewModel by activityViewModels()
 
     private lateinit var searchInput: EditText
     private lateinit var sortButton: MaterialButton
@@ -78,7 +87,23 @@ class ProductInfoFragment : Fragment() {
         pageView = view.findViewById(R.id.tv_product_page)
         paginationView = view.findViewById(R.id.product_pagination)
 
-        adapter = ProductInfoAdapter(::openDetail, ::openLabel)
+        restoreStateValues()
+        searchInput.setText(savedState.query)
+        searchInput.setSelection(searchInput.text.length)
+
+        adapter = ProductInfoAdapter(
+            scope = viewLifecycleOwner.lifecycleScope,
+            loadPhoto = { photoUrl ->
+                when (val result = posApiClient.downloadProductPhoto(configStore.getBaseUrl(), photoUrl)) {
+                    is PosApiResult.Success -> withContext(Dispatchers.Default) {
+                        ProductPhotoFiles.decodePreview(result.value, PRODUCT_THUMBNAIL_SIZE_PX)
+                    }
+                    else -> null
+                }
+            },
+            onDetail = ::openDetail,
+            onPrint = ::openLabel
+        )
         val spanCount = if (resources.configuration.smallestScreenWidthDp >= 600) 2 else 1
         recyclerView.layoutManager = GridLayoutManager(requireContext(), spanCount)
         recyclerView.adapter = adapter
@@ -91,13 +116,26 @@ class ProductInfoFragment : Fragment() {
         previousButton.setOnClickListener { loadProducts(currentPage - 1) }
         nextButton.setOnClickListener { loadProducts(currentPage + 1) }
         searchInput.doAfterTextChanged {
+            val query = it?.toString().orEmpty()
+            if (query == savedState.query) return@doAfterTextChanged
+            savedState.query = query
             searchJob?.cancel()
             searchJob = viewLifecycleOwner.lifecycleScope.launch {
                 delay(350)
                 loadProducts(1, initial = true)
             }
         }
-        loadProducts(1, initial = true)
+        if (savedState.initialized && !configStore.getAccessToken().isNullOrBlank()) {
+            applyCurrentSort()
+            restoreListPosition()
+        } else {
+            loadProducts(1, initial = true)
+        }
+    }
+
+    override fun onPause() {
+        captureState()
+        super.onPause()
     }
 
     private fun showFilterDialog() {
@@ -116,12 +154,14 @@ class ProductInfoFragment : Fragment() {
         dialog.setOnShowListener {
             dialog.listView.setOnItemClickListener { _, _, position, _ ->
                 selectedFilter = options[position].first
+                savedState.selectedFilter = selectedFilter
+                resetSavedListPosition()
                 updateActionDescriptions()
                 dialog.dismiss()
                 loadProducts(1, initial = true)
             }
         }
-        dialog.show()
+        dialog.showWithBoxedButtons()
     }
 
     private fun showSortDialog() {
@@ -142,12 +182,15 @@ class ProductInfoFragment : Fragment() {
         dialog.setOnShowListener {
             dialog.listView.setOnItemClickListener { _, _, position, _ ->
                 selectedSort = options[position].first
+                savedState.selectedSort = selectedSort
+                resetSavedListPosition()
                 updateActionDescriptions()
                 applyCurrentSort()
+                recyclerView.scrollToPosition(0)
                 dialog.dismiss()
             }
         }
-        dialog.show()
+        dialog.showWithBoxedButtons()
     }
 
     private fun updateActionDescriptions() {
@@ -179,6 +222,7 @@ class ProductInfoFragment : Fragment() {
 
     private fun openDetail(product: PosProduct) {
         val productId = product.id ?: return
+        captureState()
         parentFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, ProductDetailFragment.newInstance(productId))
             .addToBackStack("product_detail_$productId")
@@ -186,6 +230,7 @@ class ProductInfoFragment : Fragment() {
     }
 
     private fun openLabel(product: PosProduct) {
+        captureState()
         parentFragmentManager.setFragmentResult(
             LabelPrefillContract.REQUEST_KEY,
             LabelPrefillContract.toBundle(product)
@@ -201,6 +246,8 @@ class ProductInfoFragment : Fragment() {
         }
         loadJob?.cancel()
         val requestedPage = page.coerceAtLeast(1)
+        val resetPositionAfterLoad = initial || requestedPage != currentPage
+        savedState.query = searchInput.text.toString()
         if (initial) {
             products = emptyList()
             adapter.submitList(emptyList())
@@ -223,13 +270,18 @@ class ProductInfoFragment : Fragment() {
                     currentPageSize = response.limit.coerceAtLeast(1)
                     totalProducts = response.total.coerceAtLeast(0)
                     products = response.data
+                    if (resetPositionAfterLoad) resetSavedListPosition()
+                    saveLoadedState()
                     applyCurrentSort()
+                    restoreListPosition()
                 }
                 PosApiResult.NotFound -> {
                     currentPage = requestedPage
                     currentPageSize = PAGE_SIZE
                     totalProducts = 0
                     products = emptyList()
+                    if (resetPositionAfterLoad) resetSavedListPosition()
+                    saveLoadedState()
                     applyCurrentSort()
                 }
                 PosApiResult.SessionExpired -> {
@@ -268,6 +320,55 @@ class ProductInfoFragment : Fragment() {
         updatePagination()
     }
 
+    private fun restoreStateValues() {
+        products = savedState.products
+        totalProducts = savedState.totalProducts
+        currentPage = savedState.currentPage
+        currentPageSize = savedState.currentPageSize
+        selectedFilter = savedState.selectedFilter
+        selectedSort = savedState.selectedSort
+    }
+
+    private fun saveLoadedState() {
+        savedState.products = products
+        savedState.totalProducts = totalProducts
+        savedState.currentPage = currentPage
+        savedState.currentPageSize = currentPageSize
+        savedState.selectedFilter = selectedFilter
+        savedState.selectedSort = selectedSort
+        savedState.initialized = true
+    }
+
+    private fun captureState() {
+        savedState.query = if (::searchInput.isInitialized) searchInput.text.toString() else savedState.query
+        savedState.products = products
+        savedState.totalProducts = totalProducts
+        savedState.currentPage = currentPage
+        savedState.currentPageSize = currentPageSize
+        savedState.selectedFilter = selectedFilter
+        savedState.selectedSort = selectedSort
+        if (!::recyclerView.isInitialized) return
+        val manager = recyclerView.layoutManager as? GridLayoutManager ?: return
+        val position = manager.findFirstVisibleItemPosition().coerceAtLeast(0)
+        val child = manager.findViewByPosition(position)
+        savedState.firstVisiblePosition = position
+        savedState.firstVisibleOffset = child?.top ?: 0
+    }
+
+    private fun restoreListPosition() {
+        if (!savedState.initialized || products.isEmpty()) return
+        recyclerView.post {
+            val manager = recyclerView.layoutManager as? GridLayoutManager ?: return@post
+            val position = savedState.firstVisiblePosition.coerceIn(0, adapter.itemCount - 1)
+            manager.scrollToPositionWithOffset(position, savedState.firstVisibleOffset)
+        }
+    }
+
+    private fun resetSavedListPosition() {
+        savedState.firstVisiblePosition = 0
+        savedState.firstVisibleOffset = 0
+    }
+
     private fun updatePagination() {
         val totalPages = totalPages()
         pageView.text = getString(R.string.product_page_indicator, currentPage, totalPages)
@@ -304,16 +405,22 @@ class ProductInfoFragment : Fragment() {
     }
 
     private companion object {
-        const val PAGE_SIZE = 50
+        const val PAGE_SIZE = 20
+        const val PRODUCT_THUMBNAIL_SIZE_PX = 256
     }
 }
 
 private class ProductInfoAdapter(
+    private val scope: CoroutineScope,
+    private val loadPhoto: suspend (String) -> Bitmap?,
     private val onDetail: (PosProduct) -> Unit,
     private val onPrint: (PosProduct) -> Unit
 ) : RecyclerView.Adapter<ProductInfoAdapter.ProductViewHolder>() {
     private var products: List<PosProduct> = emptyList()
     private val currency = NumberFormat.getNumberInstance(Locale("id", "ID"))
+    private val photoCache = object : LruCache<String, Bitmap>(PHOTO_CACHE_SIZE_KB) {
+        override fun sizeOf(key: String, value: Bitmap): Int = (value.byteCount / 1024).coerceAtLeast(1)
+    }
 
     fun submitList(items: List<PosProduct>) {
         products = items
@@ -327,22 +434,32 @@ private class ProductInfoAdapter(
 
     override fun onBindViewHolder(holder: ProductViewHolder, position: Int) = holder.bind(products[position])
 
+    override fun onViewRecycled(holder: ProductViewHolder) {
+        holder.recycle()
+        super.onViewRecycled(holder)
+    }
+
     override fun getItemCount(): Int = products.size
 
     inner class ProductViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val photo: ImageView = view.findViewById(R.id.iv_product_photo)
+        private val photoLoading: ProgressBar = view.findViewById(R.id.progress_product_photo)
         private val name: TextView = view.findViewById(R.id.tv_product_name)
         private val sku: TextView = view.findViewById(R.id.tv_product_sku)
         private val price: TextView = view.findViewById(R.id.tv_product_price)
         private val stock: TextView = view.findViewById(R.id.tv_product_stock)
         private val detail: View = view.findViewById(R.id.btn_edit_product)
         private val print: View = view.findViewById(R.id.btn_print_product)
+        private var photoJob: Job? = null
+        private var boundPhotoKey: String? = null
 
         fun bind(product: PosProduct) {
+            bindPhoto(product)
             name.text = product.nama
             sku.text = itemView.context.getString(R.string.product_sku_value, product.sku)
             price.text = itemView.context.getString(
                 R.string.product_price_summary,
-                currency.format(product.hargaBeli),
+                product.hargaBeliKode?.trim().orEmpty().ifEmpty { "-" },
                 currency.format(product.hargaJual)
             )
             stock.text = itemView.context.getString(R.string.product_stock_value, product.stok, product.satuan)
@@ -350,5 +467,62 @@ private class ProductInfoAdapter(
             detail.setOnClickListener { onDetail(product) }
             print.setOnClickListener { onPrint(product) }
         }
+
+        fun recycle() {
+            photoJob?.cancel()
+            photoJob = null
+            boundPhotoKey = null
+            showPhotoPlaceholder()
+        }
+
+        private fun bindPhoto(product: PosProduct) {
+            photoJob?.cancel()
+            val photoUrl = product.fotoUrl?.trim()?.takeIf { it.isNotEmpty() }
+            val photoKey = photoUrl?.let { "${product.id ?: product.sku}:$it" }
+            boundPhotoKey = photoKey
+            showPhotoPlaceholder()
+            if (photoUrl == null || photoKey == null) return
+
+            photoCache.get(photoKey)?.let { bitmap ->
+                showPhoto(bitmap)
+                return
+            }
+            showPhotoLoading()
+            photoJob = scope.launch {
+                val bitmap = loadPhoto(photoUrl)
+                if (boundPhotoKey != photoKey) return@launch
+                if (bitmap == null) {
+                    showPhotoPlaceholder()
+                    return@launch
+                }
+                photoCache.put(photoKey, bitmap)
+                showPhoto(bitmap)
+            }
+        }
+
+        private fun showPhoto(bitmap: Bitmap) {
+            photoLoading.visibility = View.GONE
+            photo.setPadding(0, 0, 0, 0)
+            photo.scaleType = ImageView.ScaleType.CENTER_CROP
+            photo.setImageBitmap(bitmap)
+        }
+
+        private fun showPhotoLoading() {
+            photo.setPadding(0, 0, 0, 0)
+            photo.setImageDrawable(null)
+            photoLoading.visibility = View.VISIBLE
+        }
+
+        private fun showPhotoPlaceholder() {
+            photoLoading.visibility = View.GONE
+            val padding = (18 * itemView.resources.displayMetrics.density).toInt()
+            photo.setPadding(padding, padding, padding, padding)
+            photo.scaleType = ImageView.ScaleType.CENTER_INSIDE
+            photo.setImageResource(R.drawable.ic_photo_placeholder)
+        }
+    }
+
+    private companion object {
+        const val PHOTO_CACHE_SIZE_KB = 4 * 1024
     }
 }

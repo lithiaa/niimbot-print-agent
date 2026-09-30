@@ -9,7 +9,33 @@
     
     <!-- Dashboard -->
     <string name="dashboard_title">Dasbor</string>
+    <string name="dashboard_header_title">Dashboard</string>
+    <string name="dashboard_logo_description">Logo Lithia Project</string>
     <string name="printer_status">Status Printer</string>
+    <string name="printer_status_uppercase">STATUS PRINTER</string>
+    <string name="dashboard_pos_statistics">Statistik Barang POS</string>
+    <string name="dashboard_statistics_loading">Memuat statistik terbaru…</string>
+    <string name="dashboard_statistics_updated">Diperbarui pukul %1$s</string>
+    <string name="dashboard_statistics_not_found">Statistik barang belum tersedia.</string>
+    <string name="dashboard_statistics_retry">Coba lagi</string>
+    <string name="dashboard_total_products">Total barang</string>
+    <string name="dashboard_total_stock">Total stok</string>
+    <string name="dashboard_low_stock">Stok menipis</string>
+    <string name="dashboard_out_of_stock">Stok habis</string>
+    <string name="dashboard_product_unit">produk aktif</string>
+    <string name="dashboard_stock_unit">unit tersedia</string>
+    <string name="dashboard_needs_attention">perlu diperiksa</string>
+    <string name="dashboard_restock_now">perlu ditambah</string>
+    <string name="dashboard_low_stock_list">Barang stok menipis</string>
+    <string name="dashboard_low_stock_description">Stok sudah mencapai atau mendekati batas minimum.</string>
+    <string name="dashboard_out_of_stock_list">Barang stok habis</string>
+    <string name="dashboard_out_of_stock_description">Barang yang perlu segera ditambahkan stoknya.</string>
+    <string name="dashboard_low_stock_empty">Tidak ada barang dengan stok menipis.</string>
+    <string name="dashboard_out_of_stock_empty">Tidak ada barang dengan stok habis.</string>
+    <string name="dashboard_stock_sku">SKU %1$s</string>
+    <string name="dashboard_stock_item_value">Stok %1$s %2$s\nMinimum %3$s</string>
+    <string name="dashboard_stock_more">Menampilkan %1$d dari %2$d barang. Buka Info Barang untuk daftar lengkap.</string>
+    <string name="dashboard_stock_more_description">Buka daftar lengkap di halaman Info Barang</string>
     <string name="pending_jobs">Menunggu</string>
     <string name="printing_jobs">Sedang dicetak</string>
     <string name="done_jobs">Selesai</string>
@@ -47,8 +73,8 @@
     <string name="product_info_count">Menampilkan %1$d dari %2$d barang</string>
     <string name="product_load_more">Muat barang lainnya</string>
     <string name="product_info_page_count">Barang %1$d-%2$d dari %3$d</string>
-    <string name="product_page_indicator">Halaman %1$d dari %2$d</string>
-    <string name="product_page_initial">Halaman 1 dari 1</string>
+    <string name="product_page_indicator">Halaman %1$d / %2$d</string>
+    <string name="product_page_initial">Halaman 1 / 1</string>
     <string name="product_page_previous">Sebelumnya</string>
     <string name="product_page_next">Berikutnya</string>
     <string name="product_edit">Ubah</string>
@@ -58,12 +84,11 @@
     <string name="product_detail_back">Kembali</string>
     <string name="product_detail_information">Informasi barang</string>
     <string name="product_sku_value">SKU: %1$s</string>
-    <string name="product_price_summary">Beli Rp %1$s · Jual Rp %2$s</string>
+    <string name="product_price_summary">%1$s  Rp %2$s</string>
     <string name="product_stock_value">Stok %1$d %2$s</string>
     <string name="product_status_unknown">Status stok belum tersedia</string>
     <string name="product_brand">Merek</string>
-    <string name="product_category">Kategori</string>
-    <string name="product_supplier">Pemasok</string>
+    <string name="product_supplier">Supplier</string>
     <string name="product_prices">Harga</string>
     <string name="product_detail_price_value">Beli Rp %1$s · Jual Rp %2$s · Kode %3$s</string>
     <string name="product_min_stock">Stok minimum</string>
@@ -77,17 +102,62 @@
     <string name="product_none">Tidak ada</string>
     <string name="product_stock_apply">Terapkan</string>
     <string name="product_stock_quantity">Jumlah stok masuk</string>
+    <string name="product_stock_out_quantity">Jumlah stok keluar</string>
     <string name="product_stock_unit_price">Harga satuan</string>
     <string name="product_stock_quantity_invalid">Jumlah stok harus lebih dari nol.</string>
     <string name="product_stock_updated">Stok barang berhasil ditambahkan.</string>
-    <string name="product_stock_out_api_missing">Pengurangan stok belum dapat dikirim dengan kunci integrasi. Layanan backend perlu menyediakan POST /api/integration/barang/by-sku/{sku}/stok-keluar yang idempoten.</string>
-    <string name="product_edit_title">Ubah Barang Sistem</string>
+    <string name="product_stock_out_updated">Stok barang berhasil dikurangi.</string>
+    <string name="product_edit_title">Ubah Informasi Barang</string>
     <string name="product_save">Simpan Perubahan</string>
+    <string name="product_photo">Foto barang</string>
+    <string name="product_photo_optional">Foto barang (opsional)</string>
+    <string name="product_photo_choose">Pilih Foto</string>
+    <string name="product_photo_change">Ganti Foto</string>
+    <string name="product_photo_source_title">Ambil foto dari</string>
+    <string name="product_photo_from_camera">Kamera</string>
+    <string name="product_photo_from_gallery">Galeri</string>
+    <string name="product_photo_camera_unavailable">Kamera tidak dapat dibuka pada perangkat ini.</string>
+    <string name="product_photo_remove">Hapus Foto</string>
+    <string name="product_photo_none">Belum ada foto barang</string>
+    <string name="product_photo_loading">Memuat foto…</string>
+    <string name="product_photo_selected">Foto siap diunggah</string>
+    <string name="product_photo_pending">Baru</string>
+    <string name="product_photo_remove_item">Hapus foto ini</string>
+    <string name="product_photo_from_gallery_multiple">Pilih beberapa foto dari galeri</string>
+    <string name="product_photo_batch_help">Pilih beberapa foto sekaligus dari galeri, atau tambahkan satu per satu dari kamera. Maksimum 5 MiB per foto.</string>
+    <string name="product_photo_batch_loading">Memproses foto yang dipilihâ€¦</string>
+    <string name="product_photo_some_invalid">%1$d foto ditambahkan; %2$d foto dilewati karena tidak valid.</string>
+    <plurals name="product_photo_selected_count">
+        <item quantity="one">%1$d foto siap diunggah.</item>
+        <item quantity="other">%1$d foto siap diunggah.</item>
+    </plurals>
+    <plurals name="product_photo_edit_count">
+        <item quantity="one">%1$d foto akan tersimpan.</item>
+        <item quantity="other">%1$d foto akan tersimpan.</item>
+    </plurals>
+    <string name="product_photo_help">JPEG, PNG, atau WebP, maksimum 5 MiB. Foto otomatis dipotong menjadi 1:1 sebelum diunggah.</string>
+    <string name="product_photo_too_large">Ukuran foto melebihi batas 5 MiB.</string>
+    <string name="product_photo_unsupported">File harus berupa JPEG, PNG, atau WebP yang valid.</string>
+    <string name="product_photo_unreadable">Foto tidak dapat dibaca dari perangkat.</string>
+    <string name="product_photo_load_failed">Foto barang tidak dapat ditampilkan.</string>
+    <string name="product_photo_update_failed">Informasi barang tersimpan, tetapi foto gagal diperbarui: %1$s</string>
+    <string name="label_photo_upload_failed">Barang dan stok tersimpan, tetapi foto gagal diunggah. Label tetap dimasukkan ke antrean: %1$s</string>
+    <string name="product_photo_description">Foto barang</string>
+    <string name="product_photos">Foto barang</string>
+    <string name="product_photo_primary">Utama</string>
+    <string name="product_photo_item_description">Foto barang %1$d</string>
+    <string name="product_photo_fullscreen_description">Foto barang %1$d dalam layar penuh</string>
+    <string name="product_photo_fullscreen_close">Tutup foto layar penuh</string>
+    <string name="product_supplier_primary_value">%1$s (utama)</string>
+    <plurals name="product_photo_count">
+        <item quantity="one">%1$d foto</item>
+        <item quantity="other">%1$d foto</item>
+    </plurals>
     <string name="product_name_required">Nama barang wajib diisi.</string>
     <string name="product_price_invalid">Harga harus berupa angka nol atau lebih.</string>
     <string name="product_update_success">Data barang Sistem berhasil diperbarui.</string>
     <string name="product_not_found">Barang tidak lagi ditemukan di Sistem.</string>
-    <string name="paired_printer">Printer Terpasang</string>
+    <string name="paired_printer">Status Printer</string>
     <string name="printer_name">Nama Printer</string>
     <string name="printer_mac">Alamat MAC</string>
     <string name="printer_model">Model</string>
@@ -121,6 +191,12 @@
     <string name="job_status">Status</string>
     <string name="job_time">Waktu</string>
     <string name="job_retry">Coba Lagi</string>
+    <string name="job_cancel_action">Batalkan</string>
+    <string name="job_cancel_title">Batalkan cetak?</string>
+    <string name="job_cancel_message">Label “%1$s” masih menunggu dalam antrean dan belum dikirim ke printer.</string>
+    <string name="job_cancel_confirm">Batalkan Cetak</string>
+    <string name="job_cancel_success">Antrean cetak berhasil dibatalkan.</string>
+    <string name="job_cancel_unavailable">Tugas sudah mulai diproses dan tidak dapat dibatalkan.</string>
     
     <!-- Logs -->
     <string name="logs_title">Riwayat</string>
@@ -151,7 +227,8 @@
     <string name="dashboard_create_label_description">Buka formulir buat label</string>
     <string name="label_sku">SKU</string>
     <string name="label_sku_description">Masukkan SKU manual</string>
-    <string name="label_sku_auto_help">Kosong = SKU otomatis</string>
+    <string name="label_sku_auto_help">Kosong = SKU otomatis. Ketik SKU untuk mencari barang yang sama.</string>
+    <string name="label_sku_code128_invalid">SKU barcode hanya boleh berisi huruf Latin, angka, spasi, dan simbol standar</string>
     <string name="label_scan_sku">Pindai SKU</string>
     <string name="label_scan_failed">Pemindai kode batang tidak dapat dibuka pada perangkat ini</string>
     <string name="label_sku_required_for_lookup">Masukkan SKU barang yang akan diambil dari Sistem</string>
@@ -198,6 +275,9 @@
     <string name="confirm_print_message">Periksa desain final berikut sebelum mencetak.</string>
     <string name="confirm_print_details">Ukuran: %1$s\nDesain: %2$s\nJumlah label: %3$d</string>
     <string name="confirm_and_print">Cetak sekarang</string>
+    <string name="label_validation_alert_title">Form belum lengkap</string>
+    <string name="label_validation_alert_message">Lengkapi atau perbaiki bagian berikut:\n\n%1$s</string>
+    <string name="label_validation_alert_action">Periksa form</string>
     <string name="reset_label_form">Hapus</string>
     <string name="reset_label_form_description">Hapus seluruh isian dan draf formulir label</string>
     <string name="reset_label_form_title">Atur ulang formulir label?</string>
