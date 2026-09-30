@@ -12,10 +12,18 @@ class PosProductRulesTest {
     }
 
     @Test
+    fun `default API base URL uses TLS valid hostname`() {
+        assertEquals(
+            "https://api-ijm.lithiaproject.site",
+            IntegrationConfigStore.DEFAULT_BASE_URL
+        )
+    }
+
+    @Test
     fun `base URL normalization removes every trailing slash`() {
         assertEquals(
-            "https://api.ijm.lithiaproject.site",
-            PosProductRules.normalizeBaseUrl(" https://api.ijm.lithiaproject.site/// ")
+            "https://api-ijm.lithiaproject.site",
+            PosProductRules.normalizeBaseUrl(" https://api-ijm.lithiaproject.site/// ")
         )
     }
 
