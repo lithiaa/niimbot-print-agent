@@ -4,6 +4,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonNames
+import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class PosLogin(@SerialName("access_token") val accessToken: String)
@@ -125,6 +126,30 @@ data class PosInventoryStatistics(
 )
 
 @Serializable
+data class PosActivityLog(
+    val id: Long,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("user_id") val userId: Long? = null,
+    val username: String? = null,
+    val action: String,
+    @SerialName("http_method") val httpMethod: String,
+    val resource: String,
+    @SerialName("resource_id") val resourceId: String? = null,
+    val path: String,
+    @SerialName("status_code") val statusCode: Int,
+    @SerialName("ip_address") val ipAddress: String? = null,
+    val summary: JsonObject = JsonObject(emptyMap())
+)
+
+@Serializable
+data class PosActivityLogListResponse(
+    val total: Int,
+    val page: Int,
+    val limit: Int,
+    val data: List<PosActivityLog>
+)
+
+@Serializable
 data class PosSupplier(
     val id: Long,
     val nama: String = "",
@@ -159,19 +184,33 @@ data class PosProductMeta(
 
 @Serializable
 internal data class PosProductCreateRequest(
-    val sku: String,
+    val sku: String?,
     val nama: String,
-    val merek: String,
-    @SerialName("supplier_id") val supplierId: Long,
+    val merek: String?,
+    @SerialName("supplier_id") val supplierId: Long?,
     @SerialName("harga_modal") val hargaModal: Long,
-    @SerialName("harga_beli_kode") val hargaBeliKode: String,
-    @SerialName("harga_jual_kode") val hargaJualKode: String,
+    @SerialName("harga_beli_kode") val hargaBeliKode: String?,
+    @SerialName("harga_jual_kode") val hargaJualKode: String?,
     @SerialName("harga_jual") val hargaJual: Long,
     @SerialName("stok_minimum") val stokMinimum: Int,
     val satuan: String,
-    val deskripsi: String,
-    val foto: String,
+    val deskripsi: String?,
+    val foto: String?,
     @SerialName("stok_awal") val stokAwal: Int
+)
+
+data class PosProductCreateInput(
+    val sku: String?,
+    val nama: String,
+    val merek: String?,
+    val supplierId: Long?,
+    val hargaBeli: Long,
+    val hargaBeliKode: String?,
+    val hargaJual: Long,
+    val stokMinimum: Int,
+    val stokAwal: Int,
+    val satuan: String,
+    val deskripsi: String?
 )
 
 @Serializable

@@ -16,12 +16,14 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
 import com.niimbot.printagent.R
 import com.niimbot.printagent.pos.IntegrationConfigStore
 import com.niimbot.printagent.pos.PosApiClient
 import com.niimbot.printagent.pos.PosApiResult
 import com.niimbot.printagent.pos.PosProduct
+import com.niimbot.printagent.pos.PosProductCreateInput
 import com.niimbot.printagent.pos.PosProductEditInput
 import com.niimbot.printagent.pos.PosProductMeta
 import com.niimbot.printagent.pos.PosProductRules
@@ -37,7 +39,11 @@ class ProductEditFragment : Fragment() {
     @Inject lateinit var configStore: IntegrationConfigStore
     @Inject lateinit var posApiClient: PosApiClient
 
-    private val productId: Long by lazy { requireArguments().getLong(ARG_PRODUCT_ID) }
+    private val productId: Long? by lazy {
+        arguments?.takeIf { it.containsKey(ARG_PRODUCT_ID) }?.getLong(ARG_PRODUCT_ID)
+    }
+    private val isCreateMode: Boolean
+        get() = productId == null
     private var product: PosProduct? = null
     private var metadata: PosProductMeta = PosProductMeta()
     private var supplierOptions: List<PosSupplier?> = emptyList()
@@ -45,7 +51,9 @@ class ProductEditFragment : Fragment() {
     private lateinit var form: View
     private lateinit var progress: ProgressBar
     private lateinit var error: TextView
-    private lateinit var saveButton: View
+    private lateinit var title: TextView
+    private lateinit var saveButton: MaterialButton
+    private lateinit var skuLayout: TextInputLayout
     private lateinit var skuInput: EditText
     private lateinit var nameInput: EditText
     private lateinit var brandInput: EditText
@@ -59,6 +67,9 @@ class ProductEditFragment : Fragment() {
     private lateinit var nameLayout: TextInputLayout
     private lateinit var buyPriceLayout: TextInputLayout
     private lateinit var sellPriceLayout: TextInputLayout
+    private lateinit var minimumStockLayout: TextInputLayout
+    private lateinit var initialStockLayout: TextInputLayout
+    private lateinit var initialStockInput: EditText
     private lateinit var photoList: RecyclerView
     private lateinit var photoEmpty: View
     private lateinit var photoStatus: TextView
@@ -95,6 +106,11 @@ class ProductEditFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         pendingCameraUri = savedInstanceState?.getString(STATE_CAMERA_URI)?.let(Uri::parse)
         bindViews(view)
+        if (isCreateMode) {
+            title.setText(R.string.product_create_title)
+            saveButton.setText(R.string.product_create_save)
+            initialStockLayout.visibility = View.VISIBLE
+        }
         view.findViewById<View>(R.id.btn_product_edit_back).setOnClickListener {
             parentFragmentManager.popBackStack()
         }
@@ -107,14 +123,16 @@ class ProductEditFragment : Fragment() {
             photoStatus.setText(R.string.product_photo_batch_loading)
             photoPicker.launch("image/*")
         }
-        loadProduct()
+        loadForm()
     }
 
     private fun bindViews(view: View) {
         form = view.findViewById(R.id.product_edit_form)
         progress = view.findViewById(R.id.progress_product_edit)
         error = view.findViewById(R.id.tv_product_edit_error)
+        title = view.findViewById(R.id.tv_product_edit_title)
         saveButton = view.findViewById(R.id.btn_product_edit_save)
+        skuLayout = view.findViewById(R.id.til_edit_product_sku)
         skuInput = view.findViewById(R.id.et_edit_product_sku)
         nameInput = view.findViewById(R.id.et_edit_product_name)
         brandInput = view.findViewById(R.id.et_edit_product_brand)
@@ -128,6 +146,9 @@ class ProductEditFragment : Fragment() {
         nameLayout = view.findViewById(R.id.til_edit_product_name)
         buyPriceLayout = view.findViewById(R.id.til_edit_product_buy_price)
         sellPriceLayout = view.findViewById(R.id.til_edit_product_sell_price)
+        minimumStockLayout = view.findViewById(R.id.til_edit_product_min_stock)
+        initialStockLayout = view.findViewById(R.id.til_create_product_initial_stock)
+        initialStockInput = view.findViewById(R.id.et_create_product_initial_stock)
         photoList = view.findViewById(R.id.rv_edit_product_photos)
         photoEmpty = view.findViewById(R.id.edit_product_photo_empty)
         photoStatus = view.findViewById(R.id.tv_edit_product_photo_status)
@@ -147,7 +168,7 @@ class ProductEditFragment : Fragment() {
         photoList.adapter = photoAdapter
     }
 
-    private fun loadProduct() {
+    private fun loadForm() {
         val accessToken = configStore.getAccessToken()
         if (accessToken.isNullOrBlank()) {
             showError(getString(R.string.pos_login_required))
@@ -155,7 +176,21 @@ class ProductEditFragment : Fragment() {
         }
         setLoading(true)
         viewLifecycleOwner.lifecycleScope.launch {
-            when (val result = posApiClient.getProductById(configStore.getBaseUrl(), accessToken, productId)) {
+            if (isCreateMode) {
+                metadata = when (val meta = posApiClient.getProductMeta(configStore.getBaseUrl(), accessToken)) {
+                    is PosApiResult.Success -> meta.value
+                    PosApiResult.SessionExpired -> {
+                        expireSession()
+                        return@launch
+                    }
+                    else -> PosProductMeta()
+                }
+                populateCreateForm()
+                setLoading(false)
+                return@launch
+            }
+            val existingProductId = productId ?: return@launch
+            when (val result = posApiClient.getProductById(configStore.getBaseUrl(), accessToken, existingProductId)) {
                 is PosApiResult.Success -> {
                     product = result.value
                     metadata = when (val meta = posApiClient.getProductMeta(configStore.getBaseUrl(), accessToken)) {
@@ -174,6 +209,21 @@ class ProductEditFragment : Fragment() {
                 is PosApiResult.Failure -> showError(result.message)
             }
         }
+    }
+
+    private fun populateCreateForm() {
+        supplierOptions = listOf<PosSupplier?>(null) + metadata.suppliers.distinctBy { it.id }
+        val unitOptions = (metadata.satuan + DEFAULT_UNIT).filter { it.isNotBlank() }.distinct()
+        supplierInput.setAdapter(dropdownAdapter(supplierOptions.map { it?.displayName ?: getString(R.string.product_none) }))
+        unitInput.setAdapter(dropdownAdapter(unitOptions))
+
+        supplierInput.setText(getString(R.string.product_none), false)
+        buyPriceInput.setText("0")
+        sellPriceInput.setText("0")
+        minStockInput.setText(DEFAULT_MINIMUM_STOCK.toString())
+        initialStockInput.setText("0")
+        unitInput.setText(DEFAULT_UNIT, false)
+        renderPhotos()
     }
 
     private fun populateForm(item: PosProduct) {
@@ -205,40 +255,87 @@ class ProductEditFragment : Fragment() {
     }
 
     private fun saveProduct() {
-        val currentProduct = product ?: return
         val accessToken = configStore.getAccessToken() ?: return
+        skuLayout.error = null
         nameLayout.error = null
         buyPriceLayout.error = null
         sellPriceLayout.error = null
+        minimumStockLayout.error = null
+        initialStockLayout.error = null
         val normalizedSku = PosProductRules.normalizeSku(skuInput.text.toString())
         val name = nameInput.text.toString().trim()
         val buyPrice = buyPriceInput.text.toString().toLongOrNull()
         val sellPrice = sellPriceInput.text.toString().toLongOrNull()
         val minimum = minStockInput.text.toString().toIntOrNull()
-        if (normalizedSku.isBlank() || name.isBlank()) nameLayout.error = getString(R.string.product_name_required)
+        val initialStock = if (isCreateMode) initialStockInput.text.toString().toIntOrNull() else 0
+        if (!isCreateMode && normalizedSku.isBlank()) skuLayout.error = getString(R.string.product_sku_required)
+        if (name.isBlank()) nameLayout.error = getString(R.string.product_name_required)
         if (buyPrice == null || buyPrice < 0) buyPriceLayout.error = getString(R.string.product_price_invalid)
         if (sellPrice == null || sellPrice < 0) sellPriceLayout.error = getString(R.string.product_price_invalid)
-        if (normalizedSku.isBlank() || name.isBlank() || buyPrice == null || buyPrice < 0 ||
-            sellPrice == null || sellPrice < 0 || minimum == null || minimum < 0
+        if (minimum == null || minimum < 0) {
+            minimumStockLayout.error = getString(R.string.product_min_stock_invalid)
+        }
+        if (initialStock == null || initialStock < 0) {
+            initialStockLayout.error = getString(R.string.product_initial_stock_invalid)
+        }
+        if ((!isCreateMode && normalizedSku.isBlank()) || name.isBlank() ||
+            buyPrice == null || buyPrice < 0 || sellPrice == null || sellPrice < 0 ||
+            minimum == null || minimum < 0 || initialStock == null || initialStock < 0
         ) return
 
         val supplierId = supplierOptions.firstOrNull { it?.displayName == supplierInput.text.toString() }?.id
+        val brand = brandInput.text.toString().trim().ifEmpty { null }
+        val buyCode = buyCodeInput.text.toString().trim().ifEmpty { null }
+        val description = descriptionInput.text.toString().trim().ifEmpty { null }
+        val unit = unitInput.text.toString().trim().ifEmpty { DEFAULT_UNIT }
+        saveButton.isEnabled = false
+        if (isCreateMode) {
+            val input = PosProductCreateInput(
+                sku = normalizedSku.ifEmpty { null },
+                nama = name,
+                merek = brand,
+                supplierId = supplierId,
+                hargaBeli = buyPrice,
+                hargaBeliKode = buyCode,
+                hargaJual = sellPrice,
+                stokMinimum = minimum,
+                stokAwal = initialStock,
+                satuan = unit,
+                deskripsi = description
+            )
+            viewLifecycleOwner.lifecycleScope.launch {
+                when (val create = posApiClient.createProduct(configStore.getBaseUrl(), accessToken, input)) {
+                    is PosApiResult.Success -> applyCreatedPhotoChanges(accessToken, create.value)
+                    PosApiResult.NotFound -> showSaveFailure(getString(R.string.product_not_found))
+                    PosApiResult.SessionExpired -> expireSession()
+                    is PosApiResult.Failure -> showSaveFailure(create.message)
+                }
+            }
+            return
+        }
+
+        val currentProduct = product ?: return
+        val existingProductId = productId ?: return
         val input = PosProductEditInput(
             sku = normalizedSku,
             nama = name,
-            merek = brandInput.text.toString().trim().ifEmpty { null },
+            merek = brand,
             supplierId = supplierId,
             hargaBeli = buyPrice,
-            hargaBeliKode = buyCodeInput.text.toString().trim().ifEmpty { null },
+            hargaBeliKode = buyCode,
             hargaJual = sellPrice,
             stokMinimum = minimum,
             satuan = unitInput.text.toString().trim().ifEmpty { currentProduct.satuan },
-            deskripsi = descriptionInput.text.toString().trim().ifEmpty { null }
+            deskripsi = description
         )
-        saveButton.isEnabled = false
         viewLifecycleOwner.lifecycleScope.launch {
-            when (val update = posApiClient.updateProductById(configStore.getBaseUrl(), accessToken, productId, input)) {
-                is PosApiResult.Success -> applyPhotoChanges(accessToken, currentProduct, update.value)
+            when (val update = posApiClient.updateProductById(configStore.getBaseUrl(), accessToken, existingProductId, input)) {
+                is PosApiResult.Success -> applyUpdatedPhotoChanges(
+                    accessToken,
+                    existingProductId,
+                    currentProduct,
+                    update.value
+                )
                 PosApiResult.NotFound -> showSaveFailure(getString(R.string.product_not_found))
                 PosApiResult.SessionExpired -> expireSession()
                 is PosApiResult.Failure -> showSaveFailure(update.message)
@@ -246,8 +343,9 @@ class ProductEditFragment : Fragment() {
         }
     }
 
-    private suspend fun applyPhotoChanges(
+    private suspend fun applyUpdatedPhotoChanges(
         accessToken: String,
+        existingProductId: Long,
         previous: PosProduct,
         updated: PosProduct
     ) {
@@ -266,7 +364,7 @@ class ProductEditFragment : Fragment() {
             posApiClient.updateProductPhotos(
                 baseUrl = configStore.getBaseUrl(),
                 accessToken = accessToken,
-                productId = productId,
+                productId = existingProductId,
                 deletePhotoIds = deletedPhotoIds.toList(),
                 deleteLegacyPhoto = deleteLegacyPhoto,
                 uploads = uploads
@@ -286,9 +384,46 @@ class ProductEditFragment : Fragment() {
         }
     }
 
+    private suspend fun applyCreatedPhotoChanges(accessToken: String, created: PosProduct) {
+        val uploads = pendingPhotos.map { it.upload }
+        if (uploads.isEmpty()) {
+            finishCreateSuccessfully()
+            return
+        }
+        val createdProductId = created.id
+        if (createdProductId == null) {
+            finishCreateSuccessfully(getString(R.string.product_not_found))
+            return
+        }
+        when (
+            val result = posApiClient.updateProductPhotos(
+                baseUrl = configStore.getBaseUrl(),
+                accessToken = accessToken,
+                productId = createdProductId,
+                uploads = uploads
+            )
+        ) {
+            is PosApiResult.Success -> finishCreateSuccessfully()
+            PosApiResult.NotFound -> finishCreateSuccessfully(getString(R.string.product_not_found))
+            PosApiResult.SessionExpired -> {
+                configStore.clearSession()
+                finishCreateSuccessfully(getString(R.string.pos_session_expired))
+            }
+            is PosApiResult.Failure -> finishCreateSuccessfully(result.message)
+        }
+    }
+
     private fun finishSuccessfully() {
         parentFragmentManager.setFragmentResult(RESULT_KEY, Bundle.EMPTY)
         Toast.makeText(requireContext(), R.string.product_update_success, Toast.LENGTH_SHORT).show()
+        parentFragmentManager.popBackStack()
+    }
+
+    private fun finishCreateSuccessfully(photoFailure: String? = null) {
+        parentFragmentManager.setFragmentResult(CREATE_RESULT_KEY, Bundle.EMPTY)
+        val message = photoFailure?.let { getString(R.string.product_create_photo_failed, it) }
+            ?: getString(R.string.product_create_success)
+        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
         parentFragmentManager.popBackStack()
     }
 
@@ -400,12 +535,17 @@ class ProductEditFragment : Fragment() {
 
     companion object {
         const val RESULT_KEY = "product_edit_saved"
+        const val CREATE_RESULT_KEY = "product_create_saved"
         private const val ARG_PRODUCT_ID = "product_id"
         private const val STATE_CAMERA_URI = "product_edit_photo_camera_uri"
         private const val EDIT_PHOTO_SIZE_PX = 512
+        private const val DEFAULT_MINIMUM_STOCK = 5
+        private const val DEFAULT_UNIT = "pcs"
 
         fun newInstance(productId: Long) = ProductEditFragment().apply {
             arguments = Bundle().apply { putLong(ARG_PRODUCT_ID, productId) }
         }
+
+        fun newCreateInstance() = ProductEditFragment()
     }
 }

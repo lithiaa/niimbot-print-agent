@@ -41,6 +41,7 @@ class SettingsFragment : Fragment() {
     private var btnPosLogin: Button? = null
     private var btnTestPosConnection: Button? = null
     private var btnPosLogout: Button? = null
+    private var btnActivityLogs: Button? = null
 
     // Server config
     private var etServerPort: EditText? = null
@@ -70,6 +71,7 @@ class SettingsFragment : Fragment() {
         btnPosLogin = view.findViewById(R.id.btn_pos_login)
         btnTestPosConnection = view.findViewById(R.id.btn_test_pos_connection)
         btnPosLogout = view.findViewById(R.id.btn_pos_logout)
+        btnActivityLogs = view.findViewById(R.id.btn_activity_logs)
 
         // Server
         etServerPort = view.findViewById(R.id.et_server_port)
@@ -88,6 +90,7 @@ class SettingsFragment : Fragment() {
         btnPosLogin?.setOnClickListener { loginPos() }
         btnTestPosConnection?.setOnClickListener { testPosConnection() }
         btnPosLogout?.setOnClickListener { logoutPos() }
+        btnActivityLogs?.setOnClickListener { openActivityLogs() }
 
         // Server port
         btnSavePort?.setOnClickListener {
@@ -210,6 +213,17 @@ class SettingsFragment : Fragment() {
         Toast.makeText(requireContext(), R.string.pos_logout_success, Toast.LENGTH_SHORT).show()
     }
 
+    private fun openActivityLogs() {
+        if (!integrationConfigStore.hasAccessToken()) {
+            Toast.makeText(requireContext(), R.string.pos_login_required, Toast.LENGTH_LONG).show()
+            return
+        }
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, ActivityLogFragment())
+            .addToBackStack("activity_logs")
+            .commit()
+    }
+
     private fun expireSession() {
         integrationConfigStore.clearSession()
         showIdentity(null)
@@ -223,12 +237,14 @@ class SettingsFragment : Fragment() {
         posAuthenticatedPanel?.visibility = if (identity == null) View.GONE else View.VISIBLE
         btnPosLogout?.isEnabled = identity != null
         btnTestPosConnection?.isEnabled = identity != null
+        btnActivityLogs?.isEnabled = identity != null
     }
 
     private fun setPosBusy(busy: Boolean) {
         btnPosLogin?.isEnabled = !busy
         btnPosLogout?.isEnabled = !busy && integrationConfigStore.hasAccessToken()
         btnTestPosConnection?.isEnabled = !busy && integrationConfigStore.hasAccessToken()
+        btnActivityLogs?.isEnabled = !busy && integrationConfigStore.hasAccessToken()
     }
 
     override fun onDestroyView() {
@@ -242,6 +258,7 @@ class SettingsFragment : Fragment() {
         btnPosLogin = null
         btnTestPosConnection = null
         btnPosLogout = null
+        btnActivityLogs = null
         etServerPort = null
         btnSavePort = null
         super.onDestroyView()

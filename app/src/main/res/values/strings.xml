@@ -49,6 +49,7 @@
     <string name="product_info_nav">Info Barang</string>
     <string name="product_info_title">Info Barang</string>
     <string name="product_info_subtitle">Kelola data barang Sistem</string>
+    <string name="product_add">Tambah Barang</string>
     <string name="product_search_hint">Cari nama atau SKU</string>
     <string name="product_filter_hint">Filter barang</string>
     <string name="product_filter_description">Pilih filter berdasarkan status stok</string>
@@ -79,7 +80,9 @@
     <string name="product_page_next">Berikutnya</string>
     <string name="product_edit">Ubah</string>
     <string name="product_detail_action">Lihat detail</string>
+    <string name="product_detail_short">Detail</string>
     <string name="product_print_label">Cetak Label</string>
+    <string name="product_print_short">Cetak</string>
     <string name="product_detail_title">Detail Barang</string>
     <string name="product_detail_back">Kembali</string>
     <string name="product_detail_information">Informasi barang</string>
@@ -108,7 +111,11 @@
     <string name="product_stock_updated">Stok barang berhasil ditambahkan.</string>
     <string name="product_stock_out_updated">Stok barang berhasil dikurangi.</string>
     <string name="product_edit_title">Ubah Informasi Barang</string>
+    <string name="product_create_title">Tambah Barang</string>
     <string name="product_save">Simpan Perubahan</string>
+    <string name="product_create_save">Simpan Barang</string>
+    <string name="product_initial_stock">Stok awal</string>
+    <string name="product_initial_stock_invalid">Stok awal harus berupa angka nol atau lebih.</string>
     <string name="product_photo">Foto barang</string>
     <string name="product_photo_optional">Foto barang (opsional)</string>
     <string name="product_photo_choose">Pilih Foto</string>
@@ -154,8 +161,12 @@
         <item quantity="other">%1$d foto</item>
     </plurals>
     <string name="product_name_required">Nama barang wajib diisi.</string>
+    <string name="product_sku_required">SKU wajib diisi.</string>
     <string name="product_price_invalid">Harga harus berupa angka nol atau lebih.</string>
+    <string name="product_min_stock_invalid">Stok minimum harus berupa angka nol atau lebih.</string>
     <string name="product_update_success">Data barang Sistem berhasil diperbarui.</string>
+    <string name="product_create_success">Barang berhasil ditambahkan.</string>
+    <string name="product_create_photo_failed">Barang berhasil ditambahkan, tetapi foto gagal diunggah: %1$s</string>
     <string name="product_not_found">Barang tidak lagi ditemukan di Sistem.</string>
     <string name="paired_printer">Status Printer</string>
     <string name="printer_name">Nama Printer</string>
@@ -318,6 +329,17 @@
     <string name="pos_session_expired">Sesi Lithia POS berakhir. Login kembali.</string>
     <string name="pos_authenticated_identity">Login sebagai: %1$s (%2$s)</string>
     <string name="pos_not_authenticated">Belum login ke Lithia POS</string>
+
+    <!-- Log Aktivitas Sistem -->
+    <string name="activity_logs_open">Log Aktivitas</string>
+    <string name="activity_logs_title">Log Aktivitas</string>
+    <string name="activity_logs_empty">Belum ada aktivitas yang dapat ditampilkan.</string>
+    <string name="activity_logs_initial_count">Memuat aktivitas terbaru</string>
+    <string name="activity_logs_count">Aktivitas %1$d-%2$d dari %3$d</string>
+    <string name="activity_log_action_value">%1$s · %2$s</string>
+    <string name="activity_log_status_value">HTTP %1$d</string>
+    <string name="activity_log_meta_value">%1$s · %2$s</string>
+    <string name="activity_log_system_user">Sistem</string>
 
     <!-- Server Info -->
     <string name="server_info">Informasi Server</string>

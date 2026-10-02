@@ -146,6 +146,45 @@ class PosApiClientRequestTest {
     }
 
     @Test
+    fun `product info create posts full form and allows optional sku and supplier`() = runBlocking {
+        val recorder = RecordingResponder(
+            """{"id":42,"sku":"AUTO-42","nama":"Barang Baru","harga_modal":100,"harga_jual":150,"stok_awal":4}"""
+        )
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.createProduct(
+            "https://pos.example/base/",
+            "secret",
+            PosProductCreateInput(
+                sku = null,
+                nama = "Barang Baru",
+                merek = "Merek",
+                supplierId = null,
+                hargaBeli = 100,
+                hargaBeliKode = "SP",
+                hargaJual = 150,
+                stokMinimum = 3,
+                stokAwal = 4,
+                satuan = "pcs",
+                deskripsi = "Deskripsi"
+            )
+        )
+
+        assertTrue(result is PosApiResult.Success)
+        assertEquals("POST", recorder.request.method)
+        assertEquals("/base/api/barang", recorder.request.url.encodedPath)
+        assertEquals("Bearer secret", recorder.request.header("Authorization"))
+        assertEquals(
+            "{\"sku\":null,\"nama\":\"Barang Baru\",\"merek\":\"Merek\",\"supplier_id\":null," +
+                "\"harga_modal\":100,\"harga_beli_kode\":\"SP\",\"harga_jual_kode\":\"SUP\"," +
+                "\"harga_jual\":150,\"stok_minimum\":3,\"satuan\":\"pcs\"," +
+                "\"deskripsi\":\"Deskripsi\",\"foto\":null,\"stok_awal\":4}",
+            recorder.request.bodyText()
+        )
+        assertEquals(42L, (result as PosApiResult.Success).value.id)
+    }
+
+    @Test
     fun `existing stock posts JWT payload to user stock-in endpoint`() = runBlocking {
         val recorder = RecordingResponder(
             """{"message":"stok diperbarui"}""",
@@ -351,6 +390,48 @@ class PosApiClientRequestTest {
         assertEquals("Bearer secret", recorder.request.header("Authorization"))
         assertNull(recorder.request.header("X-Integration-Key"))
         assertEquals(21, (result as PosApiResult.Success).value.total)
+    }
+
+    @Test
+    fun `activity logs use documented paging and newest first parameters`() = runBlocking {
+        val recorder = RecordingResponder(
+            """{
+                "total":21,
+                "page":2,
+                "limit":20,
+                "data":[{
+                    "id":9,
+                    "created_at":"2026-10-01T09:15:00",
+                    "user_id":3,
+                    "username":"admin",
+                    "action":"UPDATE",
+                    "http_method":"PUT",
+                    "resource":"barang",
+                    "resource_id":"42",
+                    "path":"/api/barang/42",
+                    "status_code":200,
+                    "ip_address":"127.0.0.1",
+                    "summary":{"nama":"Barang"}
+                }]
+            }""".trimIndent()
+        )
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.listActivityLogs("https://pos.example/base/", "secret", page = 2, limit = 20)
+
+        assertTrue(result is PosApiResult.Success)
+        assertEquals("GET", recorder.request.method)
+        assertEquals("/base/api/logs", recorder.request.url.encodedPath)
+        assertEquals("20", recorder.request.url.queryParameter("limit"))
+        assertEquals("2", recorder.request.url.queryParameter("page"))
+        assertEquals("20", recorder.request.url.queryParameter("skip"))
+        assertEquals("created_at", recorder.request.url.queryParameter("sort_by"))
+        assertEquals("DESC", recorder.request.url.queryParameter("sort_order"))
+        assertEquals("Bearer secret", recorder.request.header("Authorization"))
+        result as PosApiResult.Success
+        assertEquals(21, result.value.total)
+        assertEquals("admin", result.value.data.single().username)
+        assertEquals("Barang", result.value.data.single().summary["nama"]?.toString()?.trim('"'))
     }
 
     @Test

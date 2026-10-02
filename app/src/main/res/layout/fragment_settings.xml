@@ -206,6 +206,22 @@
                         app:strokeColor="@color/primary" />
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_activity_logs"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginTop="8dp"
+                        android:contentDescription="@string/activity_logs_open"
+                        android:text="@string/activity_logs_open"
+                        android:textColor="@color/primary"
+                        app:cornerRadius="25dp"
+                        app:icon="@drawable/ic_logs"
+                        app:iconGravity="textStart"
+                        app:iconPadding="10dp"
+                        app:iconTint="@color/primary"
+                        app:strokeColor="@color/primary" />
+
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_pos_logout"
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="match_parent"

@@ -231,6 +231,48 @@ class PosApiClient(
         }
     }
 
+    suspend fun listActivityLogs(
+        baseUrl: String,
+        accessToken: String,
+        page: Int = 1,
+        limit: Int = 20
+    ): PosApiResult<PosActivityLogListResponse> = withContext(Dispatchers.IO) {
+        val safePage = page.coerceAtLeast(1)
+        val safeLimit = limit.coerceIn(1, 100)
+        val url = apiUrl(baseUrl, "api/logs").newBuilder()
+            .addQueryParameter("limit", safeLimit.toString())
+            .addQueryParameter("page", safePage.toString())
+            .addQueryParameter("skip", ((safePage - 1) * safeLimit).toString())
+            .addQueryParameter("sort_by", "created_at")
+            .addQueryParameter("sort_order", "DESC")
+            .build()
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $accessToken")
+            .header("Accept", "application/json")
+            .get()
+            .build()
+        try {
+            client.newCall(request).execute().use { response ->
+                if (response.code == 401) {
+                    response.close()
+                    return@withContext resolveUnauthorized(baseUrl, accessToken)
+                }
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
+                runCatching { json.decodeFromString<PosActivityLogListResponse>(body) }
+                    .fold(
+                        onSuccess = { PosApiResult.Success(it) },
+                        onFailure = {
+                            PosApiResult.Failure("Respons log aktivitas Sistem tidak valid.", response.code)
+                        }
+                    )
+            }
+        } catch (_: IOException) {
+            PosApiResult.Failure("Log aktivitas tidak dapat dimuat. Periksa jaringan.")
+        }
+    }
+
     suspend fun getInventoryStatistics(
         baseUrl: String,
         accessToken: String
@@ -540,6 +582,35 @@ class PosApiClient(
             networkError = "Informasi barang gagal diperbarui. Periksa jaringan."
         )
         return mutation.thenReloadProduct(baseUrl, accessToken, productId)
+    }
+
+    suspend fun createProduct(
+        baseUrl: String,
+        accessToken: String,
+        input: PosProductCreateInput
+    ): PosApiResult<PosProduct> {
+        val requestBody = PosProductCreateRequest(
+            sku = input.sku?.trim()?.takeIf { it.isNotEmpty() },
+            nama = input.nama,
+            merek = input.merek,
+            supplierId = input.supplierId,
+            hargaModal = input.hargaBeli,
+            hargaBeliKode = input.hargaBeliKode,
+            hargaJualKode = LabelGenerator.encodePurchasePrice(input.hargaJual),
+            hargaJual = input.hargaJual,
+            stokMinimum = input.stokMinimum,
+            satuan = input.satuan,
+            deskripsi = input.deskripsi,
+            foto = null,
+            stokAwal = input.stokAwal
+        )
+        return executeProductRequest(
+            baseUrl = baseUrl,
+            accessToken = accessToken,
+            request = authenticatedRequest(baseUrl, accessToken, "api/barang")
+                .post(json.encodeToString(requestBody).toRequestBody(JSON_MEDIA_TYPE))
+                .build()
+        )
     }
 
     @Suppress("UNUSED_PARAMETER")

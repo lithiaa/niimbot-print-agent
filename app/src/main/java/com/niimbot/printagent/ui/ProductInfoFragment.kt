@@ -45,6 +45,7 @@ class ProductInfoFragment : Fragment() {
     private val savedState: ProductInfoStateViewModel by activityViewModels()
 
     private lateinit var searchInput: EditText
+    private lateinit var addButton: MaterialButton
     private lateinit var sortButton: MaterialButton
     private lateinit var filterButton: MaterialButton
     private lateinit var recyclerView: RecyclerView
@@ -75,6 +76,7 @@ class ProductInfoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         searchInput = view.findViewById(R.id.et_product_search)
+        addButton = view.findViewById(R.id.btn_add_product)
         sortButton = view.findViewById(R.id.btn_product_sort)
         filterButton = view.findViewById(R.id.btn_product_filter)
         recyclerView = view.findViewById(R.id.rv_product_info)
@@ -86,6 +88,14 @@ class ProductInfoFragment : Fragment() {
         nextButton = view.findViewById(R.id.btn_next_products)
         pageView = view.findViewById(R.id.tv_product_page)
         paginationView = view.findViewById(R.id.product_pagination)
+
+        parentFragmentManager.setFragmentResultListener(
+            ProductEditFragment.CREATE_RESULT_KEY,
+            viewLifecycleOwner
+        ) { _, _ ->
+            resetSavedListPosition()
+            loadProducts(1, initial = true)
+        }
 
         restoreStateValues()
         searchInput.setText(savedState.query)
@@ -111,6 +121,7 @@ class ProductInfoFragment : Fragment() {
         updateActionDescriptions()
 
         swipeRefresh.setOnRefreshListener { loadProducts(currentPage) }
+        addButton.setOnClickListener { openCreateProduct() }
         sortButton.setOnClickListener { showSortDialog() }
         filterButton.setOnClickListener { showFilterDialog() }
         previousButton.setOnClickListener { loadProducts(currentPage - 1) }
@@ -300,6 +311,18 @@ class ProductInfoFragment : Fragment() {
         }
     }
 
+    private fun openCreateProduct() {
+        if (configStore.getAccessToken().isNullOrBlank()) {
+            Toast.makeText(requireContext(), R.string.pos_login_required, Toast.LENGTH_LONG).show()
+            return
+        }
+        captureState()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, ProductEditFragment.newCreateInstance())
+            .addToBackStack("product_create")
+            .commit()
+    }
+
     private fun applyCurrentSort() {
         val sortedProducts = ProductInfoSort.apply(
             ProductInfoFilter.apply(products, selectedFilter),
@@ -396,6 +419,7 @@ class ProductInfoFragment : Fragment() {
         nextButton.isEnabled = !loading && currentPage < totalPages()
         sortButton.isEnabled = !loading
         filterButton.isEnabled = !loading
+        addButton.isEnabled = !loading
     }
 
     private fun totalPages(): Int = if (totalProducts == 0) {

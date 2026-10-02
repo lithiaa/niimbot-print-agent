@@ -51,6 +51,7 @@ class ProductDetailFragment : Fragment() {
     private lateinit var createdAt: TextView
     private lateinit var updatedAt: TextView
     private lateinit var editButton: View
+    private lateinit var printButton: View
     private lateinit var addStockButton: View
     private lateinit var subtractStockButton: View
     private lateinit var photoList: RecyclerView
@@ -79,6 +80,7 @@ class ProductDetailFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
         editButton.setOnClickListener { openEditPage() }
+        printButton.setOnClickListener { product?.let(::openLabel) }
         addStockButton.setOnClickListener { product?.let(::showAddStockDialog) }
         subtractStockButton.setOnClickListener { product?.let(::showSubtractStockDialog) }
         loadProduct()
@@ -101,6 +103,7 @@ class ProductDetailFragment : Fragment() {
         createdAt = view.findViewById(R.id.tv_product_detail_created)
         updatedAt = view.findViewById(R.id.tv_product_detail_updated)
         editButton = view.findViewById(R.id.btn_product_detail_edit)
+        printButton = view.findViewById(R.id.btn_product_detail_print)
         addStockButton = view.findViewById(R.id.btn_product_detail_add_stock)
         subtractStockButton = view.findViewById(R.id.btn_product_detail_subtract_stock)
         photoList = view.findViewById(R.id.rv_product_detail_photos)
@@ -180,6 +183,14 @@ class ProductDetailFragment : Fragment() {
             .replace(R.id.fragment_container, ProductEditFragment.newInstance(productId))
             .addToBackStack("product_edit_$productId")
             .commit()
+    }
+
+    private fun openLabel(item: PosProduct) {
+        parentFragmentManager.setFragmentResult(
+            LabelPrefillContract.REQUEST_KEY,
+            LabelPrefillContract.toBundle(item)
+        )
+        (activity as? MainActivity)?.selectLabelTab()
     }
 
     private fun openPhotoFullscreen(photo: PosProductPhoto) {
