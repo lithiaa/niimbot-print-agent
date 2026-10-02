@@ -10,7 +10,26 @@ import kotlinx.serialization.json.JsonObject
 data class PosLogin(@SerialName("access_token") val accessToken: String)
 
 @Serializable
-data class PosIdentity(val username: String, val role: String)
+data class PosEnvironment(
+    val id: Long,
+    val name: String,
+    val status: String
+)
+
+@Serializable
+data class PosIdentity(
+    val username: String,
+    val role: String,
+    val environment: PosEnvironment? = null,
+    val permissions: List<String> = emptyList()
+)
+
+object PosIdentityAccess {
+    fun canMutate(permissions: List<String>, permission: String): Boolean {
+        // ponytail: empty means legacy server; enforce once all identity responses include permissions.
+        return permissions.isEmpty() || permission in permissions
+    }
+}
 
 @Serializable
 internal data class PosLoginRequest(val username: String, val password: String)

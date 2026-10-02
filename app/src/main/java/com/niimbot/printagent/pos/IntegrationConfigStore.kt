@@ -20,6 +20,10 @@ class IntegrationConfigStore(context: Context) {
         private const val PREF_TOKEN_IV = "access_token_iv"
         private const val PREF_USERNAME = "username"
         private const val PREF_ROLE = "role"
+        private const val PREF_ENVIRONMENT_ID = "environment_id"
+        private const val PREF_ENVIRONMENT_NAME = "environment_name"
+        private const val PREF_ENVIRONMENT_STATUS = "environment_status"
+        private const val PREF_PERMISSIONS = "permissions"
         private const val KEY_ALIAS = "niimbot_pos_access_token"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
     }
@@ -58,6 +62,10 @@ class IntegrationConfigStore(context: Context) {
             .putString(PREF_TOKEN_IV, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
             .putString(PREF_USERNAME, identity.username)
             .putString(PREF_ROLE, identity.role)
+            .putLong(PREF_ENVIRONMENT_ID, identity.environment?.id ?: -1)
+            .putString(PREF_ENVIRONMENT_NAME, identity.environment?.name ?: "")
+            .putString(PREF_ENVIRONMENT_STATUS, identity.environment?.status ?: "")
+            .putString(PREF_PERMISSIONS, identity.permissions.joinToString(","))
             .apply()
     }
 
@@ -80,7 +88,14 @@ class IntegrationConfigStore(context: Context) {
         if (!hasAccessToken()) return null
         val username = prefs.getString(PREF_USERNAME, null) ?: return null
         val role = prefs.getString(PREF_ROLE, null) ?: return null
-        return PosIdentity(username, role)
+        val envId = prefs.getLong(PREF_ENVIRONMENT_ID, -1)
+        val envName = prefs.getString(PREF_ENVIRONMENT_NAME, "")
+        val envStatus = prefs.getString(PREF_ENVIRONMENT_STATUS, "")
+        val permissions = prefs.getString(PREF_PERMISSIONS, "").split(",").filter { it.isNotEmpty() }
+        val environment = if (envId != -1L && envName.isNotBlank() && envStatus.isNotBlank()) {
+            PosEnvironment(envId, envName, envStatus)
+        } else null
+        return PosIdentity(username, role, environment, permissions)
     }
 
     fun clearSession() {
@@ -89,6 +104,10 @@ class IntegrationConfigStore(context: Context) {
             .remove(PREF_TOKEN_IV)
             .remove(PREF_USERNAME)
             .remove(PREF_ROLE)
+            .remove(PREF_ENVIRONMENT_ID)
+            .remove(PREF_ENVIRONMENT_NAME)
+            .remove(PREF_ENVIRONMENT_STATUS)
+            .remove(PREF_PERMISSIONS)
             .apply()
     }
 

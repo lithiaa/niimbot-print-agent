@@ -52,6 +52,7 @@ import com.niimbot.printagent.pos.PosConflictChoice
 import com.niimbot.printagent.pos.PosSubmissionOutcome
 import com.niimbot.printagent.pos.PosSubmissionWorkflow
 import com.niimbot.printagent.pos.PosProductRules
+import com.niimbot.printagent.pos.PosIdentityAccess
 import com.niimbot.printagent.pos.PosProduct
 import com.niimbot.printagent.pos.PosSupplier
 import com.niimbot.printagent.service.PrintForegroundService
@@ -724,6 +725,20 @@ class LabelFragment : Fragment() {
 
         if (!switchPos.isChecked) {
             enqueue(form)
+            return
+        }
+
+        val identity = configStore.getIdentity()
+        if (identity == null) {
+            showError(getString(R.string.pos_login_required))
+            return
+        }
+        if (!PosIdentityAccess.canMutate(identity.permissions, "barang.write")) {
+            showError(getString(R.string.pos_request_failed) + " (permission denied: barang.write)")
+            return
+        }
+        if (!PosIdentityAccess.canMutate(identity.permissions, "stok.write")) {
+            showError(getString(R.string.pos_request_failed) + " (permission denied: stok.write)")
             return
         }
 

@@ -19,8 +19,14 @@ import com.niimbot.printagent.label.LabelDate
 import com.niimbot.printagent.pos.IntegrationConfigStore
 import com.niimbot.printagent.pos.PosApiClient
 import com.niimbot.printagent.pos.PosApiResult
+import com.niimbot.printagent.pos.PosCategory
+import com.niimbot.printagent.pos.PosIdentityAccess
 import com.niimbot.printagent.pos.PosProduct
+import com.niimbot.printagent.pos.PosProductEditInput
+import com.niimbot.printagent.pos.PosProductMeta
 import com.niimbot.printagent.pos.PosProductPhoto
+import com.niimbot.printagent.pos.PosProductRules
+import com.niimbot.printagent.pos.PosSupplier
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.NumberFormat
 import java.util.Locale
@@ -61,6 +67,7 @@ class ProductDetailFragment : Fragment() {
 
     private val productId: Long by lazy { requireArguments().getLong(ARG_PRODUCT_ID) }
     private var product: PosProduct? = null
+    private var metadata: PosProductMeta = PosProductMeta()
     private val currency = NumberFormat.getNumberInstance(Locale("id", "ID"))
 
     override fun onCreateView(
@@ -257,6 +264,12 @@ class ProductDetailFragment : Fragment() {
         adding: Boolean,
         dialog: androidx.appcompat.app.AlertDialog
     ) {
+        val identity = configStore.getIdentity() ?: return
+        val requiredPermission = if (adding) "stok.write" else "stok.write"
+        if (!PosIdentityAccess.canMutate(identity.permissions, requiredPermission)) {
+            showToast(getString(R.string.pos_request_failed) + " (permission denied: $requiredPermission)", dialog)
+            return
+        }
         val accessToken = configStore.getAccessToken() ?: return
         dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).isEnabled = false
         viewLifecycleOwner.lifecycleScope.launch {

@@ -231,7 +231,8 @@ class SettingsFragment : Fragment() {
 
     private fun showIdentity(identity: PosIdentity?) {
         tvPosIdentity?.text = identity?.let {
-            getString(R.string.pos_authenticated_identity, it.username, it.role)
+            val env = it.environment?.let { " \u2022 ${it.name} (${it.status})" } ?: ""
+            getString(R.string.pos_authenticated_identity, it.username, it.role) + env
         } ?: getString(R.string.pos_not_authenticated)
         posLoginForm?.visibility = if (identity == null) View.VISIBLE else View.GONE
         posAuthenticatedPanel?.visibility = if (identity == null) View.GONE else View.VISIBLE

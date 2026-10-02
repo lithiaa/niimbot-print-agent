@@ -1,9 +1,10 @@
 package com.niimbot.printagent.pos
 
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class PosProductSerializationTest {
@@ -88,6 +89,44 @@ class PosProductSerializationTest {
     }
 
     @Test
+    fun `identity decodes additive toko and permissions while legacy payload stays valid`() {
+        val json = Json { ignoreUnknownKeys = true }
+
+        val identity = json.decodeFromString<PosIdentity>(
+            """{"username":"operator","role":"staff","environment":{"id":8,"name":"Toko Satu","status":"active"},"permissions":["barang.read","stok.write"]}"""
+        )
+        val legacy = json.decodeFromString<PosIdentity>("""{"username":"operator","role":"admin"}""")
+
+        assertEquals(PosEnvironment(8, "Toko Satu", "active"), identity.environment)
+        assertEquals(listOf("barang.read", "stok.write"), identity.permissions)
+        assertNull(legacy.environment)
+        assertEquals(emptyList<String>(), legacy.permissions)
+    }
+
+    @Test
+    fun `identity serializes toko and permissions roundtrip`() {
+        val json = Json { ignoreUnknownKeys = true }
+        val original = PosIdentity(
+            "operator", "staff",
+            PosEnvironment(8, "Toko Satu", "active"),
+            listOf("barang.read", "stok.write")
+        )
+        val serialized = json.encodeToString(original)
+        val decoded = json.decodeFromString<PosIdentity>(serialized)
+        assertEquals(original, decoded)
+    }
+
+    @Test
+    fun `environment serializes as expected`() {
+        val json = Json { ignoreUnknownKeys = true }
+        val env = PosEnvironment(42, "Toko Dua", "suspended")
+        assertEquals(
+            """{"id":42,"name":"Toko Dua","status":"suspended"}""",
+            json.encodeToString(env)
+        )
+    }
+
+    @Test
     fun `create request serializes exact barang contract with supplier id`() {
         val request = PosProductCreateRequest(
             sku = "GULA-1",
@@ -106,10 +145,7 @@ class PosProductSerializationTest {
         )
 
         assertEquals(
-            "{\"sku\":\"GULA-1\",\"nama\":\"Gula\",\"merek\":\"\",\"supplier_id\":7," +
-                "\"harga_modal\":10000,\"harga_beli_kode\":\"AUP\",\"harga_jual_kode\":\"ABP\"," +
-                "\"harga_jual\":12000,\"stok_minimum\":5,\"satuan\":\"pcs\",\"deskripsi\":\"\"," +
-                "\"foto\":\"\",\"stok_awal\":6}",
+            "{\"sku\":\"GULA-1\",\"nama\":\"Gula\",\"merek\":\"\",\"supplier_id\":7,\"harga_modal\":10000,\"harga_beli_kode\":\"AUP\",\"harga_jual_kode\":\"ABP\",\"harga_jual\":12000,\"stok_minimum\":5,\"satuan\":\"pcs\",\"deskripsi\":\"\",\"foto\":\"\",\"stok_awal\":6}",
             Json.encodeToString(request)
         )
     }
@@ -124,9 +160,7 @@ class PosProductSerializationTest {
         )
 
         assertEquals(
-            "{\"barang_id\":42,\"jumlah\":4,\"harga_satuan\":10000," +
-                "\"keterangan\":\"Lithia Label Printer | " +
-                "OPERATION_ID=11111111-1111-4111-8111-111111111111\"}",
+            "{\"barang_id\":42,\"jumlah\":4,\"harga_satuan\":10000,\"keterangan\":\"Lithia Label Printer | OPERATION_ID=11111111-1111-4111-8111-111111111111\"}",
             Json.encodeToString(request)
         )
     }
