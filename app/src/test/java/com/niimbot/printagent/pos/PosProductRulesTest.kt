@@ -30,10 +30,10 @@ class PosProductRulesTest {
     @Test
     fun `photo URL combines configured base and backend relative path`() {
         assertEquals(
-            "https://api-ijm.lithiaproject.site/storage/foto-barang/uuid.webp",
+            "https://api-ijm.lithiaproject.site/api/foto-barang/8/uuid.webp",
             PosProductRules.resolvePhotoUrl(
                 "https://api-ijm.lithiaproject.site/",
-                "/storage/foto-barang/uuid.webp"
+                "/api/foto-barang/8/uuid.webp"
             )
         )
         assertEquals(

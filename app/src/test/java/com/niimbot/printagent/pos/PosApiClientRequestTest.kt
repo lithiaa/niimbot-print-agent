@@ -122,6 +122,39 @@ class PosApiClientRequestTest {
     }
 
     @Test
+    fun `product photo download uses protected backend path and bearer token`() = runBlocking {
+        val recorder = RecordingResponder("photo")
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.downloadProductPhoto(
+            "https://pos.example/base/",
+            "token-123",
+            "/api/foto-barang/8/uuid.webp"
+        )
+
+        assertEquals(PosApiResult.Success("photo".toByteArray()), result)
+        assertEquals("GET", recorder.request.method)
+        assertEquals("/base/api/foto-barang/8/uuid.webp", recorder.request.url.encodedPath)
+        assertEquals("Bearer token-123", recorder.request.header("Authorization"))
+        assertNull(recorder.request.url.queryParameter("toko_id"))
+        assertNull(recorder.request.header("X-Toko-Id"))
+    }
+
+    @Test
+    fun `product photo download maps expired session`() = runBlocking {
+        val recorder = RecordingResponder("{}", statusCode = 401)
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.downloadProductPhoto(
+            "https://pos.example",
+            "expired",
+            "/api/foto-barang/8/uuid.webp"
+        )
+
+        assertEquals(PosApiResult.SessionExpired, result)
+    }
+
+    @Test
     fun `create posts current payload with supplier id to barang endpoint`() = runBlocking {
         val recorder = RecordingResponder(
             """{"sku":"SKU-1","nama":"Barang","harga_modal":100,"harga_jual":150,"stok_awal":4}"""

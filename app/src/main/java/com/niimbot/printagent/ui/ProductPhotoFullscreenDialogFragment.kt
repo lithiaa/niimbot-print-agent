@@ -48,7 +48,11 @@ class ProductPhotoFullscreenDialogFragment : DialogFragment() {
         val reference = requireArguments().getString(ARG_REFERENCE).orEmpty()
         viewLifecycleOwner.lifecycleScope.launch {
             val bitmap = when (
-                val result = posApiClient.downloadProductPhoto(configStore.getBaseUrl(), reference)
+                val result = posApiClient.downloadProductPhoto(
+                    configStore.getBaseUrl(),
+                    configStore.getAccessToken().orEmpty(),
+                    reference
+                )
             ) {
                 is PosApiResult.Success -> withContext(Dispatchers.Default) {
                     ProductPhotoFiles.decodePreview(result.value, FULLSCREEN_PHOTO_SIZE_PX)

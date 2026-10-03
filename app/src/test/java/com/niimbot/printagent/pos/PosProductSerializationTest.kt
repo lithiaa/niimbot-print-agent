@@ -15,12 +15,12 @@ class PosProductSerializationTest {
             """{
                 "id":12,"sku":"FLT-1","nama":"Filter Udara",
                 "harga_beli":10000,"harga_jual":15000,
-                "foto":"uuid.webp","foto_url":"/storage/foto-barang/uuid.webp"
+                "foto":"uuid.webp","foto_url":"/api/foto-barang/8/uuid.webp"
             }""".trimIndent()
         )
 
         assertEquals("uuid.webp", product.foto)
-        assertEquals("/storage/foto-barang/uuid.webp", product.fotoUrl)
+        assertEquals("/api/foto-barang/8/uuid.webp", product.fotoUrl)
     }
 
     @Test
@@ -35,8 +35,8 @@ class PosProductSerializationTest {
                     {"id":8,"nama":"Supplier B","is_primary":true,"jumlah_masuk_kumulatif":9}
                 ],
                 "photos":[
-                    {"id":21,"foto_url":"/storage/foto-barang/dua.webp","urutan":2,"is_primary":false},
-                    {"id":20,"foto_url":"/storage/foto-barang/utama.webp","urutan":1,"is_primary":true}
+                    {"id":21,"foto_url":"/api/foto-barang/8/dua.webp","urutan":2,"is_primary":false},
+                    {"id":20,"foto_url":"/api/foto-barang/8/utama.webp","urutan":1,"is_primary":true}
                 ]
             }""".trimIndent()
         )
@@ -56,11 +56,11 @@ class PosProductSerializationTest {
             hargaBeli = 10_000,
             hargaJual = 15_000,
             foto = "uuid.webp",
-            fotoUrl = "/storage/foto-barang/uuid.webp",
+            fotoUrl = "/api/foto-barang/8/uuid.webp",
             supplier = legacySupplier
         )
 
-        assertEquals("/storage/foto-barang/uuid.webp", product.displayPhotos.single().downloadReference)
+        assertEquals("/api/foto-barang/8/uuid.webp", product.displayPhotos.single().downloadReference)
         assertEquals("Supplier Lama", product.displaySuppliers.single().displayName)
         assertEquals(true, product.displaySuppliers.single().isPrimary)
     }

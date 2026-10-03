@@ -156,7 +156,11 @@ class ProductEditFragment : Fragment() {
         photoAdapter = EditableProductPhotoAdapter(
             scope = viewLifecycleOwner.lifecycleScope,
             loadPhoto = { photoUrl ->
-                when (val result = posApiClient.downloadProductPhoto(configStore.getBaseUrl(), photoUrl)) {
+                when (val result = posApiClient.downloadProductPhoto(
+                    configStore.getBaseUrl(),
+                    configStore.getAccessToken().orEmpty(),
+                    photoUrl
+                )) {
                     is PosApiResult.Success -> withContext(Dispatchers.Default) {
                         ProductPhotoFiles.decodePreview(result.value, EDIT_PHOTO_SIZE_PX)
                     }

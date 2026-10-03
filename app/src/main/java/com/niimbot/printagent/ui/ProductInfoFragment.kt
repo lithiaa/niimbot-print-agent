@@ -104,7 +104,11 @@ class ProductInfoFragment : Fragment() {
         adapter = ProductInfoAdapter(
             scope = viewLifecycleOwner.lifecycleScope,
             loadPhoto = { photoUrl ->
-                when (val result = posApiClient.downloadProductPhoto(configStore.getBaseUrl(), photoUrl)) {
+                when (val result = posApiClient.downloadProductPhoto(
+                    configStore.getBaseUrl(),
+                    configStore.getAccessToken().orEmpty(),
+                    photoUrl
+                )) {
                     is PosApiResult.Success -> withContext(Dispatchers.Default) {
                         ProductPhotoFiles.decodePreview(result.value, PRODUCT_THUMBNAIL_SIZE_PX)
                     }

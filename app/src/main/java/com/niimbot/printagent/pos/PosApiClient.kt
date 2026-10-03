@@ -482,12 +482,23 @@ class PosApiClient(
 
     suspend fun downloadProductPhoto(
         baseUrl: String,
+        accessToken: String,
         fotoUrl: String?
     ): PosApiResult<ByteArray> = withContext(Dispatchers.IO) {
         val finalUrl = PosProductRules.resolvePhotoUrl(baseUrl, fotoUrl)?.toHttpUrlOrNull()
             ?: return@withContext PosApiResult.NotFound
         try {
-            client.newCall(Request.Builder().url(finalUrl).get().build()).execute().use { response ->
+            client.newCall(
+                Request.Builder()
+                    .url(finalUrl)
+                    .header("Authorization", "Bearer $accessToken")
+                    .get()
+                    .build()
+            ).execute().use { response ->
+                if (response.code == 401) {
+                    response.close()
+                    return@withContext resolveUnauthorized(baseUrl, accessToken)
+                }
                 if (response.code == 404) return@withContext PosApiResult.NotFound
                 if (!response.isSuccessful) {
                     return@withContext PosApiResult.Failure(
