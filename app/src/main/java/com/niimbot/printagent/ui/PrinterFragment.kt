@@ -2,16 +2,22 @@ package com.niimbot.printagent.ui
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import android.content.Intent
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,6 +29,9 @@ import com.niimbot.printagent.data.AppDatabase
 import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintStatus
 import com.niimbot.printagent.data.PrinterConfig
+import com.niimbot.printagent.label.BuyerNoticeLabelGenerator
+import com.niimbot.printagent.label.ShippingLabelPdf
+import com.niimbot.printagent.label.ShippingLabelPdfDocument
 import com.niimbot.printagent.service.PrintForegroundService
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -43,6 +52,8 @@ class PrinterFragment : Fragment() {
     private var tvBattery: TextView? = null
     private var btnScan: Button? = null
     private var btnTestPrint: Button? = null
+    private var btnBuyerNotice: Button? = null
+    private var btnPrintPdf: Button? = null
     private var progressBar: ProgressBar? = null
     private var rvDevices: RecyclerView? = null
     private var tvDiscoveredLabel: TextView? = null
@@ -53,6 +64,10 @@ class PrinterFragment : Fragment() {
     private var printQueueAdapter: JobAdapter? = null
     private lateinit var printerTypeDropdown: AutoCompleteTextView
     private var selectedChoice = PrinterChoice.XPRINTER_203
+
+    private val openPdfLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(::preparePdfPreview)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -79,6 +94,8 @@ class PrinterFragment : Fragment() {
         tvBattery = view.findViewById(R.id.tv_battery)
         btnScan = view.findViewById(R.id.btn_scan)
         btnTestPrint = view.findViewById(R.id.btn_test_print)
+        btnBuyerNotice = view.findViewById(R.id.btn_buyer_notice)
+        btnPrintPdf = view.findViewById(R.id.btn_print_pdf)
         progressBar = view.findViewById(R.id.progress_scan)
         rvDevices = view.findViewById(R.id.rv_devices)
         tvDiscoveredLabel = view.findViewById(R.id.tv_discovered_label)
@@ -119,14 +136,15 @@ class PrinterFragment : Fragment() {
     }
 
     private fun observePrintQueue() {
-        database.printJobDao().getByStatuses(
-            listOf(
+        database.printJobDao().getRecentByStatuses(
+            statuses = listOf(
                 PrintStatus.PENDING,
                 PrintStatus.PRINTING,
                 PrintStatus.FAILED,
                 PrintStatus.DONE,
                 PrintStatus.CANCELLED
-            )
+            ),
+            limit = PRINT_HISTORY_LIMIT
         ).observe(viewLifecycleOwner) { jobs ->
             val items = jobs.orEmpty()
             printQueueAdapter?.submitList(items)
@@ -212,6 +230,9 @@ class PrinterFragment : Fragment() {
             else -> getString(R.string.printer_disconnected)
         }
         btnTestPrint?.isEnabled = state == connectedState
+        // This button opens a preview first, so keep the preview available even while disconnected.
+        btnBuyerNotice?.isEnabled = true
+        btnPrintPdf?.isEnabled = true
         tvBattery?.setText(R.string.printer_battery_unavailable)
     }
 
@@ -226,7 +247,129 @@ class PrinterFragment : Fragment() {
             }
             androidx.core.content.ContextCompat.startForegroundService(requireContext(), intent)
         }
+        btnBuyerNotice?.setOnClickListener { showBuyerNoticePreview() }
+        btnPrintPdf?.setOnClickListener { openPdfLauncher.launch(arrayOf("application/pdf")) }
         btnForgetPrinter?.setOnClickListener { forgetPrinter() }
+    }
+
+    private fun preparePdfPreview(uri: Uri) {
+        runCatching {
+            requireContext().contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }
+        btnPrintPdf?.isEnabled = false
+        Toast.makeText(requireContext(), R.string.pdf_receipt_reading, Toast.LENGTH_SHORT).show()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    val name = pdfDisplayName(uri)
+                    ShippingLabelPdfDocument.open(requireContext().contentResolver, uri).use { document ->
+                        PdfPreview(
+                            uri = uri,
+                            displayName = name,
+                            pageCount = document.pageCount,
+                            firstPage = document.renderPage(0, ShippingLabelPdf.PREVIEW_DPI)
+                        )
+                    }
+                }
+            }
+            btnPrintPdf?.isEnabled = true
+            result.onSuccess(::showPdfPreview).onFailure { error ->
+                val detail = error.message ?: getString(R.string.unknown_error)
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.pdf_receipt_invalid, detail),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun pdfDisplayName(uri: Uri): String {
+        val resolver = requireContext().contentResolver
+        return resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        } ?: uri.lastPathSegment ?: "resi.pdf"
+    }
+
+    private fun showPdfPreview(pdf: PdfPreview) {
+        val confirmationView = layoutInflater.inflate(R.layout.dialog_print_confirmation, null)
+        confirmationView.findViewById<ImageView>(R.id.iv_confirm_print_preview).apply {
+            setImageBitmap(pdf.firstPage)
+            contentDescription = getString(R.string.pdf_receipt_preview_description)
+        }
+        confirmationView.findViewById<TextView>(R.id.tv_confirm_print_details).text = getString(
+            R.string.pdf_receipt_details,
+            pdf.displayName,
+            pdf.pageCount
+        )
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.pdf_receipt_preview_title)
+            .setView(confirmationView)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(getString(R.string.pdf_receipt_print, pdf.pageCount), null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                if (xPrinterManager.connectionStateLive.value != XPrinterBluetoothManager.STATE_CONNECTED) {
+                    Toast.makeText(
+                        requireContext(),
+                        R.string.pdf_receipt_printer_required,
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@setOnClickListener
+                }
+                printPdf(pdf)
+                dialog.dismiss()
+            }
+        }
+        dialog.setOnDismissListener { pdf.firstPage.recycle() }
+        dialog.showWithBoxedButtons()
+    }
+
+    private fun printPdf(pdf: PdfPreview) {
+        val intent = Intent(requireContext(), PrintForegroundService::class.java).apply {
+            action = PrintForegroundService.ACTION_PRINT_PDF
+            data = pdf.uri
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            putExtra(PrintForegroundService.EXTRA_PDF_NAME, pdf.displayName)
+        }
+        androidx.core.content.ContextCompat.startForegroundService(requireContext(), intent)
+        Toast.makeText(
+            requireContext(),
+            getString(R.string.pdf_receipt_started, pdf.pageCount),
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    private fun showBuyerNoticePreview() {
+        val preview = BuyerNoticeLabelGenerator.generate(
+            BitmapFactory.decodeResource(resources, R.drawable.lithia_project_logo)
+        )
+        val confirmationView = layoutInflater.inflate(R.layout.dialog_print_confirmation, null)
+        confirmationView.findViewById<ImageView>(R.id.iv_confirm_print_preview).apply {
+            setImageBitmap(preview)
+            contentDescription = getString(R.string.buyer_notice_preview_description)
+        }
+        confirmationView.findViewById<TextView>(R.id.tv_confirm_print_details).text =
+            getString(R.string.buyer_notice_print_details)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.buyer_notice_preview_title)
+            .setView(confirmationView)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.confirm_and_print) { _, _ -> enqueueBuyerNotice() }
+            .showWithBoxedButtons()
+    }
+
+    private fun enqueueBuyerNotice() {
+        val intent = android.content.Intent(requireContext(), PrintForegroundService::class.java).apply {
+            action = PrintForegroundService.ACTION_PRINT_BUYER_NOTICE
+        }
+        androidx.core.content.ContextCompat.startForegroundService(requireContext(), intent)
     }
 
     @SuppressLint("MissingPermission")
@@ -321,7 +464,15 @@ class PrinterFragment : Fragment() {
 
     private companion object {
         const val TYPE_XPRINTER = "XPRINTER"
+        const val PRINT_HISTORY_LIMIT = 20
     }
+
+    private data class PdfPreview(
+        val uri: Uri,
+        val displayName: String,
+        val pageCount: Int,
+        val firstPage: android.graphics.Bitmap
+    )
 }
 
 class DeviceAdapter : RecyclerView.Adapter<DeviceAdapter.DeviceViewHolder>() {

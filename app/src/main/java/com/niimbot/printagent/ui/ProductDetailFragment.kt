@@ -8,6 +8,7 @@ import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.widget.TooltipCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -54,6 +55,7 @@ class ProductDetailFragment : Fragment() {
     private lateinit var printButton: View
     private lateinit var addStockButton: View
     private lateinit var subtractStockButton: View
+    private lateinit var deleteButton: View
     private lateinit var photoList: RecyclerView
     private lateinit var photoEmpty: View
     private lateinit var photoCount: TextView
@@ -83,6 +85,7 @@ class ProductDetailFragment : Fragment() {
         printButton.setOnClickListener { product?.let(::openLabel) }
         addStockButton.setOnClickListener { product?.let(::showAddStockDialog) }
         subtractStockButton.setOnClickListener { product?.let(::showSubtractStockDialog) }
+        deleteButton.setOnClickListener { product?.let(::showDeleteDialog) }
         loadProduct()
     }
 
@@ -106,6 +109,12 @@ class ProductDetailFragment : Fragment() {
         printButton = view.findViewById(R.id.btn_product_detail_print)
         addStockButton = view.findViewById(R.id.btn_product_detail_add_stock)
         subtractStockButton = view.findViewById(R.id.btn_product_detail_subtract_stock)
+        deleteButton = view.findViewById(R.id.btn_product_detail_delete)
+        TooltipCompat.setTooltipText(editButton, getString(R.string.product_edit))
+        TooltipCompat.setTooltipText(printButton, getString(R.string.product_print_label))
+        TooltipCompat.setTooltipText(addStockButton, getString(R.string.product_add_stock))
+        TooltipCompat.setTooltipText(subtractStockButton, getString(R.string.product_subtract_stock))
+        TooltipCompat.setTooltipText(deleteButton, getString(R.string.product_delete))
         photoList = view.findViewById(R.id.rv_product_detail_photos)
         photoEmpty = view.findViewById(R.id.product_detail_photo_empty)
         photoCount = view.findViewById(R.id.tv_product_detail_photo_count)
@@ -213,6 +222,107 @@ class ProductDetailFragment : Fragment() {
 
     private fun showSubtractStockDialog(item: PosProduct) = showStockDialog(item, adding = false)
 
+    private fun showDeleteDialog(item: PosProduct) {
+        val accessToken = configStore.getAccessToken()
+        if (accessToken.isNullOrBlank()) {
+            Toast.makeText(requireContext(), R.string.pos_login_required, Toast.LENGTH_LONG).show()
+            return
+        }
+        val itemId = item.id
+        if (itemId == null) {
+            Toast.makeText(requireContext(), R.string.product_not_found, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_confirm_product_delete, null)
+        val message = dialogView.findViewById<TextView>(R.id.tv_product_delete_message)
+        val skuInput = dialogView.findViewById<EditText>(R.id.et_product_delete_sku)
+        val skuLayout = dialogView.findViewById<TextInputLayout>(R.id.til_product_delete_sku)
+        message.text = getString(R.string.product_delete_message, item.sku, item.nama)
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.product_delete_title)
+            .setView(dialogView)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.product_delete, null)
+            .create()
+        dialog.setOnShowListener {
+            val confirmButton = dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+            confirmButton.setOnClickListener {
+                skuLayout.error = null
+                val confirmationSku = skuInput.text?.toString()?.trim().orEmpty()
+                if (confirmationSku.isBlank()) {
+                    skuLayout.error = getString(R.string.product_delete_sku_required)
+                    skuInput.requestFocus()
+                    return@setOnClickListener
+                }
+                if (confirmationSku != item.sku) {
+                    skuLayout.error = getString(R.string.product_delete_sku_incorrect)
+                    skuInput.requestFocus()
+                    return@setOnClickListener
+                }
+                setDeleteDialogBusy(dialog, skuLayout, busy = true)
+                deleteProduct(
+                    itemId = itemId,
+                    accessToken = accessToken,
+                    skuInput = skuInput,
+                    skuLayout = skuLayout,
+                    dialog = dialog
+                )
+            }
+            skuInput.requestFocus()
+        }
+        dialog.setOnDismissListener { skuInput.text?.clear() }
+        dialog.showWithBoxedButtons()
+    }
+
+    private fun deleteProduct(
+        itemId: Long,
+        accessToken: String,
+        skuInput: EditText,
+        skuLayout: TextInputLayout,
+        dialog: androidx.appcompat.app.AlertDialog
+    ) {
+        val baseUrl = configStore.getBaseUrl()
+        viewLifecycleOwner.lifecycleScope.launch {
+            skuInput.text?.clear()
+            when (val deletion = posApiClient.deleteProductById(baseUrl, accessToken, itemId)) {
+                is PosApiResult.Success -> finishProductDeletion(dialog, R.string.product_delete_success)
+                PosApiResult.NotFound -> finishProductDeletion(dialog, R.string.product_not_found)
+                PosApiResult.SessionExpired -> {
+                    dialog.dismiss()
+                    expireSession()
+                }
+                is PosApiResult.Failure -> {
+                    setDeleteDialogBusy(dialog, skuLayout, busy = false)
+                    Toast.makeText(requireContext(), deletion.message, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun setDeleteDialogBusy(
+        dialog: androidx.appcompat.app.AlertDialog,
+        skuLayout: TextInputLayout,
+        busy: Boolean
+    ) {
+        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).isEnabled = !busy
+        dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).isEnabled = !busy
+        skuLayout.isEnabled = !busy
+        dialog.setCancelable(!busy)
+        dialog.setCanceledOnTouchOutside(!busy)
+    }
+
+    private fun finishProductDeletion(
+        dialog: androidx.appcompat.app.AlertDialog,
+        messageRes: Int
+    ) {
+        dialog.dismiss()
+        parentFragmentManager.setFragmentResult(DELETE_RESULT_KEY, Bundle())
+        Toast.makeText(requireContext(), messageRes, Toast.LENGTH_SHORT).show()
+        parentFragmentManager.popBackStack()
+    }
+
     private fun showStockDialog(item: PosProduct, adding: Boolean) {
         val view = layoutInflater.inflate(R.layout.dialog_adjust_stock, null)
         val quantityInput = view.findViewById<EditText>(R.id.et_adjust_stock_quantity)
@@ -319,6 +429,7 @@ class ProductDetailFragment : Fragment() {
     companion object {
         private const val ARG_PRODUCT_ID = "product_id"
         private const val PRODUCT_DETAIL_PHOTO_SIZE_PX = 768
+        const val DELETE_RESULT_KEY = "product_deleted"
 
         fun newInstance(productId: Long) = ProductDetailFragment().apply {
             arguments = Bundle().apply { putLong(ARG_PRODUCT_ID, productId) }

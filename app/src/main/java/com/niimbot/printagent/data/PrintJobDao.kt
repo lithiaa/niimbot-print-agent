@@ -27,6 +27,9 @@ interface PrintJobDao {
     @Query("SELECT * FROM print_jobs WHERE status IN (:statuses) ORDER BY createdAt DESC, id DESC")
     fun getByStatuses(statuses: List<PrintStatus>): LiveData<List<PrintJob>>
 
+    @Query("SELECT * FROM print_jobs WHERE status IN (:statuses) ORDER BY createdAt DESC, id DESC LIMIT :limit")
+    fun getRecentByStatuses(statuses: List<PrintStatus>, limit: Int): LiveData<List<PrintJob>>
+
     @Query("SELECT * FROM print_jobs ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")
     fun getAllPaged(limit: Int, offset: Int): LiveData<List<PrintJob>>
 

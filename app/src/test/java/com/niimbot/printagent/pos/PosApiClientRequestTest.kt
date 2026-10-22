@@ -321,6 +321,21 @@ class PosApiClientRequestTest {
     }
 
     @Test
+    fun `delete removes product by id using bearer token`() = runBlocking {
+        val recorder = RecordingResponder("{\"ok\":true}")
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.deleteProductById("https://pos.example/base/", "secret", 42)
+
+        assertEquals(PosApiResult.Success(Unit), result)
+        assertEquals("DELETE", recorder.request.method)
+        assertEquals("/base/api/barang/42", recorder.request.url.encodedPath)
+        assertEquals("Bearer secret", recorder.request.header("Authorization"))
+        assertEquals(0L, recorder.request.body?.contentLength() ?: 0L)
+        assertNull(recorder.request.header("X-Integration-Key"))
+    }
+
+    @Test
     fun `edit puts complete product metadata without stock`() = runBlocking {
         val recorder = RecordingResponder(responseJson)
         val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })

@@ -96,6 +96,13 @@ class ProductInfoFragment : Fragment() {
             resetSavedListPosition()
             loadProducts(1, initial = true)
         }
+        parentFragmentManager.setFragmentResultListener(
+            ProductDetailFragment.DELETE_RESULT_KEY,
+            viewLifecycleOwner
+        ) { _, _ ->
+            resetSavedListPosition()
+            loadProducts(1, initial = true)
+        }
 
         restoreStateValues()
         searchInput.setText(savedState.query)

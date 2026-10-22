@@ -584,6 +584,22 @@ class PosApiClient(
         return mutation.thenReloadProduct(baseUrl, accessToken, productId)
     }
 
+    suspend fun deleteProductById(
+        baseUrl: String,
+        accessToken: String,
+        productId: Long
+    ): PosApiResult<Unit> = executeMutation(
+        baseUrl = baseUrl,
+        accessToken = accessToken,
+        request = Request.Builder()
+            .url(productByIdUrl(baseUrl, productId))
+            .header("Authorization", "Bearer $accessToken")
+            .header("Accept", "application/json")
+            .delete()
+            .build(),
+        networkError = "Barang gagal dihapus. Periksa jaringan."
+    )
+
     suspend fun createProduct(
         baseUrl: String,
         accessToken: String,

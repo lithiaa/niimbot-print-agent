@@ -9,7 +9,7 @@
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/page_header"
         android:layout_width="match_parent"
-        android:layout_height="76dp"
+        android:layout_height="56dp"
         android:elevation="0dp"
         app:cardBackgroundColor="@color/surface"
         app:cardCornerRadius="0dp"
@@ -22,12 +22,12 @@
             android:layout_height="match_parent"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="18dp"
-            android:paddingEnd="18dp">
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp">
 
             <ImageView
-                android:layout_width="38dp"
-                android:layout_height="38dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:adjustViewBounds="true"
                 android:contentDescription="@string/dashboard_logo_description"
                 android:scaleType="centerInside"
@@ -37,11 +37,11 @@
                 android:id="@+id/tv_page_header_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="9dp"
                 android:fontFamily="sans-serif"
                 android:text="@string/dashboard_header_title"
                 android:textColor="@color/text_primary"
-                android:textSize="23sp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -50,14 +50,14 @@
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="76dp"
+        android:layout_marginTop="56dp"
         android:clipToPadding="false"
-        android:paddingBottom="100dp" />
+        android:paddingBottom="82dp" />
 
     <FrameLayout
         android:id="@+id/footer_navigation"
         android:layout_width="match_parent"
-        android:layout_height="96dp"
+        android:layout_height="78dp"
         android:layout_gravity="bottom"
         android:clipChildren="false"
         android:clipToPadding="false">
@@ -65,23 +65,23 @@
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottom_navigation"
             android:layout_width="match_parent"
-            android:layout_height="76dp"
+            android:layout_height="62dp"
             android:layout_gravity="bottom"
             android:background="@drawable/bg_footer_nav"
             android:elevation="0dp"
             android:stateListAnimator="@null"
             app:elevation="0dp"
             app:itemHorizontalTranslationEnabled="false"
-            app:itemIconSize="24dp"
-            app:itemPaddingBottom="7dp"
-            app:itemPaddingTop="11dp"
+            app:itemIconSize="22dp"
+            app:itemPaddingBottom="5dp"
+            app:itemPaddingTop="8dp"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/menu_bottom_nav" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/btn_nav_label"
-            android:layout_width="66dp"
-            android:layout_height="66dp"
+            android:layout_width="54dp"
+            android:layout_height="54dp"
             android:layout_gravity="top|center_horizontal"
             android:clickable="true"
             android:contentDescription="@string/create_label_nav"
@@ -89,7 +89,7 @@
             android:focusable="true"
             android:stateListAnimator="@null"
             app:cardBackgroundColor="@color/nav_label_button_color"
-            app:cardCornerRadius="19dp"
+            app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
             app:strokeColor="@color/white"
             app:strokeWidth="4dp">
@@ -98,7 +98,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:contentDescription="@null"
-                android:padding="17dp"
+                android:padding="14dp"
                 app:srcCompat="@drawable/ic_label_action" />
         </com.google.android.material.card.MaterialCardView>
     </FrameLayout>

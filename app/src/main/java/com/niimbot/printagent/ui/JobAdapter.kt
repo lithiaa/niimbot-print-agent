@@ -11,6 +11,7 @@ import com.niimbot.printagent.R
 import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintQueueRules
 import com.niimbot.printagent.data.PrintStatus
+import com.niimbot.printagent.label.BuyerNoticeLabelGenerator
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -45,9 +46,18 @@ class JobAdapter(
         private val cancel: MaterialButton = view.findViewById(R.id.btn_cancel_job)
 
         fun bind(job: PrintJob) {
+            val isBuyerNotice = job.labelLayout == BuyerNoticeLabelGenerator.LAYOUT_NAME
             name.text = job.nama
-            sku.text = "SKU: ${job.sku}"
-            price.text = "Rp ${NumberFormat.getNumberInstance(Locale.GERMANY).format(job.hargaJual)}"
+            sku.text = if (isBuyerNotice) {
+                itemView.context.getString(R.string.buyer_notice_queue_size)
+            } else {
+                "SKU: ${job.sku}"
+            }
+            price.text = if (isBuyerNotice) {
+                itemView.context.getString(R.string.buyer_notice_queue_description)
+            } else {
+                "Rp ${NumberFormat.getNumberInstance(Locale.GERMANY).format(job.hargaJual)}"
+            }
             qty.text = "Jumlah: ${job.qty}"
             when (job.status) {
                 PrintStatus.PENDING -> setStatus("Menunggu", "#F59E0B")

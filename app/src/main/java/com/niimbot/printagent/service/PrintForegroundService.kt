@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -21,9 +22,12 @@ import com.niimbot.printagent.data.LogAction
 import com.niimbot.printagent.data.PrintJob
 import com.niimbot.printagent.data.PrintLog
 import com.niimbot.printagent.data.PrintStatus
+import com.niimbot.printagent.label.BuyerNoticeLabelGenerator
 import com.niimbot.printagent.label.LabelGenerator
 import com.niimbot.printagent.label.LabelDesign
 import com.niimbot.printagent.label.LabelSize
+import com.niimbot.printagent.label.ShippingLabelPdf
+import com.niimbot.printagent.label.ShippingLabelPdfDocument
 import com.niimbot.printagent.server.PrintServer
 import com.niimbot.printagent.ui.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -36,6 +40,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Date
+import java.io.IOException
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -47,11 +52,14 @@ class PrintForegroundService : Service() {
         const val ACTION_START = "com.niimbot.printagent.START"
         const val ACTION_STOP = "com.niimbot.printagent.STOP"
         const val ACTION_TEST_PRINT = "com.niimbot.printagent.TEST_PRINT"
+        const val ACTION_PRINT_BUYER_NOTICE = "com.niimbot.printagent.PRINT_BUYER_NOTICE"
+        const val ACTION_PRINT_PDF = "com.niimbot.printagent.PRINT_PDF"
         const val ACTION_ENQUEUE = "com.niimbot.printagent.ENQUEUE"
         const val ACTION_RESTART_SERVER = "com.niimbot.printagent.RESTART_SERVER"
         const val EXTRA_TEST_DATA = "test_data"
         const val EXTRA_JOB_ID = "job_id"
         const val EXTRA_SERVER_PORT = "server_port"
+        const val EXTRA_PDF_NAME = "pdf_name"
 
         private const val TAG = "PrintService"
         private const val TYPE_XPRINTER = "XPRINTER"
@@ -74,6 +82,7 @@ class PrintForegroundService : Service() {
     private val queueSignal = Channel<Unit>(Channel.CONFLATED)
     private var queueJob: Job? = null
     private var reconnectJob: Job? = null
+    private var pdfPrintJob: Job? = null
 
     private val xPrinterConnectionObserver = androidx.lifecycle.Observer<Int> { state ->
         updateNotification()
@@ -153,6 +162,12 @@ class PrintForegroundService : Service() {
                 val testData = intent?.getStringExtra(EXTRA_TEST_DATA) ?: "LABEL UJI"
                 sendTestPrint(testData)
             }
+            ACTION_PRINT_BUYER_NOTICE -> sendBuyerNoticePrint()
+            ACTION_PRINT_PDF -> {
+                val uri = intent?.data
+                val displayName = intent?.getStringExtra(EXTRA_PDF_NAME) ?: "resi.pdf"
+                if (uri != null) sendPdfPrint(uri, displayName)
+            }
             ACTION_ENQUEUE -> {
                 queueSignal.trySend(Unit)
             }
@@ -175,6 +190,7 @@ class PrintForegroundService : Service() {
         queueJob?.cancel()
         queueSignal.close()
         reconnectJob?.cancel()
+        pdfPrintJob?.cancel()
         serviceScope.cancel()
         printServer.stop()
         xPrinterManager.cleanup()
@@ -209,7 +225,7 @@ class PrintForegroundService : Service() {
         }
     }
 
-    private fun buildNotification(): Notification {
+    private fun buildNotification(contentOverride: String? = null): Notification {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -219,7 +235,7 @@ class PrintForegroundService : Service() {
         )
 
         val connected = xPrinterManager.connectionStateLive.value == XPrinterBluetoothManager.STATE_CONNECTED
-        val statusText = if (connected) "Printer terhubung ✅" else "Printer terputus 🔴"
+        val statusText = contentOverride ?: if (connected) "Printer terhubung ✅" else "Printer terputus 🔴"
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Lithia Label Printer")
@@ -233,8 +249,8 @@ class PrintForegroundService : Service() {
             .build()
     }
 
-    private fun updateNotification() {
-        notificationManager.notify(NOTIFICATION_ID, buildNotification())
+    private fun updateNotification(contentOverride: String? = null) {
+        notificationManager.notify(NOTIFICATION_ID, buildNotification(contentOverride))
     }
 
     // ─── Wake Lock ─────────────────────────────────────────────────────────
@@ -283,6 +299,7 @@ class PrintForegroundService : Service() {
         recoverInterruptedJobs()
         for (ignored in queueSignal) {
             while (true) {
+                while (pdfPrintJob?.isActive == true) delay(250)
                 val job = database.printJobDao().getNextPendingSync() ?: break
 
                 // Check printer before claiming the Room job.
@@ -313,21 +330,27 @@ class PrintForegroundService : Service() {
                     PrintLog(printJobId = job.id, action = LogAction.PRINTING_STARTED)
                 )
 
-                val bitmap = LabelGenerator.generateLabel(
-                    nama = job.nama,
-                    hargaJual = job.hargaJual,
-                    hargaBeli = job.hargaBeli,
-                    sku = job.sku,
-                    satuan = job.satuan,
-                    barcodeData = job.barcode,
-                    labelSize = LabelSize.fromName(job.labelSize),
-                    kodeHargaBeli = job.kodeHargaBeli,
-                    itemQty = job.itemQty,
-                    supplierCode = job.supplierCode,
-                    tanggalMasuk = job.tanggalMasuk,
-                    brandLogo = BitmapFactory.decodeResource(resources, R.drawable.lithia_project_logo),
-                    labelDesign = LabelDesign.fromName(job.labelLayout)
-                )
+                val bitmap = if (job.labelLayout == BuyerNoticeLabelGenerator.LAYOUT_NAME) {
+                    BuyerNoticeLabelGenerator.generate(
+                        BitmapFactory.decodeResource(resources, R.drawable.lithia_project_logo)
+                    )
+                } else {
+                    LabelGenerator.generateLabel(
+                        nama = job.nama,
+                        hargaJual = job.hargaJual,
+                        hargaBeli = job.hargaBeli,
+                        sku = job.sku,
+                        satuan = job.satuan,
+                        barcodeData = job.barcode,
+                        labelSize = LabelSize.fromName(job.labelSize),
+                        kodeHargaBeli = job.kodeHargaBeli,
+                        itemQty = job.itemQty,
+                        supplierCode = job.supplierCode,
+                        tanggalMasuk = job.tanggalMasuk,
+                        brandLogo = BitmapFactory.decodeResource(resources, R.drawable.lithia_project_logo),
+                        labelDesign = LabelDesign.fromName(job.labelLayout)
+                    )
+                }
 
                 val requestedCopies = job.qty.coerceAtLeast(1)
                 val size = LabelSize.fromName(job.labelSize)
@@ -369,18 +392,32 @@ class PrintForegroundService : Service() {
         copies: Int,
         jobId: Long
     ): Boolean {
-        val resultChannel = Channel<Boolean>(1)
-        xPrinterManager.printBitmap(
+        return printBitmapViaXPrinterBlocking(
             bitmap = bitmap,
             widthMm = size.widthMm,
             heightMm = size.heightMm,
             dpi = prefs.getInt("printer_dpi", 203),
-            copies = copies
-        ) { success, error ->
+            copies = copies,
+            timeoutMs = 45_000L,
+            logContext = "job #$jobId"
+        )
+    }
+
+    private suspend fun printBitmapViaXPrinterBlocking(
+        bitmap: android.graphics.Bitmap,
+        widthMm: Int,
+        heightMm: Int,
+        dpi: Int,
+        copies: Int,
+        timeoutMs: Long,
+        logContext: String
+    ): Boolean {
+        val resultChannel = Channel<Boolean>(1)
+        xPrinterManager.printBitmap(bitmap, widthMm, heightMm, dpi, copies) { success, error ->
             resultChannel.trySend(success)
-            if (!success) Log.e(TAG, "XPrinter print error for job #$jobId: $error")
+            if (!success) Log.e(TAG, "XPrinter print error for $logContext: $error")
         }
-        return withTimeoutOrNull(45_000L) { resultChannel.receive() } ?: false
+        return withTimeoutOrNull(timeoutMs) { resultChannel.receive() } ?: false
     }
 
     private fun isSelectedPrinterConnected(): Boolean =
@@ -425,6 +462,82 @@ class PrintForegroundService : Service() {
             database.printLogDao().insert(PrintLog(printJobId = jobId, action = LogAction.QUEUED))
             queueSignal.trySend(Unit)
             Log.i(TAG, "Test print queued, job #$jobId")
+        }
+    }
+
+    private fun sendBuyerNoticePrint() {
+        serviceScope.launch {
+            val noticeJob = PrintJob(
+                nama = BuyerNoticeLabelGenerator.JOB_NAME,
+                hargaJual = 0,
+                hargaBeli = 0,
+                sku = BuyerNoticeLabelGenerator.LAYOUT_NAME,
+                qty = 1,
+                labelSize = BuyerNoticeLabelGenerator.labelSize.name,
+                labelLayout = BuyerNoticeLabelGenerator.LAYOUT_NAME
+            )
+            val jobId = database.printJobDao().insert(noticeJob)
+            database.printLogDao().insert(PrintLog(printJobId = jobId, action = LogAction.QUEUED))
+            queueSignal.trySend(Unit)
+            Log.i(TAG, "Buyer notice queued, job #$jobId")
+        }
+    }
+
+    private fun sendPdfPrint(uri: Uri, displayName: String) {
+        if (pdfPrintJob?.isActive == true) {
+            Log.w(TAG, "PDF print ignored because another PDF is still printing")
+            return
+        }
+        pdfPrintJob = serviceScope.launch {
+            updateNotification(getString(R.string.pdf_receipt_notification_preparing))
+            val result = runCatching {
+                if (!isSelectedPrinterConnected()) throw IOException("Printer tidak terhubung")
+                val dpi = prefs.getInt("printer_dpi", 203)
+                ShippingLabelPdfDocument.open(contentResolver, uri).use { document ->
+                    for (pageIndex in 0 until document.pageCount) {
+                        if (!isSelectedPrinterConnected()) throw IOException("Printer terputus")
+                        updateNotification(
+                            getString(
+                                R.string.pdf_receipt_notification_progress,
+                                pageIndex + 1,
+                                document.pageCount
+                            )
+                        )
+                        val bitmap = document.renderPage(pageIndex, dpi)
+                        try {
+                            val printed = printBitmapViaXPrinterBlocking(
+                                bitmap = bitmap,
+                                widthMm = ShippingLabelPdf.WIDTH_MM,
+                                heightMm = ShippingLabelPdf.HEIGHT_MM,
+                                dpi = dpi,
+                                copies = 1,
+                                timeoutMs = 90_000L,
+                                logContext = "PDF $displayName halaman ${pageIndex + 1}/${document.pageCount}"
+                            )
+                            if (!printed) {
+                                throw IOException("Gagal mencetak halaman ${pageIndex + 1}/${document.pageCount}")
+                            }
+                        } finally {
+                            bitmap.recycle()
+                        }
+                    }
+                    document.pageCount
+                }
+            }
+            result.onSuccess { pageCount ->
+                Log.i(TAG, "PDF $displayName printed successfully ($pageCount pages)")
+                updateNotification(getString(R.string.pdf_receipt_notification_complete, pageCount))
+            }.onFailure { error ->
+                Log.e(TAG, "PDF $displayName print failed: ${error.message}", error)
+                updateNotification(
+                    getString(
+                        R.string.pdf_receipt_notification_failed,
+                        error.message ?: getString(R.string.unknown_error)
+                    )
+                )
+            }
+            delay(4_000)
+            updateNotification()
         }
     }
 

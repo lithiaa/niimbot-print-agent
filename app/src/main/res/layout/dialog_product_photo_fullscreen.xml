@@ -36,6 +36,30 @@
         android:visibility="gone" />
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_product_photo_fullscreen_download"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_gravity="top|start"
+        android:layout_margin="16dp"
+        android:alpha="0.5"
+        android:contentDescription="@string/product_photo_download"
+        android:enabled="false"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:minHeight="48dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="16dp"
+        android:text="@string/product_photo_download"
+        android:textColor="@color/white"
+        android:textStyle="bold"
+        app:backgroundTint="#66000000"
+        app:cornerRadius="24dp"
+        app:icon="@drawable/ic_download"
+        app:iconGravity="textStart"
+        app:iconTint="@color/white" />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_product_photo_fullscreen_close"
         style="@style/Widget.MaterialComponents.Button.TextButton"
         android:layout_width="48dp"
