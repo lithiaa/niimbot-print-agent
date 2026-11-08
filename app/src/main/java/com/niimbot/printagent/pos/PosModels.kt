@@ -190,7 +190,6 @@ internal data class PosProductCreateRequest(
     @SerialName("supplier_id") val supplierId: Long?,
     @SerialName("harga_modal") val hargaModal: Long,
     @SerialName("harga_beli_kode") val hargaBeliKode: String?,
-    @SerialName("harga_jual_kode") val hargaJualKode: String?,
     @SerialName("harga_jual") val hargaJual: Long,
     @SerialName("stok_minimum") val stokMinimum: Int,
     val satuan: String,
@@ -225,7 +224,7 @@ internal data class PosStockAdjustmentRequest(
 internal data class PosProductUpdateRequest(
     val nama: String,
     @SerialName("harga_modal") val hargaModal: Long,
-    @SerialName("harga_jual_kode") val hargaJualKode: String
+    @SerialName("harga_jual") val hargaJual: Long
 )
 
 @Serializable
@@ -250,7 +249,6 @@ internal data class PosProductUpdateByIdRequest(
     @SerialName("supplier_id") val supplierId: Long?,
     @SerialName("harga_modal") val hargaModal: Long,
     @SerialName("harga_beli_kode") val hargaBeliKode: String?,
-    @SerialName("harga_jual_kode") val hargaJualKode: String,
     @SerialName("harga_jual") val hargaJual: Long,
     @SerialName("stok_minimum") val stokMinimum: Int,
     val satuan: String,

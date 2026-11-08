@@ -120,7 +120,7 @@ class PosApiClientRequestTest {
         assertNull(recorder.request.header("X-Integration-Key"))
         assertEquals(
             "{\"sku\":\"SKU-1\",\"nama\":\"Barang\",\"merek\":\"\",\"supplier_id\":7," +
-                "\"harga_modal\":100,\"harga_beli_kode\":\"SP\",\"harga_jual_kode\":\"SUP\"," +
+                "\"harga_modal\":100,\"harga_beli_kode\":\"SP\"," +
                 "\"harga_jual\":150,\"stok_minimum\":5,\"satuan\":\"pcs\",\"deskripsi\":\"\"," +
                 "\"foto\":\"\",\"stok_awal\":4}",
             recorder.request.bodyText()
@@ -176,7 +176,7 @@ class PosApiClientRequestTest {
         assertEquals("Bearer secret", recorder.request.header("Authorization"))
         assertEquals(
             "{\"sku\":null,\"nama\":\"Barang Baru\",\"merek\":\"Merek\",\"supplier_id\":null," +
-                "\"harga_modal\":100,\"harga_beli_kode\":\"SP\",\"harga_jual_kode\":\"SUP\"," +
+                "\"harga_modal\":100,\"harga_beli_kode\":\"SP\"," +
                 "\"harga_jual\":150,\"stok_minimum\":3,\"satuan\":\"pcs\"," +
                 "\"deskripsi\":\"Deskripsi\",\"foto\":null,\"stok_awal\":4}",
             recorder.request.bodyText()
@@ -258,7 +258,7 @@ class PosApiClientRequestTest {
         assertEquals("/base/api/barang/42", recorder.request.url.encodedPath)
         assertEquals("Bearer secret", recorder.request.header("Authorization"))
         assertEquals(
-            "{\"nama\":\"Barang Baru\",\"harga_modal\":100,\"harga_jual_kode\":\"SUP\"}",
+            "{\"nama\":\"Barang Baru\",\"harga_modal\":100,\"harga_jual\":150}",
             recorder.request.bodyText()
         )
     }
@@ -370,7 +370,12 @@ class PosApiClientRequestTest {
         assertTrue(body.contains("\"supplier_id\":7"))
         assertTrue(body.contains("\"harga_modal\":100"))
         assertTrue(body.contains("\"harga_beli_kode\":\"SP\""))
-        assertTrue(body.contains("\"harga_jual_kode\":\"SUP\""))
+        assertEquals(
+            "{\"sku\":\"SKU-1\",\"nama\":\"Barang Baru\",\"merek\":\"Merek\",\"supplier_id\":7," +
+                "\"harga_modal\":100,\"harga_beli_kode\":\"SP\",\"harga_jual\":150," +
+                "\"stok_minimum\":2,\"satuan\":\"pcs\",\"deskripsi\":\"Deskripsi\"}",
+            body
+        )
         assertTrue(body.contains("\"harga_jual\":150"))
         assertTrue(body.contains("\"stok_minimum\":2"))
         assertTrue(!body.contains("kategori"))

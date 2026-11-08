@@ -637,7 +637,6 @@ class PosApiClient(
             supplierId = input.supplierId,
             hargaModal = input.hargaBeli,
             hargaBeliKode = input.hargaBeliKode,
-            hargaJualKode = LabelGenerator.encodePurchasePrice(input.hargaJual),
             hargaJual = input.hargaJual,
             stokMinimum = input.stokMinimum,
             satuan = input.satuan,
@@ -685,7 +684,6 @@ class PosApiClient(
             supplierId = input.supplierId,
             hargaModal = input.hargaBeli,
             hargaBeliKode = input.hargaBeliKode,
-            hargaJualKode = LabelGenerator.encodePurchasePrice(input.hargaJual),
             hargaJual = input.hargaJual,
             stokMinimum = input.stokMinimum,
             satuan = input.satuan,
@@ -718,7 +716,6 @@ class PosApiClient(
             supplierId = supplierId,
             hargaModal = form.hargaBeli,
             hargaBeliKode = form.kodeHargaBeli ?: LabelGenerator.encodePurchasePrice(form.hargaBeli),
-            hargaJualKode = LabelGenerator.encodePurchasePrice(form.hargaJual),
             hargaJual = form.hargaJual,
             stokMinimum = 5,
             satuan = "pcs",
@@ -746,7 +743,7 @@ class PosApiClient(
         val requestBody = PosProductUpdateRequest(
             nama = form.nama,
             hargaModal = form.hargaBeli,
-            hargaJualKode = LabelGenerator.encodePurchasePrice(form.hargaJual)
+            hargaJual = form.hargaJual
         )
         return executeProductRequest(
             baseUrl = baseUrl,
