@@ -14,4 +14,9 @@ internal class ProductInfoStateViewModel : ViewModel() {
     var firstVisiblePosition: Int = 0
     var firstVisibleOffset: Int = 0
     var initialized: Boolean = false
+
+    fun positionToRestore(itemCount: Int): Int? {
+        if (!initialized || itemCount <= 0) return null
+        return firstVisiblePosition.coerceIn(0, itemCount - 1)
+    }
 }

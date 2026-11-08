@@ -403,12 +403,11 @@ class ProductInfoFragment : Fragment() {
     }
 
     private fun restoreListPosition() {
-        if (!savedState.initialized || products.isEmpty()) return
-        recyclerView.post {
-            val manager = recyclerView.layoutManager as? GridLayoutManager ?: return@post
-            val position = savedState.firstVisiblePosition.coerceIn(0, adapter.itemCount - 1)
-            manager.scrollToPositionWithOffset(position, savedState.firstVisibleOffset)
-        }
+        val manager = recyclerView.layoutManager as? GridLayoutManager ?: return
+        val position = savedState.positionToRestore(adapter.itemCount) ?: return
+        // GridLayoutManager applies this on its next layout. Posting another callback
+        // lets a pending deletion result clear the adapter before restoration runs.
+        manager.scrollToPositionWithOffset(position, savedState.firstVisibleOffset)
     }
 
     private fun resetSavedListPosition() {
