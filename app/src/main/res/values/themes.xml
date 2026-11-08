@@ -55,20 +55,49 @@
     </style>
 
     <style name="Widget.LithiaLabelPrinter.Button" parent="Widget.MaterialComponents.Button">
-        <item name="cornerRadius">24dp</item>
-        <item name="android:minHeight">48dp</item>
+        <item name="cornerRadius">14dp</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="Widget.LithiaLabelPrinter.Button.Outlined" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="cornerRadius">14dp</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="Widget.LithiaLabelPrinter.Button.Text" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="cornerRadius">12dp</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">14sp</item>
     </style>
 
     <style name="Widget.LithiaLabelPrinter.AlertDialogButton" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
         <item name="backgroundTint">@color/primary</item>
         <item name="rippleColor">@color/primary_light</item>
-        <item name="cornerRadius">4dp</item>
-        <item name="android:minHeight">48dp</item>
-        <item name="android:minWidth">96dp</item>
-        <item name="android:layout_marginStart">6dp</item>
-        <item name="android:layout_marginEnd">6dp</item>
+        <item name="cornerRadius">10dp</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:minWidth">72dp</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:layout_marginEnd">4dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textColor">@color/white</item>
         <item name="android:fontFamily">sans-serif-medium</item>
@@ -98,26 +127,4 @@
         <item name="windowNoTitle">true</item>
     </style>
 
-    <style name="Theme.LithiaLabelPrinter.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog">
-        <item name="colorPrimary">@color/primary</item>
-        <item name="colorSurface">@color/surface</item>
-        <item name="buttonBarPositiveButtonStyle">@style/Widget.LithiaLabelPrinter.AlertDialogButton</item>
-        <item name="buttonBarNegativeButtonStyle">@style/Widget.LithiaLabelPrinter.AlertDialogButton</item>
-        <item name="buttonBarNeutralButtonStyle">@style/Widget.LithiaLabelPrinter.AlertDialogButton</item>
-    </style>
-
-    <style name="Theme.LithiaLabelPrinter.BottomSheet" parent="Theme.MaterialComponents.BottomSheetDialog">
-        <item name="bottomSheetStyle">@style/Widget.LithiaLabelPrinter.BottomSheet.Modal</item>
-    </style>
-
-    <style name="Widget.LithiaLabelPrinter.BottomSheet.Modal" parent="Widget.MaterialComponents.BottomSheet.Modal">
-        <item name="android:background">@color/surface</item>
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.LithiaLabelPrinter.BottomSheet</item>
-    </style>
-
-    <style name="ShapeAppearanceOverlay.LithiaLabelPrinter.BottomSheet" parent="">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSizeTopLeft">16dp</item>
-        <item name="cornerSizeTopRight">16dp</item>
-    </style>
 </resources>

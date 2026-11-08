@@ -86,6 +86,32 @@
                 android:textColor="@color/list_accent"
                 android:textSize="11sp" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_cancel_job"
+                style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:contentDescription="@string/job_cancel_action"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="9dp"
+                android:text=""
+                android:textColor="@color/list_error"
+                android:visibility="gone"
+                app:backgroundTint="@color/list_error_surface"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_close"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="20dp"
+                app:iconTint="@color/list_error"
+                app:strokeColor="@color/list_error_border" />
+
         </LinearLayout>
 
         <View
@@ -146,24 +172,6 @@
             android:textColor="@color/list_error"
             android:textSize="12sp"
             android:visibility="gone" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_cancel_job"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:layout_gravity="end"
-            android:layout_marginTop="12dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:minHeight="0dp"
-            android:text="@string/job_cancel_action"
-            android:textAllCaps="false"
-            android:textColor="@color/list_error"
-            android:visibility="gone"
-            app:backgroundTint="@color/list_error_surface"
-            app:cornerRadius="12dp"
-            app:strokeColor="@color/list_error_border" />
 
     </LinearLayout>
 

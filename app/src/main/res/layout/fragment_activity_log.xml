@@ -17,7 +17,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_activity_logs_back"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/Widget.LithiaLabelPrinter.Button.Text"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:contentDescription="@string/product_detail_back"
@@ -110,7 +110,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_previous_activity_logs"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:contentDescription="@string/product_page_previous"
@@ -135,7 +135,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_next_activity_logs"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:contentDescription="@string/product_page_next"

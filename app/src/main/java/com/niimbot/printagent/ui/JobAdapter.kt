@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.widget.TooltipCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.niimbot.printagent.R
@@ -77,6 +78,7 @@ class JobAdapter(
             }
             cancel.visibility = if (PrintQueueRules.canCancel(job.status)) View.VISIBLE else View.GONE
             cancel.setOnClickListener { onCancel(job) }
+            TooltipCompat.setTooltipText(cancel, itemView.context.getString(R.string.job_cancel_action))
         }
 
         private fun setStatus(label: String, color: String) {

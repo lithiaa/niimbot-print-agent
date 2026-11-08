@@ -286,9 +286,9 @@ class PrintServer(
             }
         }
 
-        val bitmap = imageBytes?.let {
+        if (imageBytes?.let {
             BitmapFactory.decodeByteArray(it, 0, it.size)
-        } ?: return null
+        } == null) return null
 
         // For multipart, we store a "raw image" job — nama generated from timestamp
         val ts = System.currentTimeMillis()

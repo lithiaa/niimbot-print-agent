@@ -3,4 +3,7 @@
     <cache-path
         name="product_photo_capture"
         path="product-photo-capture/" />
+    <cache-path
+        name="app_updates"
+        path="app-updates/" />
 </paths>

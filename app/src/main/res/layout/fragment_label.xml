@@ -122,7 +122,7 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_scan_label_sku"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
                         android:layout_width="56dp"
                         android:layout_height="56dp"
                         android:layout_gravity="top"
@@ -432,7 +432,7 @@
 
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btn_label_photo_camera"
-                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
                                 android:contentDescription="@string/product_photo_from_camera"
@@ -450,7 +450,7 @@
 
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btn_label_photo_gallery"
-                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
                                 android:layout_marginStart="8dp"
@@ -524,16 +524,16 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_reset_label_form"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="6dp"
                         android:layout_weight="1"
                         android:contentDescription="@string/reset_label_form_description"
-                        android:minHeight="48dp"
+                        android:minHeight="44dp"
                         android:text="@string/reset_label_form"
                         android:textColor="@color/error"
-                        app:cornerRadius="4dp"
+                        app:cornerRadius="12dp"
                         app:icon="@drawable/ic_delete"
                         app:iconTint="@color/error"
                         app:strokeColor="@color/error" />
@@ -545,9 +545,9 @@
                         android:layout_marginStart="6dp"
                         android:layout_weight="1"
                         android:contentDescription="@string/create_and_print_description"
-                        android:minHeight="48dp"
+                        android:minHeight="44dp"
                         android:text="@string/create_and_print"
-                        app:cornerRadius="4dp"
+                        app:cornerRadius="12dp"
                         app:icon="@drawable/ic_printer" />
                 </LinearLayout>
 

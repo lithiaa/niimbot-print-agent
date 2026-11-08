@@ -18,6 +18,7 @@ import com.niimbot.printagent.pos.PosApiResult
 import com.niimbot.printagent.pos.PosIdentity
 import com.niimbot.printagent.pos.PosProductRules
 import com.niimbot.printagent.service.PrintForegroundService
+import com.niimbot.printagent.update.InstalledAppVersion
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -42,6 +43,8 @@ class SettingsFragment : Fragment() {
     private var btnTestPosConnection: Button? = null
     private var btnPosLogout: Button? = null
     private var btnActivityLogs: Button? = null
+    private var tvAppVersion: TextView? = null
+    private var btnCheckAppUpdate: Button? = null
 
     // Server config
     private var etServerPort: EditText? = null
@@ -72,6 +75,8 @@ class SettingsFragment : Fragment() {
         btnTestPosConnection = view.findViewById(R.id.btn_test_pos_connection)
         btnPosLogout = view.findViewById(R.id.btn_pos_logout)
         btnActivityLogs = view.findViewById(R.id.btn_activity_logs)
+        tvAppVersion = view.findViewById(R.id.tv_app_version)
+        btnCheckAppUpdate = view.findViewById(R.id.btn_check_app_update)
 
         // Server
         etServerPort = view.findViewById(R.id.et_server_port)
@@ -84,6 +89,11 @@ class SettingsFragment : Fragment() {
         etServerPort?.setText(prefs.getInt("server_port", 8080).toString())
         etPosBaseUrl?.setText(integrationConfigStore.getBaseUrl())
         showIdentity(integrationConfigStore.getIdentity())
+        tvAppVersion?.text = getString(
+            R.string.app_update_current_version,
+            InstalledAppVersion.name(requireContext()),
+            InstalledAppVersion.code(requireContext())
+        )
     }
 
     private fun setupClickListeners() {
@@ -91,6 +101,9 @@ class SettingsFragment : Fragment() {
         btnTestPosConnection?.setOnClickListener { testPosConnection() }
         btnPosLogout?.setOnClickListener { logoutPos() }
         btnActivityLogs?.setOnClickListener { openActivityLogs() }
+        btnCheckAppUpdate?.setOnClickListener {
+            (activity as? MainActivity)?.checkForAppUpdate(manual = true)
+        }
 
         // Server port
         btnSavePort?.setOnClickListener {
@@ -259,6 +272,8 @@ class SettingsFragment : Fragment() {
         btnTestPosConnection = null
         btnPosLogout = null
         btnActivityLogs = null
+        tvAppVersion = null
+        btnCheckAppUpdate = null
         etServerPort = null
         btnSavePort = null
         super.onDestroyView()

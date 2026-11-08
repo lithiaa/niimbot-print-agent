@@ -17,58 +17,13 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="144dp"
+        android:minHeight="104dp"
         android:orientation="vertical"
         android:padding="10dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="end|center_vertical"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_edit_product"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:contentDescription="@string/product_detail_action"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:minWidth="0dp"
-                android:paddingHorizontal="12dp"
-                android:text="@string/product_detail_short"
-                android:textSize="12sp"
-                app:cornerRadius="11dp"
-                app:icon="@drawable/ic_chevron_right"
-                app:iconGravity="textStart"
-                app:iconPadding="6dp"
-                app:iconSize="18dp"
-                app:iconTint="@color/list_accent_dark" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_print_product"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="6dp"
-                android:contentDescription="@string/product_print_label"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:minWidth="0dp"
-                android:paddingHorizontal="12dp"
-                android:text="@string/product_print_short"
-                android:textSize="12sp"
-                app:cornerRadius="11dp"
-                app:icon="@drawable/ic_printer"
-                app:iconGravity="textStart"
-                app:iconPadding="6dp"
-                app:iconSize="18dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -157,6 +112,27 @@
                     android:textColor="@color/list_text_secondary"
                     android:textSize="13sp" />
             </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_print_product"
+                style="@style/Widget.LithiaLabelPrinter.Button"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:contentDescription="@string/product_print_label"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="9dp"
+                android:text=""
+                app:cornerRadius="11dp"
+                app:icon="@drawable/ic_printer"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="20dp" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

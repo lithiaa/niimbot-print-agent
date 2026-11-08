@@ -46,7 +46,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_editable_product_photo_remove"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/Widget.LithiaLabelPrinter.Button.Text"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_gravity="top|end"

@@ -46,6 +46,7 @@ class ProductInfoFragment : Fragment() {
 
     private lateinit var searchInput: EditText
     private lateinit var addButton: MaterialButton
+    private lateinit var supplierOrdersButton: MaterialButton
     private lateinit var sortButton: MaterialButton
     private lateinit var filterButton: MaterialButton
     private lateinit var recyclerView: RecyclerView
@@ -77,6 +78,7 @@ class ProductInfoFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         searchInput = view.findViewById(R.id.et_product_search)
         addButton = view.findViewById(R.id.btn_add_product)
+        supplierOrdersButton = view.findViewById(R.id.btn_supplier_orders)
         sortButton = view.findViewById(R.id.btn_product_sort)
         filterButton = view.findViewById(R.id.btn_product_filter)
         recyclerView = view.findViewById(R.id.rv_product_info)
@@ -107,6 +109,8 @@ class ProductInfoFragment : Fragment() {
         restoreStateValues()
         searchInput.setText(savedState.query)
         searchInput.setSelection(searchInput.text.length)
+        TooltipCompat.setTooltipText(addButton, getString(R.string.product_add))
+        TooltipCompat.setTooltipText(supplierOrdersButton, getString(R.string.supplier_orders_open))
 
         adapter = ProductInfoAdapter(
             scope = viewLifecycleOwner.lifecycleScope,
@@ -129,6 +133,7 @@ class ProductInfoFragment : Fragment() {
 
         swipeRefresh.setOnRefreshListener { loadProducts(currentPage) }
         addButton.setOnClickListener { openCreateProduct() }
+        supplierOrdersButton.setOnClickListener { openSupplierOrders() }
         sortButton.setOnClickListener { showSortDialog() }
         filterButton.setOnClickListener { showFilterDialog() }
         previousButton.setOnClickListener { loadProducts(currentPage - 1) }
@@ -330,6 +335,18 @@ class ProductInfoFragment : Fragment() {
             .commit()
     }
 
+    private fun openSupplierOrders() {
+        if (configStore.getAccessToken().isNullOrBlank()) {
+            Toast.makeText(requireContext(), R.string.pos_login_required, Toast.LENGTH_LONG).show()
+            return
+        }
+        captureState()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, SupplierOrdersFragment())
+            .addToBackStack("supplier_orders")
+            .commit()
+    }
+
     private fun applyCurrentSort() {
         val sortedProducts = ProductInfoSort.apply(
             ProductInfoFilter.apply(products, selectedFilter),
@@ -427,6 +444,7 @@ class ProductInfoFragment : Fragment() {
         sortButton.isEnabled = !loading
         filterButton.isEnabled = !loading
         addButton.isEnabled = !loading
+        supplierOrdersButton.isEnabled = !loading
     }
 
     private fun totalPages(): Int = if (totalProducts == 0) {
@@ -479,7 +497,6 @@ private class ProductInfoAdapter(
         private val sku: TextView = view.findViewById(R.id.tv_product_sku)
         private val price: TextView = view.findViewById(R.id.tv_product_price)
         private val stock: TextView = view.findViewById(R.id.tv_product_stock)
-        private val detail: View = view.findViewById(R.id.btn_edit_product)
         private val print: View = view.findViewById(R.id.btn_print_product)
         private var photoJob: Job? = null
         private var boundPhotoKey: String? = null
@@ -495,8 +512,8 @@ private class ProductInfoAdapter(
             )
             stock.text = itemView.context.getString(R.string.product_stock_value, product.stok, product.satuan)
             itemView.setOnClickListener { onDetail(product) }
-            detail.setOnClickListener { onDetail(product) }
             print.setOnClickListener { onPrint(product) }
+            TooltipCompat.setTooltipText(print, itemView.context.getString(R.string.product_print_label))
         }
 
         fun recycle() {

@@ -641,6 +641,79 @@ class PosApiClientRequestTest {
         assertEquals("photo-bytes", (result as PosApiResult.Success).value.decodeToString())
     }
 
+    @Test
+    fun `supplier order list uses authenticated trailing slash endpoint`() = runBlocking {
+        val recorder = RecordingResponder(
+            """{"data":[{"id":7,"nama_barang":"Kabel USB","jumlah_barang":12,"status":"pending"}]}"""
+        )
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.listSupplierOrders("https://pos.example/base/", "token-123")
+
+        assertEquals(
+            PosApiResult.Success(listOf(PosSupplierOrder(7, "Kabel USB", 12, "pending"))),
+            result
+        )
+        assertEquals("GET", recorder.request.method)
+        assertEquals("/base/api/pesanan-supplier/", recorder.request.url.encodedPath)
+        assertEquals("Bearer token-123", recorder.request.header("Authorization"))
+        assertNull(recorder.request.header("X-Integration-Key"))
+    }
+
+    @Test
+    fun `supplier order detail uses item endpoint`() = runBlocking {
+        val recorder = RecordingResponder(
+            """{"id":7,"nama_barang":"Kabel USB","jumlah_barang":12,"status":"dipesan"}"""
+        )
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.getSupplierOrder("https://pos.example/base/", "token-123", 7)
+
+        assertTrue(result is PosApiResult.Success)
+        assertEquals("GET", recorder.request.method)
+        assertEquals("/base/api/pesanan-supplier/7", recorder.request.url.encodedPath)
+    }
+
+    @Test
+    fun `supplier order create and update send only order fields`() = runBlocking {
+        val response = """{"id":7,"nama_barang":"Kabel USB","jumlah_barang":12,"status":"dipesan"}"""
+        val input = PosSupplierOrderInput("Kabel USB", 12, "dipesan")
+        val createRecorder = RecordingResponder(response)
+        val updateRecorder = RecordingResponder(response, statusCode = 200)
+
+        val createResult = PosApiClient(createRecorder.client, Json { ignoreUnknownKeys = true })
+            .createSupplierOrder("https://pos.example/base/", "token-123", input)
+        val updateResult = PosApiClient(updateRecorder.client, Json { ignoreUnknownKeys = true })
+            .updateSupplierOrder("https://pos.example/base/", "token-123", 7, input)
+
+        assertTrue(createResult is PosApiResult.Success)
+        assertEquals("POST", createRecorder.request.method)
+        assertEquals("/base/api/pesanan-supplier/", createRecorder.request.url.encodedPath)
+        assertEquals(
+            "{\"nama_barang\":\"Kabel USB\",\"jumlah_barang\":12,\"status\":\"dipesan\"}",
+            createRecorder.request.bodyText()
+        )
+        assertTrue(updateResult is PosApiResult.Success)
+        assertEquals("PUT", updateRecorder.request.method)
+        assertEquals("/base/api/pesanan-supplier/7", updateRecorder.request.url.encodedPath)
+        assertEquals(createRecorder.request.bodyText(), updateRecorder.request.bodyText())
+        assertFalse(createRecorder.request.url.encodedPath.contains("stok"))
+        assertFalse(updateRecorder.request.url.encodedPath.contains("stok"))
+    }
+
+    @Test
+    fun `supplier order delete uses item endpoint without a body`() = runBlocking {
+        val recorder = RecordingResponder("", statusCode = 204)
+        val api = PosApiClient(recorder.client, Json { ignoreUnknownKeys = true })
+
+        val result = api.deleteSupplierOrder("https://pos.example/base/", "token-123", 7)
+
+        assertEquals(PosApiResult.Success(Unit), result)
+        assertEquals("DELETE", recorder.request.method)
+        assertEquals("/base/api/pesanan-supplier/7", recorder.request.url.encodedPath)
+        assertEquals("", recorder.request.bodyText())
+    }
+
     private class RecordingResponder(responseJson: String, private val statusCode: Int? = null) {
         lateinit var request: Request
         val requests = mutableListOf<Request>()

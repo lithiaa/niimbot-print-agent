@@ -273,6 +273,79 @@ class PosApiClient(
         }
     }
 
+    suspend fun listSupplierOrders(
+        baseUrl: String,
+        accessToken: String
+    ): PosApiResult<List<PosSupplierOrder>> = withContext(Dispatchers.IO) {
+        val request = authenticatedRequest(baseUrl, accessToken, "api/pesanan-supplier/")
+            .get()
+            .build()
+        try {
+            client.newCall(request).execute().use { response ->
+                if (response.code == 401) {
+                    response.close()
+                    return@withContext resolveUnauthorized(baseUrl, accessToken)
+                }
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
+                decodeSupplierOrderList(body)?.let { PosApiResult.Success(it) }
+                    ?: PosApiResult.Failure("Respons daftar pesanan supplier tidak valid.", response.code)
+            }
+        } catch (_: IOException) {
+            PosApiResult.Failure("Daftar pesanan supplier tidak dapat dimuat. Periksa jaringan.")
+        }
+    }
+
+    suspend fun getSupplierOrder(
+        baseUrl: String,
+        accessToken: String,
+        orderId: Long
+    ): PosApiResult<PosSupplierOrder> = executeSupplierOrderRequest(
+        baseUrl = baseUrl,
+        accessToken = accessToken,
+        request = authenticatedRequest(baseUrl, accessToken, "api/pesanan-supplier/$orderId")
+            .get()
+            .build()
+    )
+
+    suspend fun createSupplierOrder(
+        baseUrl: String,
+        accessToken: String,
+        input: PosSupplierOrderInput
+    ): PosApiResult<PosSupplierOrder> = executeSupplierOrderRequest(
+        baseUrl = baseUrl,
+        accessToken = accessToken,
+        request = authenticatedRequest(baseUrl, accessToken, "api/pesanan-supplier/")
+            .post(json.encodeToString(input).toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+    )
+
+    suspend fun updateSupplierOrder(
+        baseUrl: String,
+        accessToken: String,
+        orderId: Long,
+        input: PosSupplierOrderInput
+    ): PosApiResult<PosSupplierOrder> = executeSupplierOrderRequest(
+        baseUrl = baseUrl,
+        accessToken = accessToken,
+        request = authenticatedRequest(baseUrl, accessToken, "api/pesanan-supplier/$orderId")
+            .put(json.encodeToString(input).toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+    )
+
+    suspend fun deleteSupplierOrder(
+        baseUrl: String,
+        accessToken: String,
+        orderId: Long
+    ): PosApiResult<Unit> = executeMutation(
+        baseUrl = baseUrl,
+        accessToken = accessToken,
+        request = authenticatedRequest(baseUrl, accessToken, "api/pesanan-supplier/$orderId")
+            .delete()
+            .build(),
+        networkError = "Pesanan supplier gagal dihapus. Periksa jaringan."
+    )
+
     suspend fun getInventoryStatistics(
         baseUrl: String,
         accessToken: String
@@ -736,6 +809,28 @@ class PosApiClient(
         }
     }
 
+    private suspend fun executeSupplierOrderRequest(
+        baseUrl: String,
+        accessToken: String,
+        request: Request
+    ): PosApiResult<PosSupplierOrder> = withContext(Dispatchers.IO) {
+        try {
+            client.newCall(request).execute().use { response ->
+                if (response.code == 401) {
+                    response.close()
+                    return@withContext resolveUnauthorized(baseUrl, accessToken)
+                }
+                if (response.code == 404) return@withContext PosApiResult.NotFound
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) return@withContext failureForStatus(response.code, body)
+                decodeSupplierOrder(body)?.let { PosApiResult.Success(it) }
+                    ?: PosApiResult.Failure("Respons pesanan supplier tidak valid.", response.code)
+            }
+        } catch (_: IOException) {
+            PosApiResult.Failure("Pesanan supplier gagal disimpan. Periksa jaringan.")
+        }
+    }
+
     private suspend fun executePhotoMutation(
         baseUrl: String,
         accessToken: String,
@@ -839,6 +934,15 @@ class PosApiClient(
     private fun decodeProduct(body: String): PosProduct? =
         runCatching { json.decodeFromString<PosProduct>(body) }.getOrNull()
             ?: runCatching { json.decodeFromString<PosProductEnvelope>(body).data }.getOrNull()
+
+    private fun decodeSupplierOrder(body: String): PosSupplierOrder? =
+        runCatching { json.decodeFromString<PosSupplierOrder>(body) }.getOrNull()
+            ?: runCatching { json.decodeFromString<PosSupplierOrderEnvelope>(body).data }.getOrNull()
+
+    private fun decodeSupplierOrderList(body: String): List<PosSupplierOrder>? =
+        runCatching { json.decodeFromString<List<PosSupplierOrder>>(body) }.getOrNull()
+            ?: runCatching { json.decodeFromString<PosSupplierOrderListEnvelope>(body).data }.getOrNull()
+            ?: runCatching { json.decodeFromString<PosSupplierOrderItemsEnvelope>(body).items }.getOrNull()
 
     private fun resolveUnauthorized(baseUrl: String, accessToken: String): PosApiResult<Nothing> {
         val request = authenticatedRequest(baseUrl, accessToken, "api/auth/me").get().build()

@@ -30,7 +30,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_product_detail_back"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    style="@style/Widget.LithiaLabelPrinter.Button.Text"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:contentDescription="@string/product_detail_back"
@@ -67,7 +67,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_product_detail_edit"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
                     android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:layout_weight="1"
@@ -86,7 +86,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_product_detail_print"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
                     android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:layout_marginStart="6dp"
@@ -106,7 +106,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_product_detail_add_stock"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
                     android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:layout_marginStart="6dp"
@@ -126,7 +126,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_product_detail_subtract_stock"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
                     android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:layout_marginStart="6dp"
@@ -146,7 +146,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_product_detail_delete"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
                     android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:layout_marginStart="6dp"
@@ -324,7 +324,38 @@
                     <TextView style="@style/ProductDetailLabel" android:text="@string/product_supplier" />
                     <TextView android:id="@+id/tv_product_detail_supplier" style="@style/ProductDetailValue" />
                     <TextView style="@style/ProductDetailLabel" android:text="@string/product_prices" />
-                    <TextView android:id="@+id/tv_product_detail_prices" style="@style/ProductDetailValue" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tv_product_detail_prices"
+                            style="@style/ProductDetailValue"
+                            android:layout_width="0dp"
+                            android:layout_weight="1" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_product_detail_toggle_cost"
+                            style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:layout_marginStart="8dp"
+                            android:contentDescription="@string/product_cost_show"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            android:minWidth="0dp"
+                            android:padding="10dp"
+                            android:text=""
+                            app:cornerRadius="12dp"
+                            app:icon="@drawable/ic_visibility"
+                            app:iconGravity="textStart"
+                            app:iconPadding="0dp"
+                            app:iconSize="20dp"
+                            app:iconTint="@color/primary"
+                            app:strokeColor="@color/primary" />
+                    </LinearLayout>
                     <TextView style="@style/ProductDetailLabel" android:text="@string/product_min_stock" />
                     <TextView android:id="@+id/tv_product_detail_min_stock" style="@style/ProductDetailValue" />
                     <TextView style="@style/ProductDetailLabel" android:text="@string/product_unit" />

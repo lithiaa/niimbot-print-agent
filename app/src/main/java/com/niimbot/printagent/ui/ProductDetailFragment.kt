@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputLayout
 import com.niimbot.printagent.R
@@ -46,6 +47,7 @@ class ProductDetailFragment : Fragment() {
     private lateinit var brand: TextView
     private lateinit var supplier: TextView
     private lateinit var prices: TextView
+    private lateinit var costVisibilityButton: MaterialButton
     private lateinit var minimumStock: TextView
     private lateinit var unit: TextView
     private lateinit var description: TextView
@@ -63,6 +65,7 @@ class ProductDetailFragment : Fragment() {
 
     private val productId: Long by lazy { requireArguments().getLong(ARG_PRODUCT_ID) }
     private var product: PosProduct? = null
+    private var isCostVisible = false
     private val currency = NumberFormat.getNumberInstance(Locale("id", "ID"))
 
     override fun onCreateView(
@@ -86,7 +89,21 @@ class ProductDetailFragment : Fragment() {
         addStockButton.setOnClickListener { product?.let(::showAddStockDialog) }
         subtractStockButton.setOnClickListener { product?.let(::showSubtractStockDialog) }
         deleteButton.setOnClickListener { product?.let(::showDeleteDialog) }
+        costVisibilityButton.setOnClickListener {
+            product?.let { item ->
+                isCostVisible = !isCostVisible
+                renderPrices(item)
+            }
+        }
         loadProduct()
+    }
+
+    override fun onPause() {
+        if (isCostVisible) {
+            isCostVisible = false
+            product?.let(::renderPrices)
+        }
+        super.onPause()
     }
 
     private fun bindViews(view: View) {
@@ -100,6 +117,7 @@ class ProductDetailFragment : Fragment() {
         brand = view.findViewById(R.id.tv_product_detail_brand)
         supplier = view.findViewById(R.id.tv_product_detail_supplier)
         prices = view.findViewById(R.id.tv_product_detail_prices)
+        costVisibilityButton = view.findViewById(R.id.btn_product_detail_toggle_cost)
         minimumStock = view.findViewById(R.id.tv_product_detail_min_stock)
         unit = view.findViewById(R.id.tv_product_detail_unit)
         description = view.findViewById(R.id.tv_product_detail_description)
@@ -143,6 +161,7 @@ class ProductDetailFragment : Fragment() {
         progress.visibility = View.VISIBLE
         content.visibility = View.GONE
         error.visibility = View.GONE
+        isCostVisible = false
         viewLifecycleOwner.lifecycleScope.launch {
             when (val result = posApiClient.getProductById(configStore.getBaseUrl(), accessToken, productId)) {
                 is PosApiResult.Success -> {
@@ -174,17 +193,36 @@ class ProductDetailFragment : Fragment() {
             }
             if (supplierItem.isPrimary) getString(R.string.product_supplier_primary_value, label) else label
         }.ifEmpty { "—" }
-        prices.text = getString(
-            R.string.product_detail_price_value,
-            currency.format(item.hargaBeli),
-            currency.format(item.hargaJual),
-            item.hargaBeliKode.orDash()
-        )
+        renderPrices(item)
         minimumStock.text = item.stokMinimum.toString()
         unit.text = item.satuan
         description.text = item.deskripsi.orDash()
         createdAt.text = formatTimestamp(item.createdAt)
         updatedAt.text = formatTimestamp(item.updatedAt)
+    }
+
+    private fun renderPrices(item: PosProduct) {
+        prices.text = if (isCostVisible) {
+            getString(
+                R.string.product_detail_price_value,
+                currency.format(item.hargaBeli),
+                currency.format(item.hargaJual),
+                item.hargaBeliKode.orDash()
+            )
+        } else {
+            getString(
+                R.string.product_detail_price_masked,
+                currency.format(item.hargaJual)
+            )
+        }
+        val description = getString(
+            if (isCostVisible) R.string.product_cost_hide else R.string.product_cost_show
+        )
+        costVisibilityButton.contentDescription = description
+        costVisibilityButton.setIconResource(
+            if (isCostVisible) R.drawable.ic_visibility_off else R.drawable.ic_visibility
+        )
+        TooltipCompat.setTooltipText(costVisibilityButton, description)
     }
 
     private fun openEditPage() {

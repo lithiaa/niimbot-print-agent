@@ -164,15 +164,16 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_pos_login"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:layout_gravity="end"
                         android:layout_marginTop="16dp"
                         android:backgroundTint="@color/primary"
                         android:contentDescription="@string/pos_login"
                         android:text="@string/pos_login"
                         android:textColor="@color/white"
                         android:textStyle="bold"
-                        app:cornerRadius="25dp" />
+                        app:cornerRadius="12dp" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -195,26 +196,28 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_test_pos_connection"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
+                        style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:layout_gravity="end"
                         android:layout_marginTop="16dp"
                         android:contentDescription="@string/test_pos_connection"
                         android:text="@string/test_pos_connection"
                         android:textColor="@color/primary"
-                        app:cornerRadius="25dp"
+                        app:cornerRadius="12dp"
                         app:strokeColor="@color/primary" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_activity_logs"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
+                        style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:layout_gravity="end"
                         android:layout_marginTop="8dp"
                         android:contentDescription="@string/activity_logs_open"
                         android:text="@string/activity_logs_open"
                         android:textColor="@color/primary"
-                        app:cornerRadius="25dp"
+                        app:cornerRadius="12dp"
                         app:icon="@drawable/ic_logs"
                         app:iconGravity="textStart"
                         app:iconPadding="10dp"
@@ -223,16 +226,110 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_pos_logout"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
+                        style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:layout_gravity="end"
                         android:layout_marginTop="8dp"
                         android:contentDescription="@string/pos_logout"
                         android:text="@string/pos_logout"
                         android:textColor="@color/primary"
-                        app:cornerRadius="25dp"
+                        app:cornerRadius="12dp"
                         app:strokeColor="@color/primary" />
                 </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Application update -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/divider"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        app:cardBackgroundColor="@color/primary_light"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="0dp">
+
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:contentDescription="@string/app_update_settings_title"
+                            android:padding="10dp"
+                            android:src="@drawable/ic_download"
+                            app:tint="@color/primary" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="@string/app_update_settings_title"
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="@string/app_update_settings_subtitle"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_app_version"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/app_update_current_version_placeholder"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_check_app_update"
+                    style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:layout_gravity="end"
+                    android:layout_marginTop="14dp"
+                    android:contentDescription="@string/app_update_check"
+                    android:text="@string/app_update_check"
+                    android:textColor="@color/primary"
+                    app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_refresh"
+                    app:iconGravity="textStart"
+                    app:iconPadding="10dp"
+                    app:iconTint="@color/primary"
+                    app:strokeColor="@color/primary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -331,14 +428,15 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_save_port"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:layout_gravity="end"
                     android:layout_marginTop="16dp"
                     android:backgroundTint="@color/primary"
                     android:text="@string/save_port"
                     android:textColor="@color/white"
                     android:textStyle="bold"
-                    app:cornerRadius="25dp" />
+                    app:cornerRadius="12dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -533,14 +631,15 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_save_tunnel"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:layout_gravity="end"
                     android:layout_marginTop="18dp"
                     android:backgroundTint="@color/primary"
                     android:text="@string/save_tunnel"
                     android:textColor="@color/white"
                     android:textStyle="bold"
-                    app:cornerRadius="25dp" />
+                    app:cornerRadius="12dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -626,14 +725,15 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_generate_preview"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
+                    style="@style/Widget.LithiaLabelPrinter.Button.Outlined"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:layout_gravity="end"
                     android:layout_marginTop="16dp"
                     android:icon="@drawable/ic_preview"
                     android:text="@string/generate_preview"
                     android:textColor="@color/primary"
-                    app:cornerRadius="25dp"
+                    app:cornerRadius="12dp"
                     app:iconGravity="textStart"
                     app:iconTint="@color/primary"
                     app:strokeColor="@color/primary" />
